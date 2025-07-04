@@ -1,0 +1,32 @@
+name: Generate Sitemap
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'the-witcher/gallery-data.json'
+  workflow_dispatch:
+
+jobs:
+  generate-sitemap:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Generate sitemap
+        run: node generate-sitemap.js
+
+      - name: Commit and push sitemap
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'docs: Auto-generate sitemap'
+          file_pattern: 'the-witcher/sitemap.xml'
+          commit_user_name: 'Sitemap Bot'
+          commit_user_email: 'sitemap-bot@users.noreply.github.com'
