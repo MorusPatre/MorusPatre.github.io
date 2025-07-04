@@ -1,0 +1,269 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+        <title>THE WITCHER</title>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+        <link rel="stylesheet" href="/the-witcher/assets/css/main.css" />
+        <noscript><link rel="stylesheet" href="/the-witcher/assets/css/noscript.css" /></noscript>
+    </head>
+    <body>
+
+        <!-- Wrapper -->
+            <div id="wrapper">
+
+                <!-- Header -->
+                    <header id="header">
+                        <div class="logo">
+                            <img src="images/witcher_wolf.png" alt="Witcher Wolf Medallion" draggable="false" />
+                        </div>
+                        <div id="search-container">
+                            <form onsubmit="return false;">
+                                <input type="text" id="search-input" placeholder="Search by filename, character, actor, episode, season etc...">
+                                <span id="clear-search" class="clear-search-button">&times;</span>
+                            </form>
+                        </div>
+                    </header>
+
+                <!-- Search Script -->
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const searchInput = document.getElementById('search-input');
+                            const gallery = document.getElementById('photo-gallery');
+                            const clearSearchBtn = document.getElementById('clear-search'); // 1. ADD THIS LINE
+                            
+                            function simplifySearchText(text) {
+                                if (!text) return "";
+                                return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                            }
+                            
+                            searchInput.addEventListener('keyup', function(event) {
+                                // This block now also handles the input's padding
+                                if (searchInput.value.length > 0) {
+                                    clearSearchBtn.style.display = 'block';
+                                    searchInput.style.paddingRight = '30px'; // Add padding
+                                } else {
+                                    clearSearchBtn.style.display = 'none';
+                                    searchInput.style.paddingRight = ''; // Remove padding
+                                }
+
+                                const searchTerm = simplifySearchText(event.target.value.toLowerCase());
+                                const galleryItems = gallery.querySelectorAll('figure');
+
+                                galleryItems.forEach(function(item) {
+                                    const img = item.querySelector('img');
+                                    if (!img || !img.dataset.search) {
+                                        item.style.display = 'none';
+                                        return;
+                                    }
+
+                                    const searchData = img.dataset.search.toLowerCase();
+
+                                    if (searchData.includes(searchTerm)) {
+                                        item.style.display = 'flex';
+                                    } else {
+                                        item.style.display = 'none';
+                                    }
+                                });
+                            });
+                            
+                            // 3. ADD THIS ENTIRE BLOCK to handle clicks on the 'x'
+                            clearSearchBtn.addEventListener('click', function() {
+                                searchInput.value = '';
+                                // Manually trigger the 'keyup' event to update the gallery
+                                const keyupEvent = new Event('keyup', { bubbles: true });
+                                searchInput.dispatchEvent(keyupEvent);
+                                searchInput.focus();
+                            });
+                        });
+                    </script>
+
+                <!--
+                ==================================================================
+                PHOTO GALLERY - PLEASE NOTE THE ADDITION OF <div id="marquee"></div>
+                ==================================================================
+                -->
+                <div id="photo-gallery">
+                    <div id="marquee"></div>
+                </div>
+                    
+                <!-- Footer -->
+                    <footer id="footer">
+						<p class="copyright">&copy; The Witcher, 2019 Netflix. All Rights Reserved.</p>
+					</footer>
+
+			</div>
+
+    <!-- BG -->
+		<div id="bg"></div>
+
+    <!-- Scripts -->
+		<script src="/the-witcher/assets/js/jquery.min.js"></script>
+        <script src="/the-witcher/assets/js/browser.min.js"></script>
+        <script src="/the-witcher/assets/js/breakpoints.min.js"></script>
+        <script src="/the-witcher/assets/js/util.js"></script>
+			
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
+			
+        <script src="/the-witcher/assets/js/main.js"></script>
+        
+        <script src="/the-witcher/assets/js/gallery-loader.js"></script>
+
+    <!-- Image Modal -->
+		<div id="image-modal" class="modal-overlay">
+				<span class="modal-close">&times;</span>
+				<span class="modal-prev">&#10094;</span>
+				<span class="modal-next">&#10095;</span>
+				<div class="modal-content">
+					<div class="modal-image-container">
+						<img id="modal-img" src="" alt="Enlarged image">
+					</div>
+					<div class="modal-info-panel">
+						<div class="info-content">
+							<h3 id="modal-filename"></h3>
+							<div id="modal-metadata">
+							</div>
+						</div>
+						<a id="modal-download-btn" href="#" class="button primary" download>Download</a>
+					</div>
+				</div>
+        </div>
+
+    <!-- Modal Script -->
+		<script>
+			document.addEventListener('DOMContentLoaded', function() {
+				const modal = document.getElementById('image-modal');
+				const modalImg = document.getElementById('modal-img');
+				const modalFilename = document.getElementById('modal-filename');
+				const modalMetadata = document.getElementById('modal-metadata');
+				const downloadBtn = document.getElementById('modal-download-btn');
+				const closeModal = document.querySelector('.modal-close');
+				const prevButton = document.querySelector('.modal-prev');
+				const nextButton = document.querySelector('.modal-next');
+				const gallery = document.getElementById('photo-gallery');
+				let galleryFigures = Array.from(gallery.querySelectorAll('figure'));
+				let currentImageIndex = -1;
+
+				function showImage(index) {
+					const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
+					if (index < 0 || index >= visibleFigures.length) {
+						return;
+					}
+					currentImageIndex = index;
+					const figure = visibleFigures[currentImageIndex];
+					const img = figure.querySelector('img');
+					const figcaptionText = figure.querySelector('figcaption').childNodes[0].nodeValue.trim();
+
+					modalImg.src = img.dataset.fullsrc || img.src;
+					modalImg.alt = img.alt;
+					modalFilename.textContent = figcaptionText;
+
+					let metadataHTML = '<table class="info-table">';
+					const dataset = img.dataset;
+					const primaryKeys = ['season', 'episode', 'actors'];
+					const handledKeys = ['search', 'fullsrc' , 'characters'];
+					let detailsHTML = '';
+
+					primaryKeys.forEach(key => {
+						if (dataset[key] && dataset[key].trim() !== '' && dataset[key].trim() !== '-' && dataset[key].trim() !== '- (-)') {
+							const label = key.charAt(0).toUpperCase() + key.slice(1);
+							metadataHTML += `<tr><td class="info-label">${label}:</td><td class="info-value">${dataset[key]}</td></tr>`;
+						}
+					});
+
+					for (const key in dataset) {
+						if (!primaryKeys.includes(key) && !handledKeys.includes(key) && dataset[key] && dataset[key].trim() !== '' && dataset[key].trim() !== '-') {
+							let label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+							detailsHTML += `<tr><td class="info-label">${label}:</td><td class="info-value">${dataset[key]}</td></tr>`;
+						}
+					}
+					if (detailsHTML) {
+						metadataHTML += '<tr><td colspan="2" class="info-label metadata-header">Metadata</td></tr>';
+						metadataHTML += detailsHTML;
+					}
+
+					metadataHTML += '</table>';
+					modalMetadata.innerHTML = metadataHTML;
+					downloadBtn.href = img.dataset.fullsrc;
+					modal.style.display = 'flex';
+				}
+				
+				function showNextImage() {
+					const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
+					let nextIndex = (currentImageIndex + 1) % visibleFigures.length;
+					showImage(nextIndex);
+				}
+
+				function showPrevImage() {
+					const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
+					let prevIndex = (currentImageIndex - 1 + visibleFigures.length) % visibleFigures.length;
+					showImage(prevIndex);
+				}
+
+				gallery.addEventListener('dblclick', function(event) {
+					const figure = event.target.closest('figure');
+					if (!figure) return;
+					const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
+					const index = visibleFigures.indexOf(figure);
+					if (index > -1) {
+						showImage(index);
+					}
+				});
+
+				function hideModal() {
+					modal.style.display = 'none';
+					currentImageIndex = -1;
+				}
+
+				closeModal.addEventListener('click', hideModal);
+				prevButton.addEventListener('click', showPrevImage);
+				nextButton.addEventListener('click', showNextImage);
+
+				modal.addEventListener('click', function(event) {
+					if (event.target === modal) {
+						hideModal();
+					}
+				});
+
+				document.addEventListener('keydown', function(event) {
+					if (modal.style.display === 'flex') {
+						if (event.key === 'Escape') {
+							hideModal();
+						} else if (event.key === 'ArrowRight') {
+							showNextImage();
+						} else if (event.key === 'ArrowLeft') {
+							showPrevImage();
+						}
+					}
+				});
+			});
+        </script>
+           
+    <!-- Image Context Menu -->
+        <div id="custom-context-menu" class="context-menu">
+                <ul>
+                    <li id="context-menu-open">Open</li>
+                    <li id="context-menu-open-tab">Open Image in New Tab</li>
+                    <li class="separator"></li>
+                    <li id="context-menu-save">Save Image to "Downloads"</li>
+                </ul>
+        </div>
+        
+    <!-- Image Context Menu -->
+        <div id="gallery-context-menu" class="context-menu">
+                <ul>
+                    <li id="gallery-context-add">Add Image</li>
+					<li class="separator"></li>
+					<li id="gallery-context-sort">Sort By</li>
+					<li id="gallery-context-view">Show View Options</li>
+                </ul>
+        </div>
+        
+    <!-- Custom Scrollbar -->
+        <div id="custom-scrollbar-track">
+            <div id="custom-scrollbar-thumb"></div>
+        </div>
+
+	</body>
+</html>
