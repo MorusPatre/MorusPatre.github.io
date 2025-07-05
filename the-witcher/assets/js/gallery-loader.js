@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 img.src = item.thumbnail;
                 img.alt = item.alt;
                 img.addEventListener('load', () => {
-                    img.classList.add('is-visible');
+                    figure.classList.add('is-visible');
                 });
 
                 // 4. Add all the data attributes needed for the modal and search
