@@ -1900,3 +1900,18 @@ html, body {
     border-color: #E8E7E0; /* A vibrant blue border */
     box-shadow: 0 0 18px rgba(232, 231, 224, 0.5); /* A light glow */
 }
+
+/*
+==================================================================
+// Lazy Load Image Fade-in
+==================================================================
+*/
+
+#photo-gallery figure img {
+    opacity: 0;
+    transition: opacity 0.4s ease-in-out;
+}
+
+#photo-gallery figure img.is-visible {
+    opacity: 1;
+}
