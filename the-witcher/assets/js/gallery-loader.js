@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // 3. Create the <img> element for the thumbnail
                 const img = document.createElement('img');
+                img.loading = 'lazy';
                 img.src = item.thumbnail;
                 img.alt = item.alt;
 
