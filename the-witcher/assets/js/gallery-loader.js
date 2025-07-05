@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 img.src = item.thumbnail;
                 img.alt = item.alt;
 
-                // Add this event listener to fade the image in on load
+                // event listener to fade the image in on load
                 img.addEventListener('load', () => {
                     img.classList.add('is-visible');
                 });
