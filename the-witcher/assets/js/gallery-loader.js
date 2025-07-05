@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const jsonPath = '../../gallery-data.json';
+    const jsonPath = 'gallery-data.json';
     const galleryContainerId = 'photo-gallery'; // Corrected from 'wrapper'
     const galleryContainer = document.getElementById(galleryContainerId);
 
