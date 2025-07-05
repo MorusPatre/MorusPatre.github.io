@@ -30,6 +30,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 img.src = item.thumbnail;
                 img.alt = item.alt;
 
+                // Add this event listener to fade the image in on load
+                img.addEventListener('load', () => {
+                    img.classList.add('is-visible');
+                });
+
                 // 4. Add all the data attributes needed for the modal and search
                 img.dataset.fullsrc = item.src;
                 img.dataset.filename = item.filename;
