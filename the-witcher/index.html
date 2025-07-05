@@ -8,10 +8,10 @@
         <noscript><link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
     </head>
     <body class="is-preload">
-
 	<div id="loader-wrapper">
-            <div class="loader"></div>
-	</div>
+            <div class="loader"></div>
+        </div>
+
 	
         <div id="wrapper">
 
@@ -32,12 +32,12 @@
                             const searchInput = document.getElementById('search-input');
                             const gallery = document.getElementById('photo-gallery');
                             const clearSearchBtn = document.getElementById('clear-search'); // 1. ADD THIS LINE
-                            
+
                             function simplifySearchText(text) {
                                 if (!text) return "";
                                 return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
                             }
-                            
+
                             searchInput.addEventListener('keyup', function(event) {
                                 // This block now also handles the input's padding
                                 if (searchInput.value.length > 0) {
@@ -67,7 +67,7 @@
                                     }
                                 });
                             });
-                            
+
                             // 3. ADD THIS ENTIRE BLOCK to handle clicks on the 'x'
                             clearSearchBtn.addEventListener('click', function() {
                                 searchInput.value = '';
@@ -82,7 +82,7 @@
                 <div id="photo-gallery">
                     <div id="marquee"></div>
                 </div>
-                    
+
                 <footer id="footer">
 						<p class="copyright">&copy; The Witcher, 2019 Netflix. All Rights Reserved.</p>
 					</footer>
@@ -95,12 +95,12 @@
         <script src="assets/js/browser.min.js"></script>
         <script src="assets/js/breakpoints.min.js"></script>
         <script src="assets/js/util.js"></script>
-			
+
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
-			
+
         <script src="assets/js/main.js"></script>
-        
+
         <script src="assets/js/gallery-loader.js"></script>
 
     <div id="image-modal" class="modal-overlay">
@@ -179,7 +179,7 @@
 					document.body.classList.add('is-article-visible');
                                         modal.classList.add('is-visible');
 				}
-				
+
 				function showNextImage() {
 					const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
 					let nextIndex = (currentImageIndex + 1) % visibleFigures.length;
@@ -231,7 +231,7 @@
 				});
 			});
         </script>
-           
+
     <div id="custom-context-menu" class="context-menu">
                 <ul>
                     <li id="context-menu-open">Open</li>
@@ -240,7 +240,7 @@
                     <li id="context-menu-save">Save Image to "Downloads"</li>
                 </ul>
         </div>
-        
+
     <div id="gallery-context-menu" class="context-menu">
                 <ul>
                     <li id="gallery-context-add">Add Image</li>
@@ -249,7 +249,7 @@
 					<li id="gallery-context-view">Show View Options</li>
                 </ul>
         </div>
-        
+
     <div id="custom-scrollbar-track">
             <div id="custom-scrollbar-thumb"></div>
         </div>
