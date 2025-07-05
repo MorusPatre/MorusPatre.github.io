@@ -1110,3 +1110,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+// Hide the pre-loader and show the content
+document.body.classList.add('is-loaded');
