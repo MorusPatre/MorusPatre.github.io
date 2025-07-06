@@ -8,132 +8,120 @@
         <noscript><link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
     </head>
     <body class="is-preload">
-	<div id="loader-wrapper">
+        <div id="loader-wrapper">
             <div class="loader"></div>
         </div>
 
-	
         <div id="wrapper">
-
-                <header id="header">
-                        <div class="logo">
-                            <img src="images/witcher_wolf.png" alt="Witcher Wolf Medallion" draggable="false" />
-                        </div>
-                        <div id="search-container">
-                            <form onsubmit="return false;">
-                                <input type="text" id="search-input" placeholder="Search by filename, character, actor, episode, season etc...">
-                                <span id="clear-search" class="clear-search-button">&times;</span>
-                            </form>
-                        </div>
-                    </header>
-
-                <script>
-                        document.addEventListener('DOMContentLoaded', function() {
-                            const searchInput = document.getElementById('search-input');
-                            const gallery = document.getElementById('photo-gallery');
-                            const clearSearchBtn = document.getElementById('clear-search'); // 1. ADD THIS LINE
-
-                            function simplifySearchText(text) {
-                                if (!text) return "";
-                                return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-                            }
-
-                            searchInput.addEventListener('keyup', function(event) {
-                                // This block now also handles the input's padding
-                                if (searchInput.value.length > 0) {
-                                    clearSearchBtn.style.display = 'block';
-                                    searchInput.style.paddingRight = '30px'; // Add padding
-                                } else {
-                                    clearSearchBtn.style.display = 'none';
-                                    searchInput.style.paddingRight = ''; // Remove padding
-                                }
-
-                                const searchTerm = simplifySearchText(event.target.value.toLowerCase());
-                                const galleryItems = gallery.querySelectorAll('figure');
-
-                                galleryItems.forEach(function(item) {
-                                    const img = item.querySelector('img');
-                                    if (!img || !img.dataset.search) {
-                                        item.style.display = 'none';
-                                        return;
-                                    }
-
-                                    const searchData = img.dataset.search.toLowerCase();
-
-                                    if (searchData.includes(searchTerm)) {
-                                        item.style.display = 'flex';
-                                    } else {
-                                        item.style.display = 'none';
-                                    }
-                                });
-                            });
-
-                            // 3. ADD THIS ENTIRE BLOCK to handle clicks on the 'x'
-                            clearSearchBtn.addEventListener('click', function() {
-                                searchInput.value = '';
-                                // Manually trigger the 'keyup' event to update the gallery
-                                const keyupEvent = new Event('keyup', { bubbles: true });
-                                searchInput.dispatchEvent(keyupEvent);
-                                searchInput.focus();
-                            });
-                        });
-                    </script>
-
-                <div id="photo-gallery">
-                    <div id="marquee"></div>
+            <header id="header">
+                <div class="logo">
+                    <img src="images/witcher_wolf.png" alt="Witcher Wolf Medallion" draggable="false" />
                 </div>
+                <div id="search-container">
+                    <form onsubmit="return false;">
+                        <input type="text" id="search-input" placeholder="Search by filename, character, actor, episode, season etc...">
+                        <span id="clear-search" class="clear-search-button">&times;</span>
+                    </form>
+                </div>
+            </header>
 
-                <footer id="footer">
-						<p class="copyright">&copy; The Witcher, 2019 Netflix. All Rights Reserved.</p>
-					</footer>
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const searchInput = document.getElementById('search-input');
+                    const gallery = document.getElementById('photo-gallery');
+                    const clearSearchBtn = document.getElementById('clear-search');
 
-			</div>
+                    function simplifySearchText(text) {
+                        if (!text) return "";
+                        return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                    }
 
-    <div id="bg"></div>
+                    searchInput.addEventListener('keyup', function(event) {
+                        if (searchInput.value.length > 0) {
+                            clearSearchBtn.style.display = 'block';
+                            searchInput.style.paddingRight = '30px';
+                        } else {
+                            clearSearchBtn.style.display = 'none';
+                            searchInput.style.paddingRight = '';
+                        }
 
-    <script src="assets/js/jquery.min.js"></script>
+                        const searchTerm = simplifySearchText(event.target.value.toLowerCase());
+                        const galleryItems = gallery.querySelectorAll('figure');
+
+                        galleryItems.forEach(function(item) {
+                            const img = item.querySelector('img');
+                            if (!img || !img.dataset.search) {
+                                item.style.display = 'none';
+                                return;
+                            }
+                            const searchData = img.dataset.search.toLowerCase();
+                            if (searchData.includes(searchTerm)) {
+                                item.style.display = 'flex';
+                            } else {
+                                item.style.display = 'none';
+                            }
+                        });
+                    });
+
+                    clearSearchBtn.addEventListener('click', function() {
+                        searchInput.value = '';
+                        const keyupEvent = new Event('keyup', { bubbles: true });
+                        searchInput.dispatchEvent(keyupEvent);
+                        searchInput.focus();
+                    });
+                });
+            </script>
+
+            <div id="photo-gallery">
+                <div id="marquee"></div>
+            </div>
+
+            <footer id="footer">
+                <p class="copyright">&copy; The Witcher, 2019 Netflix. All Rights Reserved.</p>
+            </footer>
+        </div>
+
+        <div id="bg"></div>
+
+        <script src="assets/js/jquery.min.js"></script>
         <script src="assets/js/browser.min.js"></script>
         <script src="assets/js/breakpoints.min.js"></script>
         <script src="assets/js/util.js"></script>
-
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
-
         <script src="assets/js/main.js"></script>
-
         <script src="assets/js/gallery-loader.js"></script>
 
-    <div id="image-modal" class="modal-overlay">
-				<span class="modal-close">&times;</span>
-				<span class="modal-prev">&#10094;</span>
-				<span class="modal-next">&#10095;</span>
-				<div class="modal-content">
-					<div class="modal-image-container">
-						<img id="modal-img" src="" alt="Enlarged image">
-					</div>
-					<div class="modal-info-panel">
-						<div class="info-content">
-							<h3 id="modal-filename"></h3>
-							<div id="modal-metadata">
-							</div>
-						</div>
-                        <a id="modal-download-btn" href="#" class="button download-btn" download><i class="fas fa-download"></i> Download</a>
-					</div>
-				</div>
+        <div id="image-modal" class="modal-overlay">
+            <span class="modal-close">&times;</span>
+            <span class="modal-prev">&#10094;</span>
+            <span class="modal-next">&#10095;</span>
+            <div class="modal-content">
+                <div class="modal-image-container">
+                    <img id="modal-img" src="" alt="Enlarged image">
+                </div>
+                <div class="modal-info-panel">
+                    <div class="info-content">
+                        <h3 id="modal-filename"></h3>
+                        <div id="modal-metadata"></div>
+                    </div>
+                    <a id="modal-download-btn" href="#" class="button download-btn" download><i class="fas fa-download"></i> Download</a>
+                </div>
+            </div>
         </div>
 
-    <script>
-			document.addEventListener('DOMContentLoaded', function() {
-				const modal = document.getElementById('image-modal');
-				const modalImg = document.getElementById('modal-img');
-				const modalFilename = document.getElementById('modal-filename');
-				const modalMetadata = document.getElementById('modal-metadata');
-				const downloadBtn = document.getElementById('modal-download-btn');
-				const closeModal = document.querySelector('.modal-close');
-				const prevButton = document.querySelector('.modal-prev');
-				const nextButton = document.querySelector('.modal-next');
-				const gallery = document.getElementById('photo-gallery');
-				let currentImageIndex = -1;
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const modal = document.getElementById('image-modal');
+                const modalImg = document.getElementById('modal-img');
+                const modalFilename = document.getElementById('modal-filename');
+                const modalMetadata = document.getElementById('modal-metadata');
+                const downloadBtn = document.getElementById('modal-download-btn');
+                const closeModal = document.querySelector('.modal-close');
+                const prevButton = document.querySelector('.modal-prev');
+                const nextButton = document.querySelector('.modal-next');
+                const gallery = document.getElementById('photo-gallery');
+                let currentImageIndex = -1;
 
                 function showImage(index) {
                     const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
@@ -149,11 +137,8 @@
                     modalImg.alt = img.alt;
                     modalFilename.textContent = figcaptionText;
 
-                    // --- MODIFICATION START ---
-                    // We now build a <dl> list instead of a <table>
                     let primaryHTML = '<dl class="info-grid">';
                     let detailsHTML = '<dl class="info-grid">';
-
                     const dataset = img.dataset;
                     const primaryKeys = ['season', 'episode', 'actors', 'characters'];
                     const handledKeys = ['search', 'fullsrc'];
@@ -183,41 +168,38 @@
                     }
 
                     modalMetadata.innerHTML = finalHTML;
-                    
                     downloadBtn.href = img.dataset.fullsrc;
 
                     document.body.classList.add('is-article-visible');
                     modal.classList.add('is-visible');
                 }
 
-				function showNextImage() {
-					const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
-					let nextIndex = (currentImageIndex + 1) % visibleFigures.length;
-					showImage(nextIndex);
-				}
+                function showNextImage() {
+                    const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
+                    let nextIndex = (currentImageIndex + 1) % visibleFigures.length;
+                    showImage(nextIndex);
+                }
 
-				function showPrevImage() {
-					const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
-					let prevIndex = (currentImageIndex - 1 + visibleFigures.length) % visibleFigures.length;
-					showImage(prevIndex);
-				}
+                function showPrevImage() {
+                    const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
+                    let prevIndex = (currentImageIndex - 1 + visibleFigures.length) % visibleFigures.length;
+                    showImage(prevIndex);
+                }
 
-				gallery.addEventListener('dblclick', function(event) {
-					const figure = event.target.closest('figure');
-					if (!figure) return;
-					const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
-					const index = visibleFigures.indexOf(figure);
-					if (index > -1) {
-						showImage(index);
-					}
-				});
+                gallery.addEventListener('dblclick', function(event) {
+                    const figure = event.target.closest('figure');
+                    if (!figure) return;
+                    const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
+                    const index = visibleFigures.indexOf(figure);
+                    if (index > -1) {
+                        showImage(index);
+                    }
+                });
 
                 function hideModal() {
                     document.body.classList.remove('is-article-visible');
                     modal.classList.remove('is-visible');
                     currentImageIndex = -1;
-
-                    // Clear the content after the fade-out animation (250ms)
                     setTimeout(() => {
                         modalImg.src = "";
                         modalFilename.textContent = "";
@@ -225,51 +207,75 @@
                     }, 250);
                 }
 
-				closeModal.addEventListener('click', hideModal);
-				prevButton.addEventListener('click', showPrevImage);
-				nextButton.addEventListener('click', showNextImage);
+                closeModal.addEventListener('click', hideModal);
+                prevButton.addEventListener('click', showPrevImage);
+                nextButton.addEventListener('click', showNextImage);
 
-				modal.addEventListener('click', function(event) {
-					if (event.target === modal) {
-						hideModal();
-					}
-				});
+                modal.addEventListener('click', function(event) {
+                    if (event.target === modal) {
+                        hideModal();
+                    }
+                });
 
-				document.addEventListener('keydown', function(event) {
-					if (modal.classList.contains('is-visible')) {
-						if (event.key === 'Escape') {
-							hideModal();
-						} else if (event.key === 'ArrowRight') {
-							showNextImage();
-						} else if (event.key === 'ArrowLeft') {
-							showPrevImage();
-						}
-					}
-				});
-			});
+                downloadBtn.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    const imageUrl = modalImg.src;
+                    const filename = modalFilename.textContent;
+                    if (!imageUrl || !filename) {
+                        console.error('Could not find the image URL or filename to download.');
+                        return;
+                    }
+                    fetch(imageUrl)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Network response was not ok.');
+                            }
+                            return response.blob();
+                        })
+                        .then(blob => {
+                            saveAs(blob, filename);
+                        })
+                        .catch(error => {
+                            console.error('Download failed:', error);
+                            alert('Download failed. The image will open in a new tab for you to save manually.');
+                            window.open(imageUrl, '_blank');
+                        });
+                });
+
+                document.addEventListener('keydown', function(event) {
+                    if (modal.classList.contains('is-visible')) {
+                        if (event.key === 'Escape') {
+                            hideModal();
+                        } else if (event.key === 'ArrowRight') {
+                            showNextImage();
+                        } else if (event.key === 'ArrowLeft') {
+                            showPrevImage();
+                        }
+                    }
+                });
+            });
         </script>
 
-    <div id="custom-context-menu" class="context-menu">
-                <ul>
-                    <li id="context-menu-open">Open</li>
-                    <li id="context-menu-open-tab">Open Image in New Tab</li>
-                    <li class="separator"></li>
-                    <li id="context-menu-save">Save Image to "Downloads"</li>
-                </ul>
+        <div id="custom-context-menu" class="context-menu">
+            <ul>
+                <li id="context-menu-open">Open</li>
+                <li id="context-menu-open-tab">Open Image in New Tab</li>
+                <li class="separator"></li>
+                <li id="context-menu-save">Save Image to "Downloads"</li>
+            </ul>
         </div>
 
-    <div id="gallery-context-menu" class="context-menu">
-                <ul>
-                    <li id="gallery-context-add">Add Image</li>
-					<li class="separator"></li>
-					<li id="gallery-context-sort">Sort By</li>
-					<li id="gallery-context-view">Show View Options</li>
-                </ul>
+        <div id="gallery-context-menu" class="context-menu">
+            <ul>
+                <li id="gallery-context-add">Add Image</li>
+                <li class="separator"></li>
+                <li id="gallery-context-sort">Sort By</li>
+                <li id="gallery-context-view">Show View Options</li>
+            </ul>
         </div>
 
-    <div id="custom-scrollbar-track">
+        <div id="custom-scrollbar-track">
             <div id="custom-scrollbar-thumb"></div>
         </div>
-
-	</body>
+    </body>
 </html>
