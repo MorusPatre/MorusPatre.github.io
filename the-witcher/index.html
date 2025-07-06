@@ -8,11 +8,11 @@
         <noscript><link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
     </head>
     <body class="is-preload">
-    <div id="loader-wrapper">
+	<div id="loader-wrapper">
             <div class="loader"></div>
         </div>
 
-    
+	
         <div id="wrapper">
 
                 <header id="header">
@@ -84,10 +84,10 @@
                 </div>
 
                 <footer id="footer">
-                        <p class="copyright">&copy; The Witcher, 2019 Netflix. All Rights Reserved.</p>
-                    </footer>
+						<p class="copyright">&copy; The Witcher, 2019 Netflix. All Rights Reserved.</p>
+					</footer>
 
-            </div>
+			</div>
 
     <div id="bg"></div>
 
@@ -104,49 +104,36 @@
         <script src="assets/js/gallery-loader.js"></script>
 
     <div id="image-modal" class="modal-overlay">
-                <span class="modal-close">&times;</span>
-                <span class="modal-prev">&#10094;</span>
-                <span class="modal-next">&#10095;</span>
-                <div class="modal-content">
-                    <div class="modal-image-container">
-                        <img id="modal-img" src="" alt="Enlarged image">
-                    </div>
-                    <div class="modal-info-panel">
-                        <div class="info-content">
-                            <h3 id="modal-filename"></h3>
-                            <div id="modal-metadata">
-                            </div>
-                        </div>
-                        <button id="modal-download-btn" class="button download-btn"><i class="fas fa-download"></i> Download</button>
-                    </div>
-                </div>
+				<span class="modal-close">&times;</span>
+				<span class="modal-prev">&#10094;</span>
+				<span class="modal-next">&#10095;</span>
+				<div class="modal-content">
+					<div class="modal-image-container">
+						<img id="modal-img" src="" alt="Enlarged image">
+					</div>
+					<div class="modal-info-panel">
+						<div class="info-content">
+							<h3 id="modal-filename"></h3>
+							<div id="modal-metadata">
+							</div>
+						</div>
+                        <a id="modal-download-btn" href="#" class="button download-btn" download><i class="fas fa-download"></i> Download</a>
+					</div>
+				</div>
         </div>
 
     <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                const modal = document.getElementById('image-modal');
-                const modalImg = document.getElementById('modal-img');
-                const modalFilename = document.getElementById('modal-filename');
-                const modalMetadata = document.getElementById('modal-metadata');
-                const downloadBtn = document.getElementById('modal-download-btn');
-                const closeModal = document.querySelector('.modal-close');
-                const prevButton = document.querySelector('.modal-prev');
-                const nextButton = document.querySelector('.modal-next');
-                const gallery = document.getElementById('photo-gallery');
-                let currentImageIndex = -1;
-
-                async function downloadImageWithSaveAs(url, filename) {
-                    try {
-                        const response = await fetch(url);
-                        if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
-                        const blob = await response.blob();
-                        saveAs(blob, filename || 'download');
-                    } catch (error) {
-                        console.error('Download failed:', error);
-                        alert(`Could not download the image. It will open in a new tab for you to save manually.`);
-                        window.open(url, '_blank');
-                    }
-                }
+			document.addEventListener('DOMContentLoaded', function() {
+				const modal = document.getElementById('image-modal');
+				const modalImg = document.getElementById('modal-img');
+				const modalFilename = document.getElementById('modal-filename');
+				const modalMetadata = document.getElementById('modal-metadata');
+				const downloadBtn = document.getElementById('modal-download-btn');
+				const closeModal = document.querySelector('.modal-close');
+				const prevButton = document.querySelector('.modal-prev');
+				const nextButton = document.querySelector('.modal-next');
+				const gallery = document.getElementById('photo-gallery');
+				let currentImageIndex = -1;
 
                 function showImage(index) {
                     const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
@@ -162,6 +149,8 @@
                     modalImg.alt = img.alt;
                     modalFilename.textContent = figcaptionText;
 
+                    // --- MODIFICATION START ---
+                    // We now build a <dl> list instead of a <table>
                     let primaryHTML = '<dl class="info-grid">';
                     let detailsHTML = '<dl class="info-grid">';
 
@@ -195,43 +184,33 @@
 
                     modalMetadata.innerHTML = finalHTML;
                     
-                    downloadBtn.dataset.src = img.dataset.fullsrc;
-                    downloadBtn.dataset.filename = figcaptionText;
+                    downloadBtn.href = img.dataset.fullsrc;
 
                     document.body.classList.add('is-article-visible');
                     modal.classList.add('is-visible');
                 }
 
-                function showNextImage() {
-                    const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
-                    let nextIndex = (currentImageIndex + 1) % visibleFigures.length;
-                    showImage(nextIndex);
-                }
+				function showNextImage() {
+					const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
+					let nextIndex = (currentImageIndex + 1) % visibleFigures.length;
+					showImage(nextIndex);
+				}
 
-                function showPrevImage() {
-                    const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
-                    let prevIndex = (currentImageIndex - 1 + visibleFigures.length) % visibleFigures.length;
-                    showImage(prevIndex);
-                }
+				function showPrevImage() {
+					const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
+					let prevIndex = (currentImageIndex - 1 + visibleFigures.length) % visibleFigures.length;
+					showImage(prevIndex);
+				}
 
-                gallery.addEventListener('dblclick', function(event) {
-                    const figure = event.target.closest('figure');
-                    if (!figure) return;
-                    const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
-                    const index = visibleFigures.indexOf(figure);
-                    if (index > -1) {
-                        showImage(index);
-                    }
-                });
-
-                downloadBtn.addEventListener('click', function() {
-                    const src = this.dataset.src;
-                    const filename = this.dataset.filename;
-
-                    if (src && filename) {
-                        downloadImageWithSaveAs(src, filename);
-                    }
-                });
+				gallery.addEventListener('dblclick', function(event) {
+					const figure = event.target.closest('figure');
+					if (!figure) return;
+					const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
+					const index = visibleFigures.indexOf(figure);
+					if (index > -1) {
+						showImage(index);
+					}
+				});
 
                 function hideModal() {
                     document.body.classList.remove('is-article-visible');
@@ -246,28 +225,28 @@
                     }, 250);
                 }
 
-                closeModal.addEventListener('click', hideModal);
-                prevButton.addEventListener('click', showPrevImage);
-                nextButton.addEventListener('click', showNextImage);
+				closeModal.addEventListener('click', hideModal);
+				prevButton.addEventListener('click', showPrevImage);
+				nextButton.addEventListener('click', showNextImage);
 
-                modal.addEventListener('click', function(event) {
-                    if (event.target === modal) {
-                        hideModal();
-                    }
-                });
+				modal.addEventListener('click', function(event) {
+					if (event.target === modal) {
+						hideModal();
+					}
+				});
 
-                document.addEventListener('keydown', function(event) {
-                    if (modal.classList.contains('is-visible')) {
-                        if (event.key === 'Escape') {
-                            hideModal();
-                        } else if (event.key === 'ArrowRight') {
-                            showNextImage();
-                        } else if (event.key === 'ArrowLeft') {
-                            showPrevImage();
-                        }
-                    }
-                });
-            });
+				document.addEventListener('keydown', function(event) {
+					if (modal.classList.contains('is-visible')) {
+						if (event.key === 'Escape') {
+							hideModal();
+						} else if (event.key === 'ArrowRight') {
+							showNextImage();
+						} else if (event.key === 'ArrowLeft') {
+							showPrevImage();
+						}
+					}
+				});
+			});
         </script>
 
     <div id="custom-context-menu" class="context-menu">
@@ -282,9 +261,9 @@
     <div id="gallery-context-menu" class="context-menu">
                 <ul>
                     <li id="gallery-context-add">Add Image</li>
-                    <li class="separator"></li>
-                    <li id="gallery-context-sort">Sort By</li>
-                    <li id="gallery-context-view">Show View Options</li>
+					<li class="separator"></li>
+					<li id="gallery-context-sort">Sort By</li>
+					<li id="gallery-context-view">Show View Options</li>
                 </ul>
         </div>
 
@@ -292,5 +271,5 @@
             <div id="custom-scrollbar-thumb"></div>
         </div>
 
-    </body>
+	</body>
 </html>
