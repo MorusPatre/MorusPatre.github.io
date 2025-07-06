@@ -1,24 +1,3 @@
-async function downloadImage(url, filename) {
-    try {
-        const response = await fetch(PROXY_URL + encodeURIComponent(url));
-        
-        // If the response from our proxy is NOT okay, read the error text it sent us
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText); // Throw the specific error from the proxy
-        }
-
-        const blob = await response.blob();
-        saveAs(blob, filename || 'download');
-    } catch (error) {
-        console.error('Download failed:', error);
-        
-        // MODIFIED: Display the more specific error message in the alert
-        alert(`Download failed.\n\nReason: ${error.message}\n\nThe image will open in a new tab for you to save manually.`);
-        window.open(url, '_blank');
-    }
-}
-
 (function($) {
 
     var    $window = $(window),
@@ -841,6 +820,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const itemContextMenu = document.getElementById('custom-context-menu');
     const galleryContextMenu = document.getElementById('gallery-context-menu');
     let rightClickedItem = null;
+
+    async function downloadImage(url, filename) {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
+            const blob = await response.blob();
+            saveAs(blob, filename || 'download');
+        } catch (error) {
+            console.error('Download failed:', error);
+            alert(`Could not download the image. It will open in a new tab for you to save manually.`);
+            window.open(url, '_blank');
+        }
+    }
 
     gallery.addEventListener('contextmenu', (e) => {
         e.preventDefault(); 
