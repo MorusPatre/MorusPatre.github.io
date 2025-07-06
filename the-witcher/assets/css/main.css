@@ -1940,3 +1940,24 @@ html, body {
 #photo-gallery figure.is-visible figcaption {
     opacity: 1;
 }
+
+/*
+==================================================================
+// Constrained Text Selection in Modal
+==================================================================
+*/
+
+/* By default, when selection is active, disable it for all elements */
+.is-selecting-text * {
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none;     /* IE 10+ and Edge */
+    user-select: none;         /* Standard syntax */
+}
+
+/* Re-enable text selection only for the specific item being selected and its children */
+.is-selecting-text .selection-active,
+.is-selecting-text .selection-active * {
+    -webkit-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+}
