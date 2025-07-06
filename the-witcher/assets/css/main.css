@@ -1477,6 +1477,7 @@ Styling for the Finder-Style Photo Gallery
 
     /* === ADJUSTABLE SPACING === */
     margin-top: 1rem; /* Controls the space between the header and the photo gallery */
+    margin-bottom: 1rem
     padding: 0 2rem;  /* Controls the left/right space for the entire gallery */
 }
 
