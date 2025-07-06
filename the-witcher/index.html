@@ -190,6 +190,13 @@
                     modal.classList.add('is-visible');
                 }
 
+				downloadBtn.addEventListener('click', function(event) {
+					event.preventDefault();
+					const fullSrc = modalImg.src;
+					const filename = modalFilename.textContent;
+					downloadImage(fullSrc, filename);
+				});
+
 				function showNextImage() {
 					const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
 					let nextIndex = (currentImageIndex + 1) % visibleFigures.length;
