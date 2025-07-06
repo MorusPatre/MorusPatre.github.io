@@ -1940,3 +1940,17 @@ html, body {
 #photo-gallery figure.is-visible figcaption {
     opacity: 1;
 }
+
+/*
+==================================================================
+// Constrain Text Selection in Modal
+==================================================================
+*/
+
+/* When the special class is active, disable user selection on the whole panel */
+.modal-info-panel.is-selecting-value {
+    user-select: none;
+    -webkit-user-select: none; /* For Safari */
+}
+
+/* The JavaScript will override the user-select property for the specific DD being selected */
