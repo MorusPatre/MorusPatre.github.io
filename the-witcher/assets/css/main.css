@@ -1711,11 +1711,7 @@ New Styles for Finder-Style Info Panel
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 0.25rem 1.5rem; /* Vertical and horizontal spacing */
-}
-
-.info-item {
-    padding: 0.5rem 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    user-select: none; /* Disables selection on the grid container */
 }
 
 .info-grid dt {
@@ -1731,6 +1727,8 @@ New Styles for Finder-Style Info Panel
     color: #fff;
     margin: 0;
     word-wrap: break-word;
+    user-select: all; /* Re-enables selection only for the value */
+    cursor: text;     /* Changes cursor to show text is selectable */
 }
 
 .metadata-header {
