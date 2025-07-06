@@ -1967,3 +1967,17 @@ html, body {
     user-select: text;
     cursor: text !important;
 }
+
+/*
+==================================================================
+// Disable Text Selection on Download Button
+==================================================================
+*/
+
+/* This rule makes the download button and its contents (the icon and text)
+   immune to text selection, even on right-click. */
+#modal-download-btn, #modal-download-btn * {
+    -webkit-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+}
