@@ -31,6 +31,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 img.alt = item.alt;
                 img.addEventListener('load', () => {
                     figure.classList.add('is-visible');
+
+                    // --- ADD THE FOLLOWING LINES ---
+                    // Get the actual rendered dimensions of the image
+                    const actualWidth = img.clientWidth;
+                    const actualHeight = img.clientHeight;
+
+                    // Find the span for dimensions within this specific figure
+                    const dimensionsSpan = figure.querySelector('.dimensions');
+
+                    // Update the span's text with the actual displayed size
+                    if (dimensionsSpan) {
+                        dimensionsSpan.textContent = `${actualWidth}x${actualHeight}`;
+                    }
+                    // --- END OF ADDED LINES ---
                 });
 
                 // 4. Add all the data attributes needed for the modal and search
