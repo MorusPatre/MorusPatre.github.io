@@ -266,26 +266,27 @@
             const infoPanel = document.querySelector('.modal-info-panel');
 
             infoPanel.addEventListener('mousedown', (e) => {
-                // Find the parent .info-item of the clicked element
-                const infoItem = e.target.closest('.info-item');
-                
-                // If the click wasn't inside an info-item, do nothing
-                if (!infoItem) return;
+                // Check if the clicked element is specifically a <dt> or <dd>
+                if (e.target.matches('.info-grid dt, .info-grid dd')) {
+                    const targetElement = e.target;
 
-                // When a mousedown occurs on an item, activate selection mode
-                document.body.classList.add('is-selecting-text');
-                infoItem.classList.add('selection-active');
+                    // Activate selection mode on the body
+                    document.body.classList.add('is-selecting-text');
+                    
+                    // Apply the 'selection-active' class directly to the clicked element
+                    targetElement.classList.add('selection-active');
+                }
             });
 
-            // A single mouseup listener on the document is enough to clean up
+            // This mouseup listener cleans up the classes from anywhere on the document
             document.addEventListener('mouseup', () => {
-                // If we were in selection mode, disable it
                 if (document.body.classList.contains('is-selecting-text')) {
                     document.body.classList.remove('is-selecting-text');
-                    // Remove the 'selection-active' class from any item that has it
-                    const activeItem = document.querySelector('.selection-active');
-                    if (activeItem) {
-                        activeItem.classList.remove('selection-active');
+                    
+                    // Find any element with the active class and remove it
+                    const activeElement = document.querySelector('.selection-active');
+                    if (activeElement) {
+                        activeElement.classList.remove('selection-active');
                     }
                 }
             });
