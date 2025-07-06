@@ -1,3 +1,16 @@
+async function downloadImage(url, filename) {
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
+        const blob = await response.blob();
+        saveAs(blob, filename || 'download');
+    } catch (error) {
+        console.error('Download failed:', error);
+        alert(`Could not download the image. It will open in a new tab for you to save manually.`);
+        window.open(url, '_blank');
+    }
+}
+
 (function($) {
 
     var    $window = $(window),
@@ -817,9 +830,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * Custom Right-Click Context Menu Logic
      * ----------------------------------------------------------------
      */
-    const itemContextMenu = document.getElementById('custom-context-menu');
-    const galleryContextMenu = document.getElementById('gallery-context-menu');
-    let rightClickedItem = null;
 
     async function downloadImage(url, filename) {
         try {
@@ -833,6 +843,9 @@ document.addEventListener('DOMContentLoaded', () => {
             window.open(url, '_blank');
         }
     }
+    const itemContextMenu = document.getElementById('custom-context-menu');
+    const galleryContextMenu = document.getElementById('gallery-context-menu');
+    let rightClickedItem = null;
 
     gallery.addEventListener('contextmenu', (e) => {
         e.preventDefault(); 
