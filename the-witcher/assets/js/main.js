@@ -15,19 +15,6 @@ async function downloadImage(url, filename) {
     }
 }
 
-async function downloadImage(url, filename) {
-    try {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
-        const blob = await response.blob();
-        saveAs(blob, filename || 'download');
-    } catch (error) {
-        console.error('Download failed:', error);
-        alert(`Could not download the image. It will open in a new tab for you to save manually.`);
-        window.open(url, '_blank');
-    }
-}
-
 (function($) {
 
     var    $window = $(window),
