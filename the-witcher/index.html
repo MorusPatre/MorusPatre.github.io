@@ -260,29 +260,34 @@
                 }
             });
 
-            // --- Constrain text selection in modal info panel ---
+            // --- Constrain text selection in modal info panel (Corrected) ---
             if (modalInfoPanel) {
                 modalInfoPanel.addEventListener('mousedown', (event) => {
                     const targetItem = event.target.closest('.info-item');
             
+                    // If the click was outside of any info item, do nothing and let the browser behave as default.
                     if (!targetItem) {
-                        event.preventDefault();
                         return;
                     }
             
                     const valueElement = targetItem.querySelector('dd');
             
+                    // If the item has no <dd> value, also do nothing.
                     if (!valueElement) {
-                        event.preventDefault();
                         return;
                     }
             
+                    // Apply a class to the panel. The CSS will set `user-select: none` on everything inside.
                     modalInfoPanel.classList.add('is-selecting-value');
+                    
+                    // Apply an inline style to the specific value element to override the panel's style,
+                    // making it the only thing that can be selected.
                     valueElement.style.userSelect = 'text';
             
+                    // Use a one-time listener on mouseup to remove the styles and clean up.
                     document.addEventListener('mouseup', () => {
                         modalInfoPanel.classList.remove('is-selecting-value');
-                        valueElement.style.userSelect = '';
+                        valueElement.style.userSelect = ''; // Reset the style.
                     }, { once: true });
                 });
             }
