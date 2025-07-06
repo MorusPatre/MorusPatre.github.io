@@ -266,8 +266,8 @@
             const infoPanel = document.querySelector('.modal-info-panel');
 
             infoPanel.addEventListener('mousedown', (e) => {
-                // Check if the clicked element is specifically a <dt> or <dd>
-                if (e.target.matches('.info-grid dt, .info-grid dd')) {
+                // MODIFIED: Selector now includes the filename and metadata header
+                if (e.target.matches('.info-grid dt, .info-grid dd, #modal-filename, .metadata-header')) {
                     const targetElement = e.target;
 
                     // Activate selection mode on the body
