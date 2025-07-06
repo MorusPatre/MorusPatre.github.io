@@ -1970,14 +1970,14 @@ html, body {
 
 /*
 ==================================================================
-// Disable Image Selection Highlight in Modal
+// Disable Text Selection on Download Button
 ==================================================================
 */
 
-.modal-image-container,
-#modal-img {
-	-webkit-user-select: none; /* Safari */
-	-ms-user-select: none;     /* IE 10+ and Edge */
-	user-select: none;         /* Standard syntax */
-	-webkit-user-drag: none;   /* Prevents dragging the image */
+/* This rule makes the download button and its contents (the icon and text)
+   immune to text selection, even on right-click. */
+#modal-download-btn, #modal-download-btn * {
+    -webkit-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
 }
