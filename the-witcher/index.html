@@ -245,10 +245,24 @@
             prevButton.addEventListener('click', showPrevImage);
             nextButton.addEventListener('click', showNextImage);
 
-            modal.addEventListener('click', function(event) {
+            let mouseDownOnOverlay = false;
+
+            modal.addEventListener('mousedown', function(event) {
+                // If the mousedown event's target is the overlay itself, set a flag.
                 if (event.target === modal) {
+                    mouseDownOnOverlay = true;
+                }
+            });
+
+            modal.addEventListener('mouseup', function(event) {
+                // Only hide the modal if the mouseup is on the overlay AND the mousedown
+                // also originated on the overlay.
+                if (event.target === modal && mouseDownOnOverlay) {
                     hideModal();
                 }
+
+                // Reset the flag regardless, to prepare for the next click.
+                mouseDownOnOverlay = false;
             });
 
             document.addEventListener('keydown', function(event) {
