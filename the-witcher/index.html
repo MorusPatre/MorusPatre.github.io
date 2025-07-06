@@ -304,6 +304,24 @@
                     }
                 }
             });
+
+            // --- ADD THIS BLOCK for right-click text selection ---
+            infoPanel.addEventListener('contextmenu', (e) => {
+                const infoItem = e.target.closest('.info-item');
+
+                // If a row was right-clicked, create a text selection
+                if (infoItem) {
+                    const selection = window.getSelection();
+                    const range = document.createRange();
+
+                    // This selects all content (both category and value) within the row
+                    range.selectNodeContents(infoItem);
+
+                    // Clear any previous selections and apply the new one
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                }
+            });
         });
     </script>
 
