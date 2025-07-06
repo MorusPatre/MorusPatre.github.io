@@ -137,7 +137,7 @@
             const prevButton = document.querySelector('.modal-prev');
             const nextButton = document.querySelector('.modal-next');
             const gallery = document.getElementById('photo-gallery');
-            const imageContainer = document.querySelector('.modal-image-container'); // Get the image container
+            const imageContainer = document.querySelector('.modal-image-container');
             const infoPanel = document.querySelector('.modal-info-panel');
             let currentImageIndex = -1;
 
@@ -198,6 +198,11 @@
                 const fullSrc = modalImg.src;
                 const filename = modalFilename.textContent;
                 downloadImage(fullSrc, filename);
+            });
+            
+            // **NEW**: Prevent the default drag behavior on the download button
+            downloadBtn.addEventListener('dragstart', function(event) {
+                event.preventDefault();
             });
 
             function showNextImage() {
@@ -269,7 +274,6 @@
                 }
             });
             
-            // **NEW**: Add listener to image container to lock selection
             imageContainer.addEventListener('mousedown', (e) => {
                 if (e.button === 0) {
                     document.body.classList.add('is-selecting-text');
