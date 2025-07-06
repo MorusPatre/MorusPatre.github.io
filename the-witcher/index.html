@@ -221,25 +221,9 @@
                     event.preventDefault();
                     const imageUrl = modalImg.src;
                     const filename = modalFilename.textContent;
-                    if (!imageUrl || !filename) {
-                        console.error('Could not find the image URL or filename to download.');
-                        return;
-                    }
-                    fetch(imageUrl)
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error('Network response was not ok.');
-                            }
-                            return response.blob();
-                        })
-                        .then(blob => {
-                            saveAs(blob, filename);
-                        })
-                        .catch(error => {
-                            console.error('Download failed:', error);
-                            alert('Download failed. The image will open in a new tab for you to save manually.');
-                            window.open(imageUrl, '_blank');
-                        });
+                    
+                    // Call the global helper function from main.js
+                    downloadImage(imageUrl, filename);
                 });
 
                 document.addEventListener('keydown', function(event) {
