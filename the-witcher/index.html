@@ -153,8 +153,6 @@
                 modalImg.alt = img.alt;
                 modalFilename.textContent = figcaptionText;
 
-                // --- MODIFICATION START ---
-                // We now build a <dl> list instead of a <table>
                 let primaryHTML = '<dl class="info-grid">';
                 let detailsHTML = '<dl class="info-grid">';
 
@@ -228,7 +226,6 @@
                 modal.classList.remove('is-visible');
                 currentImageIndex = -1;
 
-                // Clear the content after the fade-out animation (250ms)
                 setTimeout(() => {
                     modalImg.src = "";
                     modalFilename.textContent = "";
@@ -236,7 +233,6 @@
                 }, 250);
             }
             
-            // This stops clicks inside the modal from bubbling up to the body
             modalContent.addEventListener('click', function(event) {
                 event.stopPropagation();
             });
@@ -248,20 +244,15 @@
             let mouseDownOnOverlay = false;
 
             modal.addEventListener('mousedown', function(event) {
-                // If the mousedown event's target is the overlay itself, set a flag.
                 if (event.target === modal) {
                     mouseDownOnOverlay = true;
                 }
             });
 
             modal.addEventListener('mouseup', function(event) {
-                // Only hide the modal if the mouseup is on the overlay AND the mousedown
-                // also originated on the overlay.
                 if (event.target === modal && mouseDownOnOverlay) {
                     hideModal();
                 }
-
-                // Reset the flag regardless, to prepare for the next click.
                 mouseDownOnOverlay = false;
             });
 
@@ -280,46 +271,37 @@
             const infoPanel = document.querySelector('.modal-info-panel');
 
             infoPanel.addEventListener('mousedown', (e) => {
-                // MODIFIED: Selector now includes the filename and metadata header
-                if (e.target.matches('.info-grid dt, .info-grid dd, #modal-filename, .metadata-header')) {
-                    const targetElement = e.target;
-
-                    // Activate selection mode on the body
-                    document.body.classList.add('is-selecting-text');
-                    
-                    // Apply the 'selection-active' class directly to the clicked element
-                    targetElement.classList.add('selection-active');
+                // Handle LEFT-CLICK for constrained text selection
+                if (e.button === 0) {
+                    if (e.target.matches('.info-grid dt, .info-grid dd, #modal-filename, .metadata-header')) {
+                        const targetElement = e.target;
+                        document.body.classList.add('is-selecting-text');
+                        targetElement.classList.add('selection-active');
+                    }
                 }
-            });
+                // Handle RIGHT-CLICK for full-row selection
+                else if (e.button === 2) {
+                    const infoItem = e.target.closest('.info-item');
+                    if (infoItem) {
+                        const selection = window.getSelection();
+                        const range = document.createRange();
 
-            // This mouseup listener cleans up the classes from anywhere on the document
-            document.addEventListener('mouseup', () => {
-                if (document.body.classList.contains('is-selecting-text')) {
-                    document.body.classList.remove('is-selecting-text');
-                    
-                    // Find any element with the active class and remove it
-                    const activeElement = document.querySelector('.selection-active');
-                    if (activeElement) {
-                        activeElement.classList.remove('selection-active');
+                        range.selectNodeContents(infoItem);
+
+                        selection.removeAllRanges();
+                        selection.addRange(range);
                     }
                 }
             });
 
-            // --- ADD THIS BLOCK for right-click text selection ---
-            infoPanel.addEventListener('contextmenu', (e) => {
-                const infoItem = e.target.closest('.info-item');
-
-                // If a row was right-clicked, create a text selection
-                if (infoItem) {
-                    const selection = window.getSelection();
-                    const range = document.createRange();
-
-                    // This selects all content (both category and value) within the row
-                    range.selectNodeContents(infoItem);
-
-                    // Clear any previous selections and apply the new one
-                    selection.removeAllRanges();
-                    selection.addRange(range);
+            document.addEventListener('mouseup', () => {
+                if (document.body.classList.contains('is-selecting-text')) {
+                    document.body.classList.remove('is-selecting-text');
+                    
+                    const activeElement = document.querySelector('.selection-active');
+                    if (activeElement) {
+                        activeElement.classList.remove('selection-active');
+                    }
                 }
             });
         });
