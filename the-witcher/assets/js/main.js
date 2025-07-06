@@ -1,3 +1,20 @@
+const PROXY_URL = 'https://working-witcher.witcherarchive.workers.dev?url=';
+
+async function downloadImage(url, filename) {
+    try {
+        // We now fetch from our proxy, passing the original URL as a parameter
+        const response = await fetch(PROXY_URL + encodeURIComponent(url));
+        
+        if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
+        const blob = await response.blob();
+        saveAs(blob, filename || 'download');
+    } catch (error) {
+        console.error('Download failed:', error);
+        alert(`Could not download the image. It will open in a new tab for you to save manually.`);
+        window.open(url, '_blank');
+    }
+}
+
 async function downloadImage(url, filename) {
     try {
         const response = await fetch(url);
