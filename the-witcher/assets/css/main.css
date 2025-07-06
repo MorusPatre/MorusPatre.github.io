@@ -1691,6 +1691,10 @@ Modal / Lightbox Styles
     font-size: 1rem;
 }
 
+#modal-filename {
+    text-transform: none;
+}
+
 /* Download button */
 #modal-download-btn {
     width: 100%;
