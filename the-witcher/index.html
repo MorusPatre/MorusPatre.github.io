@@ -262,6 +262,33 @@
                     }
                 }
             });
+            
+            const infoPanel = document.querySelector('.modal-info-panel');
+
+            infoPanel.addEventListener('mousedown', (e) => {
+                // Find the parent .info-item of the clicked element
+                const infoItem = e.target.closest('.info-item');
+                
+                // If the click wasn't inside an info-item, do nothing
+                if (!infoItem) return;
+
+                // When a mousedown occurs on an item, activate selection mode
+                document.body.classList.add('is-selecting-text');
+                infoItem.classList.add('selection-active');
+            });
+
+            // A single mouseup listener on the document is enough to clean up
+            document.addEventListener('mouseup', () => {
+                // If we were in selection mode, disable it
+                if (document.body.classList.contains('is-selecting-text')) {
+                    document.body.classList.remove('is-selecting-text');
+                    // Remove the 'selection-active' class from any item that has it
+                    const activeItem = document.querySelector('.selection-active');
+                    if (activeItem) {
+                        activeItem.classList.remove('selection-active');
+                    }
+                }
+            });
         });
     </script>
 
