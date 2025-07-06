@@ -1702,20 +1702,18 @@ Modal / Lightbox Styles
 New Styles for Finder-Style Info Panel
 ================================================
 */
-
 .info-grid {
     display: grid;
-    /* Create as many 180px columns as can fit, and let them expand */
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 0.25rem 1.5rem; /* Vertical and horizontal spacing */
 }
 
 .info-item {
-    padding: 0.5rem 0; /* Vertical padding for each item */
+    padding: 0.5rem 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.info-grid dt { /* The Label, e.g., "Season" */
+.info-grid dt {
     font-size: 0.55rem;
     font-weight: 300;
     color: #999;
@@ -1723,10 +1721,10 @@ New Styles for Finder-Style Info Panel
     margin: 0;
 }
 
-.info-grid dd { /* The Value, e.g., "2" */
+.info-grid dd {
     font-size: 0.65rem;
     color: #fff;
-    margin: 0; /* Remove default margin from <dd> */
+    margin: 0;
     word-wrap: break-word;
 }
 
@@ -1738,6 +1736,27 @@ New Styles for Finder-Style Info Panel
     font-size: 0.7rem;
     letter-spacing: 0.1rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* ================================================
+Custom Download Button Style
+================================================
+*/
+/* Using the 'Subtle & Integrated' style */
+#modal-download-btn.download-btn {
+	background-color: rgba(255, 255, 255, 0.075);
+	color: #ffffff !important;
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+	font-weight: 300;
+}
+
+#modal-download-btn.download-btn:hover {
+	background-color: rgba(255, 255, 255, 0.15);
+	box-shadow: inset 0 0 0 1px #ffffff;
+}
+
+#modal-download-btn.download-btn .fas {
+	margin-right: 0.75em;
 }
 
 /*
@@ -1915,21 +1934,4 @@ html, body {
 #photo-gallery figure.is-visible .image-container,
 #photo-gallery figure.is-visible figcaption {
     opacity: 1;
-}
-
-/* Custom Download Button - Subtle */
-#modal-download-btn.download-btn {
-	background-color: rgba(255, 255, 255, 0.075);
-	color: #ffffff !important;
-	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
-	font-weight: 300;
-}
-
-#modal-download-btn.download-btn:hover {
-	background-color: rgba(255, 255, 255, 0.15);
-	box-shadow: inset 0 0 0 1px #ffffff;
-}
-
-#modal-download-btn.download-btn .fas {
-	margin-right: 0.75em;
 }
