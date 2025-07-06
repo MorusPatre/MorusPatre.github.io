@@ -1703,42 +1703,41 @@ New Styles for Finder-Style Info Panel
 ================================================
 */
 
-.info-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.6rem;
+.info-grid {
+    display: grid;
+    /* Create as many 180px columns as can fit, and let them expand */
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.25rem 1.5rem; /* Vertical and horizontal spacing */
 }
 
-.info-table td {
-    padding: 0.75rem 0;
+.info-item {
+    padding: 0.5rem 0; /* Vertical padding for each item */
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    vertical-align: top;
 }
 
-.info-table tr:last-child td {
-    border-bottom: none;
-}
-
-.info-table .info-label {
+.info-grid dt { /* The Label, e.g., "Season" */
+    font-size: 0.55rem;
+    font-weight: 300;
     color: #999;
-    text-align: right;
-    padding-right: 1.5em;
-    white-space: nowrap;
+    text-transform: uppercase;
+    margin: 0;
 }
 
-.info-table .metadata-header {
-    text-align: center;
-    padding-top: 1rem;
-    padding-bottom: 0.5rem;
-    font-weight: bold;
+.info-grid dd { /* The Value, e.g., "2" */
+    font-size: 0.65rem;
     color: #fff;
-}
-
-
-.info-table .info-value {
-    color: #fff;
-    text-align: left;
+    margin: 0; /* Remove default margin from <dd> */
     word-wrap: break-word;
+}
+
+.metadata-header {
+    text-align: left;
+    padding-top: 1.5rem;
+    padding-bottom: 0.5rem;
+    margin: 0;
+    font-size: 0.7rem;
+    letter-spacing: 0.1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 /*
