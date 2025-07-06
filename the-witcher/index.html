@@ -137,7 +137,6 @@
             const prevButton = document.querySelector('.modal-prev');
             const nextButton = document.querySelector('.modal-next');
             const gallery = document.getElementById('photo-gallery');
-            const modalInfoPanel = document.querySelector('.modal-info-panel');
             let currentImageIndex = -1;
 
             function showImage(index) {
@@ -154,6 +153,8 @@
                 modalImg.alt = img.alt;
                 modalFilename.textContent = figcaptionText;
 
+                // --- MODIFICATION START ---
+                // We now build a <dl> list instead of a <table>
                 let primaryHTML = '<dl class="info-grid">';
                 let detailsHTML = '<dl class="info-grid">';
 
@@ -227,6 +228,7 @@
                 modal.classList.remove('is-visible');
                 currentImageIndex = -1;
 
+                // Clear the content after the fade-out animation (250ms)
                 setTimeout(() => {
                     modalImg.src = "";
                     modalFilename.textContent = "";
@@ -234,6 +236,7 @@
                 }, 250);
             }
             
+            // This stops clicks inside the modal from bubbling up to the body
             modalContent.addEventListener('click', function(event) {
                 event.stopPropagation();
             });
@@ -259,39 +262,6 @@
                     }
                 }
             });
-
-            // --- Constrain text selection in modal info panel (Corrected) ---
-            if (modalInfoPanel) {
-                modalInfoPanel.addEventListener('mousedown', (event) => {
-                    const targetItem = event.target.closest('.info-item');
-            
-                    // If the click was outside of any info item, do nothing and let the browser behave as default.
-                    if (!targetItem) {
-                        return;
-                    }
-            
-                    const valueElement = targetItem.querySelector('dd');
-            
-                    // If the item has no <dd> value, also do nothing.
-                    if (!valueElement) {
-                        return;
-                    }
-            
-                    // Apply a class to the panel. The CSS will set `user-select: none` on everything inside.
-                    modalInfoPanel.classList.add('is-selecting-value');
-                    
-                    // Apply an inline style to the specific value element to override the panel's style,
-                    // making it the only thing that can be selected.
-                    valueElement.style.userSelect = 'text';
-            
-                    // Use a one-time listener on mouseup to remove the styles and clean up.
-                    document.addEventListener('mouseup', () => {
-                        modalInfoPanel.classList.remove('is-selecting-value');
-                        valueElement.style.userSelect = ''; // Reset the style.
-                    }, { once: true });
-                });
-            }
-
         });
     </script>
 
