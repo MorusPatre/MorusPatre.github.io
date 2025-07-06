@@ -1123,15 +1123,3 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
-
-/*
-==================================================================
-// Disable Text Selection on Download Button
-==================================================================
-*/
-
-#modal-download-btn {
-    -webkit-user-select: none; /* Safari */
-    -ms-user-select: none;     /* IE 10+ and Edge */
-    user-select: none;         /* Standard syntax */
-}
