@@ -38,7 +38,7 @@
                 }, 250);
             }).triggerHandler('resize.flexbox-fix');
         }
-        
+
 })(jQuery);
 
 
@@ -158,7 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Primary Event Listeners ---
 
-    // Keyboard Navigation
+    // Keyboard Navigation & Select All
     document.addEventListener('keydown', (e) => {
         const activeEl = document.activeElement;
         if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) return;
