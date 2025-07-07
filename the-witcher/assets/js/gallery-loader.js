@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     const jsonPath = 'gallery-data.json';
-    const galleryContainerId = 'photo-gallery';
+    const galleryContainerId = 'photo-gallery'; // Corrected from 'wrapper'
     const galleryContainer = document.getElementById(galleryContainerId);
 
     if (!galleryContainer) {
@@ -19,7 +19,6 @@ document.addEventListener('DOMContentLoaded', function() {
             galleryData.forEach(item => {
                 // 1. Create the <figure> element for each grid item
                 const figure = document.createElement('figure');
-                figure.draggable = true; // <<< THIS LINE IS ADDED
 
                 // 2. Create the container for the image
                 const imageContainer = document.createElement('div');
@@ -60,14 +59,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 figcaption.appendChild(dimensionsSpan);
 
                 // 6. Assemble the pieces
-                imageContainer.appendChild(img);
-                figure.appendChild(imageContainer);
-                figure.appendChild(figcaption);
+                imageContainer.appendChild(img); // Image goes into its container
+                figure.appendChild(imageContainer); // Image container goes into the figure
+                figure.appendChild(figcaption); // Caption goes into the figure
 
                 // 7. Add the completed figure to the gallery
                 galleryContainer.appendChild(figure);
             });
             
+            // Send a custom event to let the other scripts know the gallery is ready
             document.dispatchEvent(new CustomEvent('galleryLoaded'));
         })
         .catch(error => {
