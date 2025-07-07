@@ -427,6 +427,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let hasDragged = false;
     let mouseDownItem = null;
+    let isPerformingFileDrag = false;
 
     /*
     ==================================================================
@@ -620,6 +621,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- MouseDown Listener ---
     wrapper.addEventListener('mousedown', (e) => {
+        isPerformingFileDrag = false;
         // MODIFIED: If click starts in search bar, exit to allow native text selection.
         if (e.target === searchInput) {
             return;
@@ -651,6 +653,14 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- MouseMove Listener ---
     document.addEventListener('mousemove', (e) => {
+        // ADD THIS BLOCK to prevent marquee during file drag
+        if (isPerformingFileDrag) {
+            if (marquee.style.visibility !== 'hidden') {
+                marquee.style.visibility = 'hidden';
+            }
+            return;
+        }
+        
         if (!isMarquee) return;
 
         // NEW: If the mouse moves over the footer, stop the marquee selection
@@ -722,6 +732,10 @@ document.addEventListener('DOMContentLoaded', () => {
      * UPDATED endDragAction function
      */
     const endDragAction = (e) => {
+        if (isPerformingFileDrag) {
+            return;
+        }
+        
         if (!isMarquee) return;
     
         if (!hasDragged) {
@@ -808,6 +822,62 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
+    /*
+    ==================================================================
+    // START: NEW DRAG-AND-DROP TO DOWNLOAD LOGIC
+    ==================================================================
+    */
+    gallery.addEventListener('dragstart', (e) => {
+        const figure = e.target.closest('figure');
+        if (!figure || e.target.tagName !== 'IMG') {
+            e.preventDefault();
+            return;
+        }
+
+        isPerformingFileDrag = true;
+        const img = figure.querySelector('img');
+        const fullSrc = img.dataset.fullsrc;
+        const filename = img.dataset.filename || 'witcher-image.jpg';
+
+        // Infer MIME type from the filename for proper download handling
+        const extension = filename.split('.').pop().toLowerCase();
+        let mimeType = 'application/octet-stream'; // A generic default
+        if (extension === 'jpg' || extension === 'jpeg') {
+            mimeType = 'image/jpeg';
+        } else if (extension === 'png') {
+            mimeType = 'image/png';
+        } else if (extension === 'webp') {
+            mimeType = 'image/webp';
+        }
+
+        // This special data type tells browsers like Chrome and Firefox
+        // to handle the drop as a file download from the provided URL.
+        e.dataTransfer.setData('DownloadURL', `${mimeType}:${filename}:${fullSrc}`);
+
+        // If the item you start dragging isn't selected, clear the
+        // existing selection and select only the dragged item.
+        if (!isSelected(figure)) {
+            clearSelection();
+            toggleSelection(figure);
+            selectionAnchor = figure;
+            lastSelectedItem = figure;
+        }
+    });
+
+    // Add a listener to clean up state after the drag operation concludes.
+    document.addEventListener('dragend', () => {
+        if (isPerformingFileDrag) {
+            isPerformingFileDrag = false;
+            isMarquee = false; // Also reset the marquee flag
+        }
+    });
+    /*
+    ==================================================================
+    // END: NEW DRAG-AND-DROP TO DOWNLOAD LOGIC
+    ==================================================================
+    */
+    });
+
     /**
      * SELECT ALL FUNCTIONALITY
      */
