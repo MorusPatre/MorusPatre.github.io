@@ -407,8 +407,8 @@ input, select, textarea {
         select:focus,
         textarea:focus {
             background: rgba(255, 255, 255, 0.075);
-            border-color: #ffffff;
-            box-shadow: 0 0 0 0.5px #ffffff;
+            border-color: #a3adaf;
+            box-shadow: 0 0 0 0.5px #a3adaf;
         }
 
     select {
@@ -1989,11 +1989,9 @@ html, body {
 */
 
 ::selection {
-  background-color: rgba(200, 160, 80, 0.4); /* A muted, semi-transparent gold */
-  color: #ffffff; /* Ensures text remains white and readable */
+  background-color: rgba(80, 139, 200, 0.3); /* A muted, semi-transparent gold */
 }
 
 ::-moz-selection { /* Firefox compatibility */
-  background-color: rgba(200, 160, 80, 0.4);
-  color: #ffffff;
+  background-color: rgba(80, 139, 200, 0.3);
 }
