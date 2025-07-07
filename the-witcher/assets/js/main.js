@@ -982,11 +982,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     /*
     ==================================================================
-    // START: DRAG-OUT TO DOWNLOAD FUNCTIONALITY (NEW, REVISED CODE)
+    // START: DRAG-OUT TO DOWNLOAD FUNCTIONALITY (FINAL, REVISED CODE)
     ==================================================================
     */
     // This function determines the file's MIME type based on its extension.
     function getMimeType(filename) {
+        if (!filename) return 'application/octet-stream';
         const extension = filename.split('.').pop().toLowerCase();
         switch (extension) {
             case 'jpg':
@@ -1012,26 +1013,38 @@ document.addEventListener('DOMContentLoaded', () => {
             const figure = e.target.closest('figure');
             if (!figure) return;
 
+            // --- NEW: SELECTION LOGIC ---
+            // If the dragged item is NOT part of the current selection,
+            // this clears the old selection and selects only the item being dragged.
+            if (!selectedItems.has(figure)) {
+                clearSelection();
+                toggleSelection(figure);
+                selectionAnchor = figure;
+                lastSelectedItem = figure;
+            }
+
             const img = figure.querySelector('img');
-            
-            // More reliable way to get data directly from the dataset.
             const highResSrc = img.dataset.fullsrc;
             const filename = img.dataset.filename;
 
             if (highResSrc && filename) {
                 const mimeType = getMimeType(filename);
                 
-                // This special "DownloadURL" format tells the browser to treat the drop
-                // as a file download from the specified URL.
-                // Format: mime-type:filename:URL
+                // --- DATA FOR DROPPING ON DESKTOP ---
+                // The special "DownloadURL" tells the OS to treat the drop as a file download.
+                // This is for dragging OUT of the browser to the file system.
                 try {
                     e.dataTransfer.setData('DownloadURL', `${mimeType}:${filename}:${highResSrc}`);
                 } catch (err) {
-                    console.error("Could not set DownloadURL data. This may be due to browser limitations or security settings.", err);
+                    console.error("Could not set DownloadURL data. This may be due to browser limitations.", err);
                 }
+
+                // --- NEW: DATA FOR DROPPING IN ANOTHER TAB ---
+                // This is a standard format that tells another browser window to navigate to the URL.
+                e.dataTransfer.setData('text/uri-list', highResSrc);
+                e.dataTransfer.setData('text/plain', highResSrc); // Fallback for simple text apps
             }
         });
-    });
 });
 
 /*Custom Scrollbar Advanced*/
