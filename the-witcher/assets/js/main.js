@@ -427,7 +427,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let hasDragged = false;
     let mouseDownItem = null;
-    let isPerformingFileDrag = false;
 
     /*
     ==================================================================
@@ -621,7 +620,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- MouseDown Listener ---
     wrapper.addEventListener('mousedown', (e) => {
-        isPerformingFileDrag = false;
         // MODIFIED: If click starts in search bar, exit to allow native text selection.
         if (e.target === searchInput) {
             return;
@@ -653,14 +651,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- MouseMove Listener ---
     document.addEventListener('mousemove', (e) => {
-        // ADD THIS BLOCK to prevent marquee during file drag
-        if (isPerformingFileDrag) {
-            if (marquee.style.visibility !== 'hidden') {
-                marquee.style.visibility = 'hidden';
-            }
-            return;
-        }
-        
         if (!isMarquee) return;
 
         // NEW: If the mouse moves over the footer, stop the marquee selection
@@ -732,10 +722,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * UPDATED endDragAction function
      */
     const endDragAction = (e) => {
-        if (isPerformingFileDrag) {
-            return;
-        }
-        
         if (!isMarquee) return;
     
         if (!hasDragged) {
@@ -822,66 +808,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    /*
-    ==================================================================
-    // START: NEW DRAG-AND-DROP TO DOWNLOAD LOGIC
-    ==================================================================
-    */
-    gallery.addEventListener('dragstart', (e) => {
-        const figure = e.target.closest('figure');
-        if (!figure || e.target.tagName !== 'IMG') {
-            e.preventDefault();
-            return;
-        }
-
-        isPerformingFileDrag = true;
-        const img = figure.querySelector('img');
-        const fullSrc = img.dataset.fullsrc;
-        const filename = img.dataset.filename || 'witcher-image.jpg';
-
-        // Infer MIME type for better download handling
-        const extension = filename.split('.').pop().toLowerCase();
-        let mimeType = 'image/jpeg';
-        if (extension === 'png') mimeType = 'image/png';
-        else if (extension === 'webp') mimeType = 'image/webp';
-
-        /* ==================================================================
-        // START: CROSS-BROWSER DRAG-TO-DOWNLOAD LOGIC
-        ==================================================================
-        */
-        
-        // For Chrome/Firefox: Triggers a direct download with the correct filename
-        e.dataTransfer.setData('DownloadURL', `${mimeType}:${filename}:${fullSrc}`);
-        
-        // For Safari & other browsers: Standard way to drag a link.
-        // This ensures the full-resolution URL is used, not the thumbnail's.
-        e.dataTransfer.setData('text/uri-list', fullSrc);
-        
-        // A plain text fallback for maximum compatibility
-        e.dataTransfer.setData('text/plain', fullSrc);
-        
-        /* ==================================================================
-        // END: CROSS-BROWSER DRAG-TO-DOWNLOAD LOGIC
-        ==================================================================
-        */
-
-        // If the item you start dragging isn't selected, clear the
-        // existing selection and select only the dragged item.
-        if (!isSelected(figure)) {
-            clearSelection();
-            toggleSelection(figure);
-            selectionAnchor = figure;
-            lastSelectedItem = figure;
-        }
-    });
-    
-    /*
-    ==================================================================
-    // END: NEW DRAG-AND-DROP TO DOWNLOAD LOGIC
-    ==================================================================
-    */
-    });
-
     /**
      * SELECT ALL FUNCTIONALITY
      */
