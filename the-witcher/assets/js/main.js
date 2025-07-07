@@ -411,32 +411,70 @@ document.addEventListener('DOMContentLoaded', () => {
     galleryContextMenu.addEventListener('click', (e) => {
         galleryContextMenu.style.display = 'none';
     });
-
+    
     // --- Drag-to-Download ---
     document.addEventListener('galleryLoaded', () => {
-        calculateGridMetrics(); // Initial calculation
+        // Initial and responsive grid calculation
+        calculateGridMetrics();
         const galleryObserver = new ResizeObserver(calculateGridMetrics);
         galleryObserver.observe(gallery);
         if(searchInput) searchInput.addEventListener('keyup', () => setTimeout(calculateGridMetrics, 50));
 
-        gallery.addEventListener('dragstart', (e) => {
+        // Keep a reference to the temporary URL to clean it up later.
+        let temporaryObjectURL = null;
+
+        // Note: The event listener is now ASYNC to allow for 'await'.
+        gallery.addEventListener('dragstart', async (e) => {
             const figure = e.target.closest('figure');
             if (!figure) return;
+
+            // Set a "waiting" cursor because we are now downloading the file.
+            document.body.style.cursor = 'wait';
+
+            // Handle selection logic.
             if (!selectedItems.has(figure)) {
                 clearSelection();
                 toggleSelection(figure);
                 selectionAnchor = figure;
                 lastSelectedItem = figure;
             }
+
             const img = figure.querySelector('img');
             const highResSrc = img.dataset.fullsrc;
             const filename = img.dataset.filename;
-            if (highResSrc && filename) {
-                const mimeType = getMimeType(filename);
-                e.dataTransfer.setData('DownloadURL', `${mimeType}:${filename}:${highResSrc}`);
-                e.dataTransfer.setData('text/uri-list', highResSrc);
 
-                e.dataTransfer.setData('text/plain', highResSrc);
+            if (highResSrc && filename) {
+                try {
+                    // 1. FETCH the image data and create a local Blob URL.
+                    const response = await fetch(highResSrc);
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    const blob = await response.blob();
+                    temporaryObjectURL = URL.createObjectURL(blob);
+
+                    const mimeType = getMimeType(filename);
+                    
+                    // 2. SET the drag data using the local Blob URL.
+                    e.dataTransfer.setData('DownloadURL', `${mimeType}:${filename}:${temporaryObjectURL}`);
+                    e.dataTransfer.setData('text/uri-list', temporaryObjectURL);
+                    e.dataTransfer.setData('text/plain', temporaryObjectURL);
+                    
+                    // A small touch: use the thumbnail as the drag ghost image.
+                    e.dataTransfer.setDragImage(img, 20, 20);
+
+                } catch (error) {
+                    console.error("Drag-to-download setup failed:", error);
+                    document.body.style.cursor = 'default';
+                    e.preventDefault();
+                }
+            }
+        });
+
+        // Add a 'dragend' listener to clean up.
+        gallery.addEventListener('dragend', (e) => {
+            document.body.style.cursor = 'default';
+            if (temporaryObjectURL) {
+                URL.revokeObjectURL(temporaryObjectURL);
+                temporaryObjectURL = null;
             }
         });
     });
