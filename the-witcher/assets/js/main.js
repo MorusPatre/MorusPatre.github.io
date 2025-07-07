@@ -980,6 +980,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
         }
     });
+    
+    /*
+    ==================================================================
+    // START: DRAG-OUT TO DOWNLOAD FUNCTIONALITY (NEW CODE)
+    ==================================================================
+    */
+    gallery.addEventListener('dragstart', (e) => {
+        const figure = e.target.closest('figure');
+        if (!figure) return;
+
+        const img = figure.querySelector('img');
+        const highResSrc = img.dataset.fullsrc;
+        const filename = figure.querySelector('figcaption').childNodes[0].nodeValue.trim();
+
+        if (highResSrc && filename) {
+            // This special "DownloadURL" format tells the browser to treat the drop
+            // as a file download from the specified URL.
+            // Format: mime-type:filename:URL
+            e.dataTransfer.setData('DownloadURL', `image/jpeg:${filename}:${highResSrc}`);
+        }
+    });
+    /*
+    ==================================================================
+    // END: DRAG-OUT TO DOWNLOAD FUNCTIONALITY
+    ==================================================================
+    */
+
 });
 
 /*Custom Scrollbar Advanced*/
