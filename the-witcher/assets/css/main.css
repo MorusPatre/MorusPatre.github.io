@@ -1514,7 +1514,6 @@ Styling for the Finder-Style Photo Gallery
     height: auto;
     object-fit: contain;
     border: solid 1px #474442;
-    pointer-events: none; /* Makes sure clicks go to the parent figure */
     box-shadow: 0 0 18px rgba(71, 68, 66, 0.3); /* A warm grey glow */
 }
 
