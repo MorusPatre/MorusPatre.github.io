@@ -983,30 +983,56 @@ document.addEventListener('DOMContentLoaded', () => {
     
     /*
     ==================================================================
-    // START: DRAG-OUT TO DOWNLOAD FUNCTIONALITY (NEW CODE)
+    // START: DRAG-OUT TO DOWNLOAD FUNCTIONALITY (NEW, REVISED CODE)
     ==================================================================
     */
-    gallery.addEventListener('dragstart', (e) => {
-        const figure = e.target.closest('figure');
-        if (!figure) return;
-
-        const img = figure.querySelector('img');
-        const highResSrc = img.dataset.fullsrc;
-        const filename = figure.querySelector('figcaption').childNodes[0].nodeValue.trim();
-
-        if (highResSrc && filename) {
-            // This special "DownloadURL" format tells the browser to treat the drop
-            // as a file download from the specified URL.
-            // Format: mime-type:filename:URL
-            e.dataTransfer.setData('DownloadURL', `image/jpeg:${filename}:${highResSrc}`);
+    // This function determines the file's MIME type based on its extension.
+    function getMimeType(filename) {
+        const extension = filename.split('.').pop().toLowerCase();
+        switch (extension) {
+            case 'jpg':
+            case 'jpeg':
+                return 'image/jpeg';
+            case 'png':
+                return 'image/png';
+            case 'webp':
+                return 'image/webp';
+            default:
+                // A generic fallback for unknown file types.
+                return 'application/octet-stream';
         }
-    });
-    /*
-    ==================================================================
-    // END: DRAG-OUT TO DOWNLOAD FUNCTIONALITY
-    ==================================================================
-    */
+    }
 
+    // We wait for the 'galleryLoaded' event, which is sent by gallery-loader.js
+    // This ensures the gallery is fully populated before we attach our drag listener.
+    document.addEventListener('galleryLoaded', () => {
+        const gallery = document.getElementById('photo-gallery');
+        if (!gallery) return;
+
+        gallery.addEventListener('dragstart', (e) => {
+            const figure = e.target.closest('figure');
+            if (!figure) return;
+
+            const img = figure.querySelector('img');
+            
+            // More reliable way to get data directly from the dataset.
+            const highResSrc = img.dataset.fullsrc;
+            const filename = img.dataset.filename;
+
+            if (highResSrc && filename) {
+                const mimeType = getMimeType(filename);
+                
+                // This special "DownloadURL" format tells the browser to treat the drop
+                // as a file download from the specified URL.
+                // Format: mime-type:filename:URL
+                try {
+                    e.dataTransfer.setData('DownloadURL', `${mimeType}:${filename}:${highResSrc}`);
+                } catch (err) {
+                    console.error("Could not set DownloadURL data. This may be due to browser limitations or security settings.", err);
+                }
+            }
+        });
+    });
 });
 
 /*Custom Scrollbar Advanced*/
