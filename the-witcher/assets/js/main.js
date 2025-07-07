@@ -831,6 +831,18 @@ document.addEventListener('DOMContentLoaded', () => {
      * ----------------------------------------------------------------
      */
 
+    async function downloadImage(url, filename) {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
+            const blob = await response.blob();
+            saveAs(blob, filename || 'download');
+        } catch (error) {
+            console.error('Download failed:', error);
+            alert(`Could not download the image. It will open in a new tab for you to save manually.`);
+            window.open(url, '_blank');
+        }
+    }
     const itemContextMenu = document.getElementById('custom-context-menu');
     const galleryContextMenu = document.getElementById('gallery-context-menu');
     let rightClickedItem = null;
@@ -968,107 +980,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
         }
     });
-
-    /**
-     * ----------------------------------------------------------------
-     * Drag-and-Drop Out of Gallery Logic
-     * ----------------------------------------------------------------
-     */
-    gallery.addEventListener('dragstart', (e) => {
-        const figure = e.target.closest('figure');
-        if (!figure) {
-            return;
-        }
-    
-        // Prevent this event from interfering with other logic
-        e.stopPropagation();
-    
-        // Halt the marquee selection process if it was initiated
-        isMarquee = false;
-        marquee.style.visibility = 'hidden';
-    
-        // If the user starts dragging an item that isn't already selected,
-        // clear the previous selection and select only the dragged item.
-        if (!selectedItems.has(figure)) {
-            clearSelection();
-            toggleSelection(figure); // Adds 'selected' class and updates the Set
-            selectionAnchor = figure;
-            lastSelectedItem = figure;
-        }
-    
-        // Prepare the data needed for the drag operation
-        const img = figure.querySelector('img');
-        if (!img || !img.dataset.fullsrc || !img.dataset.filename) {
-            e.preventDefault(); // Cancel the drag if essential data is missing
-            return;
-        }
-    
-        const fullSrc = img.dataset.fullsrc;
-        const filename = img.dataset.filename;
-    
-        // Determine the MIME type from the file's extension
-        let mimeType = 'image/jpeg'; // A sensible default
-        const lowerFilename = filename.toLowerCase();
-        if (lowerFilename.endsWith('.png')) {
-            mimeType = 'image/png';
-        } else if (lowerFilename.endsWith('.webp')) {
-            mimeType = 'image/webp';
-        }
-        
-        // Use the DownloadURL API to enable dragging files out of the browser.
-        // Note: This API only supports dragging a single file.
-        const downloadURL = `${mimeType}:${filename}:${fullSrc}`;
-        e.dataTransfer.setData('DownloadURL', downloadURL);
-        e.dataTransfer.effectAllowed = 'copy';
-    
-        // --- Create a Custom Drag Image for Visual Feedback ---
-        const dragImageContainer = document.createElement('div');
-        dragImageContainer.style.position = 'absolute';
-        dragImageContainer.style.top = '-1000px';
-        dragImageContainer.style.left = '-1000px';
-    
-        const thumbClone = img.cloneNode(true);
-        thumbClone.style.width = '80px';
-        thumbClone.style.height = 'auto';
-        thumbClone.style.opacity = '0.8';
-        thumbClone.style.borderRadius = '4px';
-        thumbClone.style.border = '1px solid rgba(255, 255, 255, 0.5)';
-    
-        dragImageContainer.appendChild(thumbClone);
-    
-        // If multiple items are selected, add a count badge
-        if (selectedItems.size > 1) {
-            const badge = document.createElement('span');
-            badge.textContent = selectedItems.size;
-            Object.assign(badge.style, {
-                position: 'absolute',
-                top: '-10px',
-                right: '-10px',
-                background: 'rgba(20, 120, 255, 0.9)',
-                color: 'white',
-                borderRadius: '50%',
-                width: '24px',
-                height: '24px',
-                textAlign: 'center',
-                lineHeight: '24px',
-                fontSize: '14px',
-                fontWeight: 'bold',
-                boxShadow: '0 0 5px rgba(0,0,0,0.5)',
-                border: '1px solid rgba(255, 255, 255, 0.8)',
-            });
-            dragImageContainer.appendChild(badge);
-        }
-    
-        document.body.appendChild(dragImageContainer);
-        e.dataTransfer.setDragImage(dragImageContainer, 40, 40);
-    
-        // Clean up the temporary drag image from the DOM
-        setTimeout(() => {
-            if (document.body.contains(dragImageContainer)) {
-                document.body.removeChild(dragImageContainer);
-            }
-        }, 0);
-    });
 });
 
 /*Custom Scrollbar Advanced*/
@@ -1172,7 +1083,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initial setup
     setupScrollbar();
     // A small timeout helps ensure all content (like images) has loaded and affected the page height
-    setTimeout(setupScrollbar, 500);
+    setTimeout(setupScrollbar, 500); 
 });
 
 /*
