@@ -628,7 +628,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // MODIFIED: Check if the event target is within the header or footer
         if (e.button !== 0 || header.contains(e.target) || footer.contains(e.target)) {
             isMarquee = false; // Ensure marquee selection is not initiated if starting in header/footer
-            return;
+            return; 
         }
         
         if(gallery.contains(e.target) || e.target === gallery) {
@@ -815,7 +815,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
             const activeEl = document.activeElement;
             if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
-                return;
+                return; 
             }
             e.preventDefault();
             const visibleItems = Array.from(items).filter(item => item.style.display !== 'none');
@@ -831,24 +831,12 @@ document.addEventListener('DOMContentLoaded', () => {
      * ----------------------------------------------------------------
      */
 
-    async function downloadImage(url, filename) {
-        try {
-            const response = await fetch(url);
-            if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
-            const blob = await response.blob();
-            saveAs(blob, filename || 'download');
-        } catch (error) {
-            console.error('Download failed:', error);
-            alert(`Could not download the image. It will open in a new tab for you to save manually.`);
-            window.open(url, '_blank');
-        }
-    }
     const itemContextMenu = document.getElementById('custom-context-menu');
     const galleryContextMenu = document.getElementById('gallery-context-menu');
     let rightClickedItem = null;
 
     gallery.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
+        e.preventDefault(); 
 
         const figure = e.target.closest('figure');
 
@@ -856,7 +844,7 @@ document.addEventListener('DOMContentLoaded', () => {
         galleryContextMenu.style.display = 'none';
         
         if (figure) {
-            rightClickedItem = figure;
+            rightClickedItem = figure; 
 
             if (!selectedItems.has(figure)) {
                 clearSelection();
