@@ -1981,3 +1981,19 @@ html, body {
     -ms-user-select: none !important;
     user-select: none !important;
 }
+
+/*
+==================================================================
+// Custom Text Selection Style
+==================================================================
+*/
+
+::selection {
+  background-color: rgba(200, 160, 80, 0.55); /* A muted, semi-transparent gold */
+  color: #ffffff; /* Ensures text remains white and readable */
+}
+
+::-moz-selection { /* Firefox compatibility */
+  background-color: rgba(200, 160, 80, 0.55);
+  color: #ffffff;
+}
