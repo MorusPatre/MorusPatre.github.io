@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 img.loading = 'lazy';
                 img.src = item.thumbnail;
                 img.alt = item.alt;
+                img.draggable = true;
                 img.addEventListener('load', () => {
                     figure.classList.add('is-visible');
                 });
