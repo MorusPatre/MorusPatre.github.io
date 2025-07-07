@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     const jsonPath = 'gallery-data.json';
-    const galleryContainerId = 'photo-gallery';
+    const galleryContainerId = 'photo-gallery'; // Corrected from 'wrapper'
     const galleryContainer = document.getElementById(galleryContainerId);
 
     if (!galleryContainer) {
@@ -17,11 +17,14 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(galleryData => {
             galleryData.forEach(item => {
+                // 1. Create the <figure> element for each grid item
                 const figure = document.createElement('figure');
 
+                // 2. Create the container for the image
                 const imageContainer = document.createElement('div');
                 imageContainer.className = 'image-container';
                 
+                // 3. Create the <img> element for the thumbnail
                 const img = document.createElement('img');
                 img.loading = 'lazy';
                 img.src = item.thumbnail;
@@ -30,6 +33,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     figure.classList.add('is-visible');
                 });
 
+                // 4. Add all the data attributes needed for the modal and search
                 img.dataset.fullsrc = item.src;
                 img.dataset.filename = item.filename;
                 img.dataset.search = item.search;
@@ -44,6 +48,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
 
+                // 5. Create the <figcaption> for the filename and dimensions
                 const figcaption = document.createElement('figcaption');
                 const filenameNode = document.createTextNode(item.filename);
                 figcaption.appendChild(filenameNode);
@@ -53,13 +58,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 dimensionsSpan.textContent = item.dimensions;
                 figcaption.appendChild(dimensionsSpan);
 
-                imageContainer.appendChild(img);
-                figure.appendChild(imageContainer);
-                figure.appendChild(figcaption);
+                // 6. Assemble the pieces
+                imageContainer.appendChild(img); // Image goes into its container
+                figure.appendChild(imageContainer); // Image container goes into the figure
+                figure.appendChild(figcaption); // Caption goes into the figure
 
+                // 7. Add the completed figure to the gallery
                 galleryContainer.appendChild(figure);
             });
             
+            // Send a custom event to let the other scripts know the gallery is ready
             document.dispatchEvent(new CustomEvent('galleryLoaded'));
         })
         .catch(error => {
