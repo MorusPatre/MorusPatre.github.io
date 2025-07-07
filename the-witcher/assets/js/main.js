@@ -620,33 +620,37 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- MouseDown Listener ---
     wrapper.addEventListener('mousedown', (e) => {
-        // MODIFIED: If click starts in search bar, exit to allow native text selection.
-        if (e.target === searchInput) {
+        // Exit if not the primary mouse button, or if the click is in the header/footer/search
+        if (e.button !== 0 || header.contains(e.target) || footer.contains(e.target) || e.target === searchInput) {
             return;
         }
 
-        // MODIFIED: Check if the event target is within the header or footer
-        if (e.button !== 0 || header.contains(e.target) || footer.contains(e.target)) {
-            isMarquee = false; // Ensure marquee selection is not initiated if starting in header/footer
-            return; 
+        const clickedOnItem = e.target.closest('figure');
+
+        if (clickedOnItem) {
+            // --- The click started ON an item ---
+            // We do NOT call e.preventDefault(). This is crucial because it allows the native 'dragstart' event to fire.
+            isMarquee = false; // We are NOT starting a marquee selection.
+            hasDragged = false;
+            mouseDownItem = clickedOnItem; // Record what we clicked on for the 'mouseup' event.
+
+        } else if (gallery.contains(e.target)) {
+            // --- The click started on the gallery BACKGROUND ---
+            e.preventDefault(); // Prevent text selection on the background.
+            if (searchInput) searchInput.blur();
+
+            isMarquee = true; // We ARE starting a marquee selection.
+            hasDragged = false;
+            mouseDownItem = null; // We didn't click on an item.
+            
+            const galleryRect = gallery.getBoundingClientRect();
+            startPos = {
+                x: e.clientX - galleryRect.left,
+                y: e.clientY - galleryRect.top,
+            };
+            
+            preMarqueeSelectedItems = new Set(selectedItems);
         }
-        
-        if(gallery.contains(e.target) || e.target === gallery) {
-            e.preventDefault();
-            if (searchInput) searchInput.blur(); // MODIFIED: Use variable and check for existence
-        }
-        
-        hasDragged = false;
-        isMarquee = true;
-        mouseDownItem = e.target.closest('figure');
-        
-        const galleryRect = gallery.getBoundingClientRect();
-        startPos = {
-            x: e.clientX - galleryRect.left,
-            y: e.clientY - galleryRect.top,
-        };
-        
-        preMarqueeSelectedItems = new Set(selectedItems);
     });
     
     // --- MouseMove Listener ---
@@ -722,45 +726,9 @@ document.addEventListener('DOMContentLoaded', () => {
      * UPDATED endDragAction function
      */
     const endDragAction = (e) => {
-        if (!isMarquee) return;
-    
-        if (!hasDragged) {
-            // Logic for a simple click (no drag)
-            const isShift = e.shiftKey;
-            const isModifier = e.metaKey || e.ctrlKey;
-            const clickedOnItem = mouseDownItem;
-    
-            if (clickedOnItem) {
-                // MODIFIED: Shift+Click now acts like Ctrl+Click
-                if (isShift || isModifier) {
-                    toggleSelection(clickedOnItem);
-                    if (isSelected(clickedOnItem)) {
-                        selectionAnchor = clickedOnItem;
-                        lastSelectedItem = clickedOnItem;
-                    }
-                } else {
-                    // MODIFIED: A single click on a lone selected item now deselects it
-                    if (!isSelected(clickedOnItem) || selectedItems.size > 1) {
-                        clearSelection();
-                        toggleSelection(clickedOnItem);
-                        selectionAnchor = clickedOnItem;
-                        lastSelectedItem = clickedOnItem;
-                    } else {
-                        clearSelection();
-                        selectionAnchor = null;
-                        lastSelectedItem = null;
-                    }
-                }
-            } else {
-                // Click was on the gallery background
-                if (!isModifier && !isShift) {
-                    clearSelection();
-                    selectionAnchor = null;
-                    lastSelectedItem = null;
-                }
-            }
-        } else {
-            // Logic after a marquee drag
+        // This part handles the marquee cleanup and logic.
+        // It only runs if a marquee selection was actually started.
+        if (isMarquee && hasDragged) {
             const itemUnderMouse = e.target.closest('figure');
             
             if (mouseDownItem) {
@@ -778,8 +746,39 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         }
-    
-        // Cleanup marquee state
+        // This part handles the item selection for a simple CLICK (no drag).
+        // It runs whether a marquee was started or not.
+        else if (!hasDragged) {
+            const isShift = e.shiftKey;
+            const isModifier = e.metaKey || e.ctrlKey;
+            
+            if (mouseDownItem) { // A click happened on an item
+                if (isShift || isModifier) {
+                    toggleSelection(mouseDownItem);
+                    if (isSelected(mouseDownItem)) {
+                        selectionAnchor = mouseDownItem;
+                        lastSelectedItem = mouseDownItem;
+                    }
+                } else {
+                    if (!isSelected(mouseDownItem) || selectedItems.size > 1) {
+                        clearSelection();
+                        toggleSelection(mouseDownItem);
+                        selectionAnchor = mouseDownItem;
+                        lastSelectedItem = mouseDownItem;
+                    } else {
+                        clearSelection();
+                        selectionAnchor = null;
+                        lastSelectedItem = null;
+                    }
+                }
+            } else if (!isModifier && !isShift) { // A click happened on the background
+                clearSelection();
+                selectionAnchor = null;
+                lastSelectedItem = null;
+            }
+        }
+
+        // Universal cleanup for all mouseup events.
         isMarquee = false;
         hasDragged = false;
         mouseDownItem = null;
@@ -788,7 +787,7 @@ document.addEventListener('DOMContentLoaded', () => {
         marquee.style.height = '0px';
         preMarqueeSelectedItems.clear();
     };
-    
+
     document.addEventListener('mouseup', endDragAction);
     
     // --- Mousedown listener for the whole document ---
