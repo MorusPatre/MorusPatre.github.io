@@ -1989,11 +1989,11 @@ html, body {
 */
 
 ::selection {
-  background-color: rgba(114, 99, 191, 0.7); /* A muted, semi-transparent gold */
+  background-color: rgba(200, 160, 80, 0.4); /* A muted, semi-transparent gold */
   color: #ffffff; /* Ensures text remains white and readable */
 }
 
 ::-moz-selection { /* Firefox compatibility */
-  background-color: rgba(39, 39, 39, 0.8);
+  background-color: rgba(200, 160, 80, 0.4);
   color: #ffffff;
 }
