@@ -1,609 +1,1125 @@
-/**
- * @file main.js
- * @description Refactored and modernized main JavaScript file for interactive gallery website.
- * @author Your Name
- * @date 2025-07-08
- */
-
-/**
- * ================================================================
- * UTILITY FUNCTIONS
- * ================================================================
- */
-
-/**
- * Asynchronously downloads an image and prompts the user to save it.
- * Falls back to opening the image in a new tab on failure.
- * @param {string} url - The URL of the image to download.
- * @param {string} filename - The desired filename for the downloaded image.
- */
-async function downloadImage(url, filename = 'download') {
+async function downloadImage(url, filename) {
     try {
         const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`Network response was not ok: ${response.statusText}`);
-        }
+        if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
         const blob = await response.blob();
-        // Assumes FileSaver.js's saveAs function is available globally
-        if (window.saveAs) {
-            window.saveAs(blob, filename);
-        } else {
-            console.error('FileSaver.js (saveAs) is not loaded.');
-            throw new Error('File-saving utility not found.');
-        }
+        saveAs(blob, filename || 'download');
     } catch (error) {
         console.error('Download failed:', error);
-        alert(`Could not download the image automatically. It will open in a new tab for you to save manually.`);
+        alert(`Could not download the image. It will open in a new tab for you to save manually.`);
         window.open(url, '_blank');
     }
 }
 
+(function($) {
 
-/**
- * ================================================================
- * MAIN LAYOUT AND ARTICLE VIEWER
- * ================================================================
- * Handles the main view switching between the gallery and individual articles.
- */
-document.addEventListener('DOMContentLoaded', () => {
-    const body = document.body;
-    const main = document.getElementById('main');
-    const header = document.getElementById('header');
-    const footer = document.getElementById('footer');
-    const articles = main ? Array.from(main.children).filter(el => el.tagName === 'ARTICLE') : [];
+    var    $window = $(window),
+        $body = $('body'),
+        $wrapper = $('#wrapper'),
+        $header = $('#header'),
+        $footer = $('#footer'),
+        $main = $('#main'),
+        $main_articles = $main.children('article');
 
-    if (!main || !header || !footer || articles.length === 0) return;
-
-    let isLocked = false;
-    const switchDelay = 325; // ms
-
-    // --- Core Functions ---
-
-    const showArticle = (id, isInitial = false) => {
-        const article = document.getElementById(id);
-        if (!article) return;
-
-        const handleShow = () => {
-            body.classList.add('is-article-visible');
-            const activeArticle = articles.find(a => a.classList.contains('active'));
-            if (activeArticle) activeArticle.classList.remove('active', 'show');
-
-            header.style.display = 'none';
-            footer.style.display = 'none';
-            main.style.display = 'block';
-            article.style.display = 'block';
-
-            setTimeout(() => {
-                article.classList.add('active');
-                window.scrollTo(0, 0);
-                isLocked = false;
-                body.classList.remove('is-switching');
-            }, isInitial ? 1000 : 25);
-        };
-
-        if (isLocked && !isInitial) return;
-        isLocked = true;
-        body.classList.add('is-switching');
-
-        if (body.classList.contains('is-article-visible')) {
-            const currentArticle = articles.find(a => a.classList.contains('active'));
-            if (currentArticle) {
-                currentArticle.classList.remove('active');
-                setTimeout(() => {
-                    currentArticle.style.display = 'none';
-                    handleShow();
-                }, switchDelay);
-            }
-        } else {
-            setTimeout(handleShow, isInitial ? 0 : switchDelay);
-        }
-    };
-
-    const hideArticle = (pushState = false) => {
-        const article = articles.find(a => a.classList.contains('active'));
-        if (!article || !body.classList.contains('is-article-visible') || isLocked) return;
-
-        if (pushState) {
-            history.pushState(null, '', '#');
-        }
-
-        isLocked = true;
-        article.classList.remove('active');
-
-        setTimeout(() => {
-            article.style.display = 'none';
-            main.style.display = 'none';
-            header.style.display = 'block';
-            footer.style.display = 'block';
-
-            setTimeout(() => {
-                body.classList.remove('is-article-visible');
-                window.scrollTo(0, 0);
-                isLocked = false;
-            }, 25);
-        }, switchDelay);
-    };
-
-    // --- Event Listeners & Initialization ---
-
-    // Page load animations
-    window.addEventListener('load', () => {
-        setTimeout(() => body.classList.remove('is-preload'), 100);
-    });
-
-    // Close button for articles
-    articles.forEach(article => {
-        const closeButton = document.createElement('div');
-        closeButton.className = 'close';
-        closeButton.textContent = 'Close';
-        closeButton.addEventListener('click', () => {
-            location.hash = '';
+    // Breakpoints.
+        breakpoints({
+            xlarge:   [ '1281px',  '1680px' ],
+            large:    [ '981px',   '1280px' ],
+            medium:   [ '737px',   '980px'  ],
+            small:    [ '481px',   '736px'  ],
+            xsmall:   [ '361px',   '480px'  ],
+            xxsmall:  [ null,      '360px'  ]
         });
-        article.appendChild(closeButton);
-    });
 
-    // Hash change routing
-    window.addEventListener('hashchange', () => {
-        const hash = location.hash;
-        if (hash === '' || hash === '#') {
-            hideArticle();
-        } else {
-            showArticle(hash.substring(1));
+    // Play initial animations on page load.
+        $window.on('load', function() {
+            window.setTimeout(function() {
+                $body.removeClass('is-preload');
+            }, 100);
+        });
+
+    // Fix: Flexbox min-height bug on IE.
+        if (browser.name == 'ie') {
+
+            var flexboxFixTimeoutId;
+
+            $window.on('resize.flexbox-fix', function() {
+
+                clearTimeout(flexboxFixTimeoutId);
+
+                flexboxFixTimeoutId = setTimeout(function() {
+
+                    if ($wrapper.prop('scrollHeight') > $window.height())
+                        $wrapper.css('height', 'auto');
+                    else
+                        $wrapper.css('height', '100vh');
+
+                }, 250);
+
+            }).triggerHandler('resize.flexbox-fix');
+
         }
-    });
 
-    // Keyboard (Escape key) to close article
-    window.addEventListener('keyup', (e) => {
-        if (e.key === 'Escape') {
-            hideArticle(true);
-        }
-    });
+    // Nav.
+        var $nav = $header.children('nav'),
+            $nav_li = $nav.find('li');
 
-    // Background click to close article
-    body.addEventListener('click', (e) => {
-        if (body.classList.contains('is-article-visible') && e.target === main) {
-            hideArticle(true);
-        }
-    });
+        // Add "middle" alignment classes if we're dealing with an even number of items.
+            if ($nav_li.length % 2 == 0) {
 
-    // Prevent scroll restoration on hash change
-    if ('scrollRestoration' in history) {
-        history.scrollRestoration = 'manual';
-    }
+                $nav.addClass('use-middle');
+                $nav_li.eq( ($nav_li.length / 2) ).addClass('is-middle');
 
-    // Initial state setup
-    main.style.display = 'none';
-    articles.forEach(a => a.style.display = 'none');
-    if (location.hash && location.hash !== '#') {
-        window.addEventListener('load', () => showArticle(location.hash.substring(1), true));
-    }
-});
+            }
+
+    // Main.
+        var    delay = 325,
+            locked = false;
+
+        // Methods.
+            $main._show = function(id, initial) {
+
+                var $article = $main_articles.filter('#' + id);
+
+                // No such article? Bail.
+                    if ($article.length == 0)
+                        return;
+
+                // Handle lock.
+
+                    // Already locked? Speed through "show" steps w/o delays.
+                        if (locked || (typeof initial != 'undefined' && initial === true)) {
+
+                            // Mark as switching.
+                                $body.addClass('is-switching');
+
+                            // Mark as visible.
+                                $body.addClass('is-article-visible');
+
+                            // Deactivate all articles (just in case one's already active).
+                                $main_articles.removeClass('active');
+
+                            // Hide header, footer.
+                                $header.hide();
+                                $footer.hide();
+
+                            // Show main, article.
+                                $main.show();
+                                $article.show();
+
+                            // Activate article.
+                                $article.addClass('active');
+
+                            // Unlock.
+                                locked = false;
+
+                            // Unmark as switching.
+                                setTimeout(function() {
+                                    $body.removeClass('is-switching');
+                                }, (initial ? 1000 : 0));
+
+                            return;
+
+                        }
+
+                    // Lock.
+                        locked = true;
+
+                // Article already visible? Just swap articles.
+                    if ($body.hasClass('is-article-visible')) {
+
+                        // Deactivate current article.
+                            var $currentArticle = $main_articles.filter('.active');
+
+                            $currentArticle.removeClass('active');
+
+                        // Show article.
+                            setTimeout(function() {
+
+                                // Hide current article.
+                                    $currentArticle.hide();
+
+                                // Show article.
+                                    $article.show();
+
+                                // Activate article.
+                                    setTimeout(function() {
+
+                                        $article.addClass('active');
+
+                                        // Window stuff.
+                                            $window
+                                                .scrollTop(0)
+                                                .triggerHandler('resize.flexbox-fix');
+
+                                        // Unlock.
+                                            setTimeout(function() {
+                                                locked = false;
+                                            }, delay);
+
+                                    }, 25);
+
+                            }, delay);
+
+                    }
+
+                // Otherwise, handle as normal.
+                    else {
+
+                        // Mark as visible.
+                            $body
+                                .addClass('is-article-visible');
+
+                        // Show article.
+                            setTimeout(function() {
+
+                                // Hide header, footer.
+                                    $header.hide();
+                                    $footer.hide();
+
+                                // Show main, article.
+                                    $main.show();
+                                    $article.show();
+
+                                // Activate article.
+                                    setTimeout(function() {
+
+                                        $article.addClass('active');
+
+                                        // Window stuff.
+                                            $window
+                                                .scrollTop(0)
+                                                .triggerHandler('resize.flexbox-fix');
+
+                                        // Unlock.
+                                            setTimeout(function() {
+                                                locked = false;
+                                            }, delay);
+
+                                    }, 25);
+
+                            }, delay);
+
+                    }
+
+            };
+
+            $main._hide = function(addState) {
+
+                var $article = $main_articles.filter('.active');
+
+                // Article not visible? Bail.
+                    if (!$body.hasClass('is-article-visible'))
+                        return;
+
+                // Add state?
+                    if (typeof addState != 'undefined'
+                    &&    addState === true)
+                        history.pushState(null, null, '#');
+
+                // Handle lock.
+
+                    // Already locked? Speed through "hide" steps w/o delays.
+                        if (locked) {
+
+                            // Mark as switching.
+                                $body.addClass('is-switching');
+
+                            // Deactivate article.
+                                $article.removeClass('active');
+
+                            // Hide article, main.
+                                $article.hide();
+                                $main.hide();
+
+                            // Show footer, header.
+                                $footer.show();
+                                $header.show();
+
+                            // Unmark as visible.
+                                $body.removeClass('is-article-visible');
+
+                            // Unlock.
+                                locked = false;
+
+                            // Unmark as switching.
+                                $body.removeClass('is-switching');
+
+                            // Window stuff.
+                                $window
+                                    .scrollTop(0)
+                                    .triggerHandler('resize.flexbox-fix');
+
+                            return;
+
+                        }
+
+                    // Lock.
+                        locked = true;
+
+                // Deactivate article.
+                    $article.removeClass('active');
+
+                // Hide article.
+                    setTimeout(function() {
+
+                        // Hide article, main.
+                            $article.hide();
+                            $main.hide();
+
+                        // Show footer, header.
+                            $footer.show();
+                            $header.show();
+
+                        // Unmark as visible.
+                            setTimeout(function() {
+
+                                $body.removeClass('is-article-visible');
+
+                                // Window stuff.
+                                    $window
+                                        .scrollTop(0)
+                                        .triggerHandler('resize.flexbox-fix');
+
+                                // Unlock.
+                                    setTimeout(function() {
+                                        locked = false;
+                                    }, delay);
+
+                            }, 25);
+
+                    }, delay);
 
 
-/**
- * ================================================================
- * FINDER-STYLE GALLERY INTERACTION
- * ================================================================
- * Handles selection (click, marquee), keyboard navigation, and context menus.
- */
+            };
+
+        // Articles.
+            $main_articles.each(function() {
+
+                var $this = $(this);
+
+                // Close.
+                    $('<div class="close">Close</div>')
+                        .appendTo($this)
+                        .on('click', function() {
+                            location.hash = '';
+                        });
+
+                // Prevent clicks from inside article from bubbling.
+                    $this.on('click', function(event) {
+                        event.stopPropagation();
+                    });
+
+            });
+
+        // Events.
+            $body.on('click', function(event) {
+
+                // Article visible? Hide.
+                    if ($body.hasClass('is-article-visible'))
+                        $main._hide(true);
+
+            });
+
+            $window.on('keyup', function(event) {
+
+                switch (event.keyCode) {
+
+                    case 27:
+
+                        // Article visible? Hide.
+                            if ($body.hasClass('is-article-visible'))
+                                $main._hide(true);
+
+                        break;
+
+                    default:
+                        break;
+
+                }
+
+            });
+
+            $window.on('hashchange', function(event) {
+
+                // Empty hash?
+                    if (location.hash == ''
+                    ||    location.hash == '#') {
+
+                        // Prevent default.
+                            event.preventDefault();
+                            event.stopPropagation();
+
+                        // Hide.
+                            $main._hide();
+
+                    }
+
+                // Otherwise, check for a matching article.
+                    else if ($main_articles.filter(location.hash).length > 0) {
+
+                        // Prevent default.
+                            event.preventDefault();
+                            event.stopPropagation();
+
+                        // Show article.
+                            $main._show(location.hash.substr(1));
+
+                    }
+
+            });
+
+        // Scroll restoration.
+        // This prevents the page from scrolling back to the top on a hashchange.
+            if ('scrollRestoration' in history)
+                history.scrollRestoration = 'manual';
+            else {
+
+                var    oldScrollPos = 0,
+                    scrollPos = 0,
+                    $htmlbody = $('html,body');
+
+                $window
+                    .on('scroll', function() {
+
+                        oldScrollPos = scrollPos;
+                        scrollPos = $htmlbody.scrollTop();
+
+                    })
+                    .on('hashchange', function() {
+                        $window.scrollTop(oldScrollPos);
+                    });
+
+            }
+
+        // Initialize.
+
+            // Hide main, articles.
+                $main.hide();
+                $main_articles.hide();
+
+            // Initial article.
+                if (location.hash != ''
+                &&    location.hash != '#')
+                    $window.on('load', function() {
+                        $main._show(location.hash.substr(1), true);
+                    });
+
+})(jQuery);
+
+
 document.addEventListener('DOMContentLoaded', () => {
-    const gallery = document.getElementById('photo-gallery');
-    const marquee = document.getElementById('marquee');
-    const searchInput = document.getElementById('search-input');
+    const wrapper = document.getElementById('wrapper');
     const header = document.getElementById('header');
     const footer = document.getElementById('footer');
+    const gallery = document.getElementById('photo-gallery');
+    const searchInput = document.getElementById('search-input'); // MOVED
 
-    if (!gallery || !marquee || !header || !footer) return;
+    if (!gallery || !wrapper) return;
 
-    const items = Array.from(gallery.getElementsByTagName('figure'));
+    const marquee = document.getElementById('marquee');
+    const items = gallery.getElementsByTagName('figure');
+
     let selectedItems = new Set();
-    let selectionAnchor = null;
-    let lastSelectedItem = null;
-    let gridMetrics = { cols: 0 };
+    let isMarquee = false;
+    let startPos = { x: 0, y: 0 };
+    let preMarqueeSelectedItems = new Set();
 
-    // --- Helper Functions ---
-    const isSelected = (el) => selectedItems.has(el);
-    const clearSelection = () => {
-        selectedItems.forEach(item => item.classList.remove('selected'));
-        selectedItems.clear();
-        selectionAnchor = null;
-        lastSelectedItem = null;
-    };
-    const toggleSelection = (el) => {
-        el.classList.toggle('selected');
-        if (el.classList.contains('selected')) selectedItems.add(el);
-        else selectedItems.delete(el);
-    };
-    const setSelection = (el, select) => {
-        el.classList.toggle('selected', select);
-        if (select) selectedItems.add(el);
-        else selectedItems.delete(el);
-    };
+    let hasDragged = false;
+    let mouseDownItem = null;
 
-    // --- Grid Calculation for Keyboard Navigation ---
-    const calculateGridMetrics = () => {
-        const visibleItems = items.filter(item => item.style.display !== 'none');
+    /*
+    ==================================================================
+    // START: FINDER-STYLE ARROW KEY NAVIGATION LOGIC
+    ==================================================================
+    */
+
+    // --- State Variables for Navigation ---
+    let selectionAnchor = null; // For range selections (Shift key)
+    let lastSelectedItem = null; // The currently "focused" item for keyboard navigation
+    let gridMetrics = { cols: 0 }; // To store the calculated number of columns
+
+    /**
+     * Calculates the number of columns in the responsive grid.
+     * This is crucial for Up/Down arrow navigation.
+     */
+    function calculateGridMetrics() {
+        const visibleItems = Array.from(items).filter(item => item.style.display !== 'none');
         if (visibleItems.length === 0) {
             gridMetrics.cols = 0;
             return;
         }
+
         const firstItemTop = visibleItems[0].offsetTop;
-        gridMetrics.cols = visibleItems.filter(item => item.offsetTop === firstItemTop).length || 1;
-    };
-    // Recalculate grid on resize or after search
-    new ResizeObserver(calculateGridMetrics).observe(gallery);
-    if(searchInput) searchInput.addEventListener('keyup', () => setTimeout(calculateGridMetrics, 50));
-    window.addEventListener('load', calculateGridMetrics);
+        let cols = 0;
+        for (const item of visibleItems) {
+            if (item.offsetTop === firstItemTop) {
+                cols++;
+            } else {
+                break;
+            }
+        }
+        gridMetrics.cols = cols > 0 ? cols : 1;
+    }
 
+    /**
+     * Applies a selection to all items between the anchor and the focus item.
+     * Mimics Finder's shift-click and shift-arrow behavior.
+     */
+    function applyRangeSelection() {
+        if (!selectionAnchor) return;
 
-    // --- Keyboard Navigation ---
+        const visibleItems = Array.from(items).filter(item => item.style.display !== 'none');
+        const anchorIndex = visibleItems.indexOf(selectionAnchor);
+        const focusIndex = visibleItems.indexOf(lastSelectedItem);
+
+        if (anchorIndex === -1 || focusIndex === -1) return;
+
+        const start = Math.min(anchorIndex, focusIndex);
+        const end = Math.max(anchorIndex, focusIndex);
+
+        // First, determine the final set of selected items
+        const itemsToSelect = new Set();
+        for (let i = start; i <= end; i++) {
+            itemsToSelect.add(visibleItems[i]);
+        }
+        
+        // Now, update the DOM and the main selectedItems set in one pass
+        for(const item of visibleItems) {
+            if(itemsToSelect.has(item)) {
+                if (!selectedItems.has(item)) {
+                     item.classList.add('selected');
+                     selectedItems.add(item);
+                }
+            } else {
+                if (selectedItems.has(item)) {
+                    item.classList.remove('selected');
+                    selectedItems.delete(item);
+                }
+            }
+        }
+    }
+
+    // --- Event Listener for Keyboard Navigation ---
     document.addEventListener('keydown', (e) => {
-        const isTyping = document.activeElement.matches('input, textarea');
-        const isArrowKey = e.key.startsWith('Arrow');
+        // Ignore key events if the user is typing in the search bar
+        const activeEl = document.activeElement;
+        if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+            return;
+        }
 
-        if (isTyping || !isArrowKey) return;
-        e.preventDefault();
+        // We only care about arrow keys
+        if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+            return;
+        }
 
-        const visibleItems = items.filter(item => item.style.display !== 'none');
+        e.preventDefault(); // Prevent page scrolling
+
+        const visibleItems = Array.from(items).filter(item => item.style.display !== 'none');
         if (visibleItems.length === 0) return;
 
         let currentIndex = lastSelectedItem ? visibleItems.indexOf(lastSelectedItem) : -1;
         let newIndex = -1;
 
+        // If nothing is selected, start from the first or last item.
         if (currentIndex === -1) {
-            newIndex = 0; // Default to first item if none selected
+             if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                newIndex = 0;
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                newIndex = visibleItems.length -1;
+            }
         } else {
+            // If an item IS selected, navigate from it.
             switch (e.key) {
-                case 'ArrowLeft':  newIndex = currentIndex - 1; break;
-                case 'ArrowRight': newIndex = currentIndex + 1; break;
-                case 'ArrowUp':    newIndex = currentIndex - gridMetrics.cols; break;
-                case 'ArrowDown':  newIndex = currentIndex + gridMetrics.cols; break;
+                case 'ArrowLeft':
+                    newIndex = currentIndex - 1;
+                    break;
+                case 'ArrowRight':
+                    newIndex = currentIndex + 1;
+                    break;
+                case 'ArrowUp':
+                    newIndex = currentIndex - gridMetrics.cols;
+                    break;
+                case 'ArrowDown':
+                    newIndex = currentIndex + gridMetrics.cols;
+                    break;
             }
         }
 
+        // Check if the new index is valid
         if (newIndex >= 0 && newIndex < visibleItems.length) {
             const newItem = visibleItems[newIndex];
+            
             if (e.shiftKey) {
-                // Range selection
-                lastSelectedItem = newItem;
-                applyRangeSelection(visibleItems);
+                // If Shift is pressed, extend the selection
+                lastSelectedItem = newItem; // Update the focus
+                applyRangeSelection();
             } else {
-                // Single selection
+                // This block handles arrow key presses WITHOUT the Shift key.
                 clearSelection();
                 toggleSelection(newItem);
-                selectionAnchor = newItem;
+                selectionAnchor = newItem; // The new item is now the anchor
                 lastSelectedItem = newItem;
             }
-            newItem.scrollIntoView({ block: 'nearest' });
+            
+            // Ensure the newly selected item is visible
+            newItem.scrollIntoView({ block: 'nearest', inline: 'nearest' });
         }
     });
 
-    const applyRangeSelection = (visibleItems) => {
-        if (!selectionAnchor || !lastSelectedItem) return;
-        const anchorIndex = visibleItems.indexOf(selectionAnchor);
-        const focusIndex = visibleItems.indexOf(lastSelectedItem);
-        const [start, end] = [Math.min(anchorIndex, focusIndex), Math.max(anchorIndex, focusIndex)];
-        
-        const itemsToSelect = new Set(visibleItems.slice(start, end + 1));
-        visibleItems.forEach(item => setSelection(item, itemsToSelect.has(item)));
+    // --- Initial Setup and Observers ---
+
+    calculateGridMetrics();
+
+    const galleryObserver = new ResizeObserver(() => {
+        calculateGridMetrics();
+    });
+    galleryObserver.observe(gallery);
+
+    if (searchInput) {
+        searchInput.addEventListener('keyup', () => {
+            setTimeout(calculateGridMetrics, 50);
+        });
+    }
+    /*
+    ==================================================================
+    // END: FINDER-STYLE ARROW KEY NAVIGATION LOGIC
+    ==================================================================
+    */
+    
+    // Helper functions
+    const isSelected = (el) => selectedItems.has(el);
+    const toggleSelection = (el) => {
+        if (isSelected(el)) {
+            selectedItems.delete(el);
+            el.classList.remove('selected');
+        } else {
+            selectedItems.add(el);
+            el.classList.add('selected');
+        }
+    };
+    const clearSelection = () => {
+        Array.from(selectedItems).forEach(item => {
+            item.classList.remove('selected');
+        });
+        selectedItems.clear();
+    };
+    const setSelection = (el, shouldBeSelected) => {
+        if (shouldBeSelected) {
+            if (!isSelected(el)) {
+                selectedItems.add(el);
+                el.classList.add('selected');
+            }
+        } else {
+            if (isSelected(el)) {
+                selectedItems.delete(el);
+                el.classList.remove('selected');
+            }
+        }
     };
     
-    // --- Select All (Cmd/Ctrl + A) ---
-    document.addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
-             if (document.activeElement.matches('input, textarea')) return;
-             e.preventDefault();
-             const visibleItems = items.filter(item => item.style.display !== 'none');
-             visibleItems.forEach(item => setSelection(item, true));
-        }
-    });
-
-    // --- Mouse Drag (Marquee) and Click Selection ---
-    let isMarquee = false;
-    let hasDragged = false;
-    let startPos = { x: 0, y: 0 };
-    let preMarqueeSelectedItems = new Set();
-    let mouseDownItem = null;
-
-    gallery.addEventListener('mousedown', (e) => {
-        if (e.button !== 0 || header.contains(e.target) || footer.contains(e.target)) return;
-        if(searchInput) searchInput.blur();
-        e.preventDefault();
-
-        isMarquee = true;
-        hasDragged = false;
-        mouseDownItem = e.target.closest('figure');
-        startPos = { x: e.clientX, y: e.clientY };
-        preMarqueeSelectedItems = new Set(selectedItems);
-    });
-
-    document.addEventListener('mousemove', (e) => {
-        if (!isMarquee) return;
-        if (Math.abs(e.clientX - startPos.x) > 5 || Math.abs(e.clientY - startPos.y) > 5) {
-            hasDragged = true; // Register drag only after minimal movement
-        }
-        if (!hasDragged) return;
-
-        // Stop marquee if mouse enters footer
-        if (footer.contains(e.target)) {
-            endDragAction(e);
+    // --- MouseDown Listener ---
+    wrapper.addEventListener('mousedown', (e) => {
+        // MODIFIED: If click starts in search bar, exit to allow native text selection.
+        if (e.target === searchInput) {
             return;
         }
 
-        marquee.style.visibility = 'visible';
-        const rect = {
-            x: Math.min(startPos.x, e.clientX),
-            y: Math.min(startPos.y, e.clientY),
-            w: Math.abs(startPos.x - e.clientX),
-            h: Math.abs(startPos.y - e.clientY)
+        // MODIFIED: Check if the event target is within the header or footer
+        if (e.button !== 0 || header.contains(e.target) || footer.contains(e.target)) {
+            isMarquee = false; // Ensure marquee selection is not initiated if starting in header/footer
+            return; 
+        }
+        
+        if(gallery.contains(e.target) || e.target === gallery) {
+            e.preventDefault();
+            if (searchInput) searchInput.blur(); // MODIFIED: Use variable and check for existence
+        }
+        
+        hasDragged = false;
+        isMarquee = true;
+        mouseDownItem = e.target.closest('figure');
+        
+        const galleryRect = gallery.getBoundingClientRect();
+        startPos = {
+            x: e.clientX - galleryRect.left,
+            y: e.clientY - galleryRect.top,
         };
-        marquee.style.left = `${rect.x}px`;
-        marquee.style.top = `${rect.y}px`;
-        marquee.style.width = `${rect.w}px`;
-        marquee.style.height = `${rect.h}px`;
+        
+        preMarqueeSelectedItems = new Set(selectedItems);
+    });
+    
+    // --- MouseMove Listener ---
+    document.addEventListener('mousemove', (e) => {
+        if (!isMarquee) return;
 
+        // NEW: If the mouse moves over the footer, stop the marquee selection
+        if (footer.contains(e.target)) {
+            isMarquee = false;
+            hasDragged = false;
+            marquee.style.visibility = 'hidden';
+            marquee.style.width = '0px';
+            marquee.style.height = '0px';
+            preMarqueeSelectedItems.clear();
+            return;
+        }
+        
+        e.preventDefault();
+        hasDragged = true;
+        
+        marquee.style.visibility = 'visible';
+        
+        const galleryRect = gallery.getBoundingClientRect();
+        let rawX = e.clientX - galleryRect.left;
+        let rawY = e.clientY - galleryRect.top;
+        let currentX = Math.max(0, Math.min(rawX, galleryRect.width));
+        let currentY = Math.max(0, Math.min(rawY, galleryRect.height));
+        
+        const marqueeRect = {
+            x: Math.min(startPos.x, currentX),
+            y: Math.min(startPos.y, currentY),
+            w: Math.abs(startPos.x - currentX),
+            h: Math.abs(startPos.y - currentY)
+        };
+        
+        marquee.style.left = `${marqueeRect.x}px`;
+        marquee.style.top = `${marqueeRect.y}px`;
+        marquee.style.width = `${marqueeRect.w}px`;
+        marquee.style.height = `${marqueeRect.h}px`;
+        
         const isModifier = e.metaKey || e.ctrlKey || e.shiftKey;
-        items.forEach(item => {
-            if (item.style.display === 'none') return;
+        
+        for (const item of items) {
+            if (item.style.display === 'none') continue;
+            
             const itemRect = item.getBoundingClientRect();
-            const intersects = rect.x < itemRect.right && rect.x + rect.w > itemRect.left &&
-                               rect.y < itemRect.bottom && rect.y + rect.h > itemRect.top;
+            const relativeItemRect = {
+                left: itemRect.left - galleryRect.left,
+                top: itemRect.top - galleryRect.top,
+                right: itemRect.right - galleryRect.left,
+                bottom: itemRect.bottom - galleryRect.top
+            };
+            
+            const intersects =
+            marqueeRect.x < relativeItemRect.right &&
+            marqueeRect.x + marqueeRect.w > relativeItemRect.left &&
+            marqueeRect.y < relativeItemRect.bottom &&
+            marqueeRect.y + marqueeRect.h > relativeItemRect.top;
             
             if (isModifier) {
-                setSelection(item, intersects ? !preMarqueeSelectedItems.has(item) : preMarqueeSelectedItems.has(item));
+                if (intersects) {
+                    setSelection(item, !preMarqueeSelectedItems.has(item));
+                } else {
+                    setSelection(item, preMarqueeSelectedItems.has(item));
+                }
             } else {
                 setSelection(item, intersects);
             }
-        });
-    });
-
-    document.addEventListener('mouseup', (e) => {
-        if(isMarquee) endDragAction(e);
+        }
     });
     
+    /**
+     * UPDATED endDragAction function
+     */
     const endDragAction = (e) => {
-        if (!hasDragged) { // Simple click logic
-            const isModifier = e.shiftKey || e.metaKey || e.ctrlKey;
-            if (mouseDownItem) {
-                if (isModifier) {
-                    toggleSelection(mouseDownItem);
-                    selectionAnchor = isSelected(mouseDownItem) ? mouseDownItem : null;
-                    lastSelectedItem = selectionAnchor;
+        if (!isMarquee) return;
+    
+        if (!hasDragged) {
+            // Logic for a simple click (no drag)
+            const isShift = e.shiftKey;
+            const isModifier = e.metaKey || e.ctrlKey;
+            const clickedOnItem = mouseDownItem;
+    
+            if (clickedOnItem) {
+                // MODIFIED: Shift+Click now acts like Ctrl+Click
+                if (isShift || isModifier) {
+                    toggleSelection(clickedOnItem);
+                    if (isSelected(clickedOnItem)) {
+                        selectionAnchor = clickedOnItem;
+                        lastSelectedItem = clickedOnItem;
+                    }
                 } else {
-                    const wasAlreadyOnlySelection = isSelected(mouseDownItem) && selectedItems.size === 1;
-                    clearSelection();
-                    if(!wasAlreadyOnlySelection) {
-                        toggleSelection(mouseDownItem);
-                        selectionAnchor = mouseDownItem;
-                        lastSelectedItem = mouseDownItem;
+                    // MODIFIED: A single click on a lone selected item now deselects it
+                    if (!isSelected(clickedOnItem) || selectedItems.size > 1) {
+                        clearSelection();
+                        toggleSelection(clickedOnItem);
+                        selectionAnchor = clickedOnItem;
+                        lastSelectedItem = clickedOnItem;
+                    } else {
+                        clearSelection();
+                        selectionAnchor = null;
+                        lastSelectedItem = null;
                     }
                 }
-            } else if (!isModifier) { // Click on background
-                clearSelection();
+            } else {
+                // Click was on the gallery background
+                if (!isModifier && !isShift) {
+                    clearSelection();
+                    selectionAnchor = null;
+                    lastSelectedItem = null;
+                }
             }
-        } else { // End of a marquee drag
-             const visibleSelected = items.filter(item => isSelected(item) && item.style.display !== 'none');
-             if (visibleSelected.length > 0) {
-                 selectionAnchor = mouseDownItem || visibleSelected[0];
-                 lastSelectedItem = visibleSelected[visibleSelected.length - 1];
-             }
-        }
+        } else {
+            // Logic after a marquee drag
+            const itemUnderMouse = e.target.closest('figure');
+            
+            if (mouseDownItem) {
+                selectionAnchor = mouseDownItem;
+            }
 
-        // Cleanup
+            if (itemUnderMouse && selectedItems.has(itemUnderMouse)) {
+                lastSelectedItem = itemUnderMouse;
+            } else {
+                const visibleSelectedItems = Array.from(items)
+                    .filter(item => item.style.display !== 'none' && selectedItems.has(item));
+
+                if (visibleSelectedItems.length > 0) {
+                    lastSelectedItem = visibleSelectedItems[visibleSelectedItems.length - 1];
+                }
+            }
+        }
+    
+        // Cleanup marquee state
         isMarquee = false;
         hasDragged = false;
+        mouseDownItem = null;
         marquee.style.visibility = 'hidden';
         marquee.style.width = '0px';
         marquee.style.height = '0px';
         preMarqueeSelectedItems.clear();
-        mouseDownItem = null;
     };
     
-    // Deselect if clicking outside the gallery
+    document.addEventListener('mouseup', endDragAction);
+    
+    // --- Mousedown listener for the whole document ---
     document.addEventListener('mousedown', (e) => {
-        const isOutside = !gallery.contains(e.target) && !e.target.closest('.context-menu');
-        if (isOutside && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
-            clearSelection();
+        const itemMenu = document.getElementById('custom-context-menu');
+        const galleryMenu = document.getElementById('gallery-context-menu');
+
+        if (e.button === 0 && !itemMenu.contains(e.target) && !galleryMenu.contains(e.target)) {
+            itemMenu.style.display = 'none';
+            galleryMenu.style.display = 'none';
+        }
+
+        if (!wrapper.contains(e.target) && !itemMenu.contains(e.target) && !galleryMenu.contains(e.target)) {
+            if (!e.metaKey && !e.ctrlKey && !e.shiftKey) {
+                clearSelection();
+            }
         }
     });
+    
+    /**
+     * SELECT ALL FUNCTIONALITY
+     */
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+            const activeEl = document.activeElement;
+            if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+                return; 
+            }
+            e.preventDefault();
+            const visibleItems = Array.from(items).filter(item => item.style.display !== 'none');
+            visibleItems.forEach(item => {
+                setSelection(item, true);
+            });
+        }
+    });
+    
+    /**
+     * ----------------------------------------------------------------
+     * Custom Right-Click Context Menu Logic
+     * ----------------------------------------------------------------
+     */
 
-    // --- Custom Context Menu ---
+    async function downloadImage(url, filename) {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
+            const blob = await response.blob();
+            saveAs(blob, filename || 'download');
+        } catch (error) {
+            console.error('Download failed:', error);
+            alert(`Could not download the image. It will open in a new tab for you to save manually.`);
+            window.open(url, '_blank');
+        }
+    }
     const itemContextMenu = document.getElementById('custom-context-menu');
     const galleryContextMenu = document.getElementById('gallery-context-menu');
-    if (!itemContextMenu || !galleryContextMenu) return;
+    let rightClickedItem = null;
 
     gallery.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        // Hide both menus first
-        itemContextMenu.style.display = 'none';
-        galleryContextMenu.style.display = 'none';
+        e.preventDefault(); 
 
         const figure = e.target.closest('figure');
-        const showMenu = (menu, event) => {
-            menu.style.display = 'block';
-            menu.style.left = `${event.clientX}px`;
-            menu.style.top = `${event.clientY}px`;
-        };
-        
-        if (figure) {
-            if (!isSelected(figure)) {
-                clearSelection();
-                toggleSelection(figure);
-                selectionAnchor = lastSelectedItem = figure;
-            }
-            document.getElementById('context-menu-save').textContent = selectedItems.size > 1
-                ? `Save ${selectedItems.size} Images as .zip`
-                : 'Save Image to "Downloads"';
-            showMenu(itemContextMenu, e);
-        } else if (e.target === gallery) {
-            showMenu(galleryContextMenu, e);
-        }
-    });
 
-    document.addEventListener('click', () => {
         itemContextMenu.style.display = 'none';
         galleryContextMenu.style.display = 'none';
-    });
+        
+        if (figure) {
+            rightClickedItem = figure; 
 
-    itemContextMenu.addEventListener('click', async (e) => {
-        const action = e.target.id;
-        const firstSelected = items.find(isSelected);
-        if (!action || !firstSelected) return;
-
-        switch (action) {
-            case 'context-menu-open':
-                firstSelected.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-                break;
-
-            case 'context-menu-open-tab': {
-                const img = firstSelected.querySelector('img');
-                if (img && img.dataset.fullsrc) window.open(img.dataset.fullsrc, '_blank');
-                break;
+            if (!selectedItems.has(figure)) {
+                clearSelection();
+                toggleSelection(figure);
+                selectionAnchor = figure;
+                lastSelectedItem = figure;
             }
 
-            case 'context-menu-save':
-                if (selectedItems.size > 1) {
-                    // ZIP download
-                    document.body.style.cursor = 'wait';
-                    const JSZip = window.JSZip;
-                    if (!JSZip) {
-                        console.error("JSZip library not found.");
-                        document.body.style.cursor = 'default';
-                        return;
-                    }
-                    const zip = new JSZip();
-                    const promises = Array.from(selectedItems).map(item => {
-                        const img = item.querySelector('img');
-                        const src = img.dataset.fullsrc;
-                        const filename = item.querySelector('figcaption')?.textContent.trim() || 'image.jpg';
-                        return fetch(src)
-                            .then(res => res.blob())
-                            .then(blob => zip.file(filename, blob))
-                            .catch(err => console.error(`Failed to fetch ${filename}:`, err));
-                    });
-                    await Promise.all(promises);
-                    const content = await zip.generateAsync({ type: 'blob' });
-                    window.saveAs(content, 'gallery_export.zip');
-                    document.body.style.cursor = 'default';
+            const saveMenuItem = document.getElementById('context-menu-save');
+            if (selectedItems.size > 1) {
+                saveMenuItem.textContent = `Save ${selectedItems.size} Images as .zip`;
+            } else {
+                saveMenuItem.textContent = 'Save Image to "Downloads"';
+            }
+            
+            itemContextMenu.style.display = 'block';
+            itemContextMenu.style.left = `${e.clientX}px`;
+            itemContextMenu.style.top = `${e.clientY}px`;
 
+        } else if (e.target === gallery) {
+            rightClickedItem = null;
+            galleryContextMenu.style.display = 'block';
+            galleryContextMenu.style.left = `${e.clientX}px`;
+            galleryContextMenu.style.top = `${e.clientY}px`;
+        }
+    });
+    
+    itemContextMenu.addEventListener('click', (e) => {
+        const targetId = e.target.id;
+        if (!targetId) return;
+
+        itemContextMenu.style.display = 'none';
+
+        const primaryTarget = rightClickedItem || Array.from(selectedItems)[0];
+        if (!primaryTarget) return;
+
+        switch (targetId) {
+            case 'context-menu-open': {
+                const dblClickEvent = new MouseEvent('dblclick', {
+                    bubbles: true, cancelable: true, view: window
+                });
+                primaryTarget.dispatchEvent(dblClickEvent);
+                break;
+            }
+            case 'context-menu-open-tab': {
+                const img = primaryTarget.querySelector('img');
+                const fullSrc = img.dataset.fullsrc;
+                if (fullSrc) window.open(fullSrc, '_blank');
+                break;
+            }
+            case 'context-menu-save': {
+                if (selectedItems.size > 1) {
+                    // ZIP DOWNLOAD LOGIC
+                    document.body.style.cursor = 'wait';
+                    const zip = new JSZip();
+                    const promises = [];
+
+                    for (const figure of selectedItems) {
+                        const itemImg = figure.querySelector('img');
+                        const itemSrc = itemImg.dataset.fullsrc;
+                        const itemFilename = figure.querySelector('figcaption').childNodes[0].nodeValue.trim();
+                        
+                        if (itemSrc) {
+                            const promise = fetch(itemSrc)
+                                .then(response => {
+                                    if (!response.ok) throw new Error(`Fetch failed for ${itemFilename}: ${response.statusText}`);
+                                    return response.blob();
+                                })
+                                .then(blob => {
+                                    if (blob) zip.file(itemFilename, blob);
+                                })
+                                .catch(error => {
+                                    console.error(error);
+                                    alert(`Could not download: ${itemFilename}\nReason: ${error.message}`);
+                                });
+                            promises.push(promise);
+                        }
+                    }
+
+                    Promise.all(promises).then(() => {
+                        zip.generateAsync({ type: "blob" }).then(content => {
+                            if (typeof saveAs !== 'undefined') {
+                                saveAs(content, "witcher_images.zip");
+                            } else {
+                                console.error("FileSaver.js (saveAs) is not loaded.");
+                            }
+                            document.body.style.cursor = 'default';
+                        }).catch(zipError => {
+                            console.error("Error generating zip file:", zipError);
+                            document.body.style.cursor = 'default';
+                        });
+                    });
                 } else {
-                    // Single image download
-                    const img = firstSelected.querySelector('img');
-                    const src = img.dataset.fullsrc;
-                    const filename = firstSelected.querySelector('figcaption')?.textContent.trim();
-                    if (src && filename) await downloadImage(src, filename);
+                    // SINGLE IMAGE DOWNLOAD LOGIC
+                    const img = primaryTarget.querySelector('img');
+                    const fullSrc = img.dataset.fullsrc;
+                    const filename = primaryTarget.querySelector('figcaption').childNodes[0].nodeValue.trim();
+                    if (fullSrc && filename) {
+                        downloadImage(fullSrc, filename);
+                    }
                 }
+                break;
+            }
+        }
+        rightClickedItem = null;
+    });
+
+    galleryContextMenu.addEventListener('click', (e) => {
+        galleryContextMenu.style.display = 'none';
+        const targetId = e.target.id;
+
+        switch (targetId) {
+            case 'gallery-context-add':
+                alert('Functionality for "Add Image" is not yet implemented.');
+                break;
+            case 'gallery-context-sort':
+                alert('Functionality for "Sort By" is not yet implemented.');
+                break;
+            case 'gallery-context-view':
+                alert('Functionality for "Show View Options" is not yet implemented.');
                 break;
         }
     });
 });
 
-
-/**
- * ================================================================
- * CUSTOM SCROLLBAR
- * ================================================================
- * Advanced custom scrollbar with proximity hover effect.
- */
+/*Custom Scrollbar Advanced*/
 document.addEventListener('DOMContentLoaded', () => {
     const track = document.getElementById('custom-scrollbar-track');
     const thumb = document.getElementById('custom-scrollbar-thumb');
     const header = document.getElementById('header');
-    
+
     if (!track || !thumb || !header) return;
 
-    const setupScrollbar = () => {
-        const { scrollHeight, clientHeight } = document.documentElement;
-        const trackHeight = track.clientHeight;
+    let ticking = false;
 
-        if (scrollHeight <= clientHeight) {
+    // This function now only updates the thumb's position.
+    // We use transform for smoother, GPU-accelerated animation.
+    function updateThumbPosition() {
+        const scrollableHeight = document.documentElement.scrollHeight;
+        const viewportHeight = window.innerHeight;
+        const trackHeight = track.offsetHeight;
+        const thumbHeight = thumb.offsetHeight;
+        
+        // Prevent division by zero if content is smaller than viewport
+        if (scrollableHeight <= viewportHeight) return;
+
+        const scrollPercentage = window.scrollY / (scrollableHeight - viewportHeight);
+        const thumbPosition = scrollPercentage * (trackHeight - thumbHeight);
+        
+        thumb.style.transform = `translateY(${thumbPosition}px)`;
+    }
+
+    // This function sets up the scrollbar dimensions and is called less frequently.
+    function setupScrollbar() {
+        const headerHeight = header.offsetHeight;
+        const scrollableHeight = document.documentElement.scrollHeight;
+        const viewportHeight = window.innerHeight;
+
+        // Hide or show track based on whether scrolling is needed
+        if (scrollableHeight <= viewportHeight) {
             track.style.display = 'none';
             return;
         }
-        
         track.style.display = 'block';
-        track.style.top = `${header.offsetHeight}px`;
-        track.style.height = `calc(100% - ${header.offsetHeight}px)`;
 
-        const thumbHeight = Math.max((clientHeight / scrollHeight) * trackHeight, 20); // 20px min height
+        track.style.top = `${headerHeight}px`;
+        track.style.height = `calc(100% - ${headerHeight}px)`;
+
+        const trackHeight = track.offsetHeight;
+        const thumbHeight = Math.max((viewportHeight / scrollableHeight) * trackHeight, 20); // 20px min height
         thumb.style.height = `${thumbHeight}px`;
 
+        // Run a position update immediately
         updateThumbPosition();
-    };
-
-    const updateThumbPosition = () => {
-        const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
-        const trackHeight = track.clientHeight;
-        const thumbHeight = thumb.clientHeight;
-
-        if (scrollHeight <= clientHeight) return;
-
-        const scrollPercentage = scrollTop / (scrollHeight - clientHeight);
-        const thumbPosition = scrollPercentage * (trackHeight - thumbHeight);
-        thumb.style.transform = `translateY(${thumbPosition}px)`;
-    };
+    }
     
-    // Optimize scroll updates with requestAnimationFrame
-    let isTicking = false;
+    // On scroll, request an animation frame to update the thumb.
+    // The 'ticking' flag ensures we don't have multiple animation frames queued.
     document.addEventListener('scroll', () => {
-        if (!isTicking) {
+        if (!ticking) {
             window.requestAnimationFrame(() => {
                 updateThumbPosition();
-                isTicking = false;
+                ticking = false;
             });
-            isTicking = true;
+            ticking = true;
         }
     });
 
-    // --- Thumb Dragging Logic ---
+    // The logic for dragging the thumb doesn't need to change.
+    // Calling window.scrollTo() will trigger our optimized scroll listener above.
     thumb.addEventListener('mousedown', (e) => {
         e.preventDefault();
-        e.stopPropagation();
         const startY = e.clientY;
         const startScrollTop = document.documentElement.scrollTop;
-        const { scrollHeight, clientHeight } = document.documentElement;
-        const trackHeight = track.clientHeight;
-        const thumbHeight = thumb.clientHeight;
-        
-        const onMouseMove = (moveEvent) => {
-            const deltaY = moveEvent.clientY - startY;
-            const scrollableDist = scrollHeight - clientHeight;
-            const draggableDist = trackHeight - thumbHeight;
-            if (draggableDist === 0) return;
-            
-            const deltaScroll = (deltaY / draggableDist) * scrollableDist;
-            window.scrollTo(0, startScrollTop + deltaScroll);
-        };
 
-        const onMouseUp = () => {
+        function onMouseMove(e) {
+            const deltaY = e.clientY - startY;
+            const scrollableHeight = document.documentElement.scrollHeight;
+            const viewportHeight = window.innerHeight;
+            const trackHeight = track.offsetHeight;
+            const thumbHeight = thumb.offsetHeight;
+
+            // Prevent division by zero
+            if (trackHeight - thumbHeight === 0) return;
+
+            const deltaScroll = (deltaY / (trackHeight - thumbHeight)) * (scrollableHeight - viewportHeight);
+            window.scrollTo(0, startScrollTop + deltaScroll);
+        }
+
+        function onMouseUp() {
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);
-        };
+        }
 
         document.addEventListener('mousemove', onMouseMove);
         document.addEventListener('mouseup', onMouseUp);
     });
 
-    // --- Proximity Effect ---
-    let proximityTicking = false;
+    // Recalculate everything on resize, load, or orientation change
+    window.addEventListener('resize', setupScrollbar);
+    window.addEventListener('load', setupScrollbar);
+    window.addEventListener('orientationchange', setupScrollbar);
+
+    // Initial setup
+    setupScrollbar();
+    // A small timeout helps ensure all content (like images) has loaded and affected the page height
+    setTimeout(setupScrollbar, 500); 
+});
+
+/*
+==================================================================
+// Scrollbar Proximity Effect
+==================================================================
+*/
+document.addEventListener('DOMContentLoaded', () => {
+    const thumb = document.getElementById('custom-scrollbar-thumb');
+    if (!thumb) return;
+
+    const proximity = 30; // How close in pixels the mouse needs to be to trigger the effect
+    let ticking = false; // A flag to optimize performance
+
     document.addEventListener('mousemove', (e) => {
-        if (!proximityTicking) {
+        // Use requestAnimationFrame to avoid running this code too often
+        if (!ticking) {
             window.requestAnimationFrame(() => {
                 const thumbRect = thumb.getBoundingClientRect();
-                const proximity = 30; // px
-                const isNear = e.clientX >= thumbRect.left - proximity &&
-                               e.clientY >= thumbRect.top - proximity &&
-                               e.clientY <= thumbRect.bottom + proximity &&
-                               e.clientX < window.innerWidth - 2;
-                thumb.classList.toggle('is-near', isNear);
-                proximityTicking = false;
+
+                // Check if the mouse is horizontally within range (from the left of the thumb)
+                const isHorizontallyNear = e.clientX >= thumbRect.left - proximity;
+
+                // Check if the mouse is vertically within range (above or below the thumb)
+                const isVerticallyNear = (e.clientY >= thumbRect.top - proximity) && (e.clientY <= thumbRect.bottom + proximity);
+
+                // If the mouse is near and not at the very edge of the window, add the class
+                if (isHorizontallyNear && isVerticallyNear && e.clientX < window.innerWidth - 2) {
+                    thumb.classList.add('is-near');
+                } else {
+                    thumb.classList.remove('is-near');
+                }
+
+                ticking = false; // Reset the flag
             });
-            proximityTicking = true;
+            ticking = true; // Set the flag
         }
     });
-    
-    // --- Initial Setup and Observers ---
-    new ResizeObserver(setupScrollbar).observe(document.body);
-    window.addEventListener('load', () => setTimeout(setupScrollbar, 100)); // Timeout for images
-    setupScrollbar();
 });
