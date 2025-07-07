@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', function() {
             galleryData.forEach(item => {
                 // 1. Create the <figure> element for each grid item
                 const figure = document.createElement('figure');
+                figure.draggable = true;
 
                 // 2. Create the container for the image
                 const imageContainer = document.createElement('div');
