@@ -1990,8 +1990,10 @@ html, body {
 
 ::selection {
   background-color: rgba(80, 139, 200, 0.3); /* A muted, semi-transparent gold */
+  color: #ffffff; /* Ensures text remains white and readable */
 }
 
 ::-moz-selection { /* Firefox compatibility */
   background-color: rgba(80, 139, 200, 0.3);
+  color: #ffffff;
 }
