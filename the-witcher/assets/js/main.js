@@ -839,20 +839,31 @@ document.addEventListener('DOMContentLoaded', () => {
         const fullSrc = img.dataset.fullsrc;
         const filename = img.dataset.filename || 'witcher-image.jpg';
 
-        // Infer MIME type from the filename for proper download handling
+        // Infer MIME type for better download handling
         const extension = filename.split('.').pop().toLowerCase();
-        let mimeType = 'application/octet-stream'; // A generic default
-        if (extension === 'jpg' || extension === 'jpeg') {
-            mimeType = 'image/jpeg';
-        } else if (extension === 'png') {
-            mimeType = 'image/png';
-        } else if (extension === 'webp') {
-            mimeType = 'image/webp';
-        }
+        let mimeType = 'image/jpeg';
+        if (extension === 'png') mimeType = 'image/png';
+        else if (extension === 'webp') mimeType = 'image/webp';
 
-        // This special data type tells browsers like Chrome and Firefox
-        // to handle the drop as a file download from the provided URL.
+        /* ==================================================================
+        // START: CROSS-BROWSER DRAG-TO-DOWNLOAD LOGIC
+        ==================================================================
+        */
+        
+        // For Chrome/Firefox: Triggers a direct download with the correct filename
         e.dataTransfer.setData('DownloadURL', `${mimeType}:${filename}:${fullSrc}`);
+        
+        // For Safari & other browsers: Standard way to drag a link.
+        // This ensures the full-resolution URL is used, not the thumbnail's.
+        e.dataTransfer.setData('text/uri-list', fullSrc);
+        
+        // A plain text fallback for maximum compatibility
+        e.dataTransfer.setData('text/plain', fullSrc);
+        
+        /* ==================================================================
+        // END: CROSS-BROWSER DRAG-TO-DOWNLOAD LOGIC
+        ==================================================================
+        */
 
         // If the item you start dragging isn't selected, clear the
         // existing selection and select only the dragged item.
@@ -863,14 +874,7 @@ document.addEventListener('DOMContentLoaded', () => {
             lastSelectedItem = figure;
         }
     });
-
-    // Add a listener to clean up state after the drag operation concludes.
-    document.addEventListener('dragend', () => {
-        if (isPerformingFileDrag) {
-            isPerformingFileDrag = false;
-            isMarquee = false; // Also reset the marquee flag
-        }
-    });
+    
     /*
     ==================================================================
     // END: NEW DRAG-AND-DROP TO DOWNLOAD LOGIC
