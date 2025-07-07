@@ -620,35 +620,25 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- MouseDown Listener ---
     wrapper.addEventListener('mousedown', (e) => {
-        // Exit if not the primary mouse button, or if the click is in the header/footer
-        if (e.button !== 0 || header.contains(e.target) || footer.contains(e.target)) {
-            isMarquee = false;
-            return;
-        }
-
-        // Allow native text selection in the search bar
+        // MODIFIED: If click starts in search bar, exit to allow native text selection.
         if (e.target === searchInput) {
             return;
         }
 
-        const clickedFigure = e.target.closest('figure');
-
-        // *** THIS IS THE CRITICAL FIX ***
-        // Only prevent default for marquee selection on the gallery background.
-        // This allows the native drag event to fire on the items themselves.
-        if (!clickedFigure && gallery.contains(e.target)) {
+        // MODIFIED: Check if the event target is within the header or footer
+        if (e.button !== 0 || header.contains(e.target) || footer.contains(e.target)) {
+            isMarquee = false; // Ensure marquee selection is not initiated if starting in header/footer
+            return; 
+        }
+        
+        if(gallery.contains(e.target) || e.target === gallery) {
             e.preventDefault();
+            if (searchInput) searchInput.blur(); // MODIFIED: Use variable and check for existence
         }
-
-        // Blur search input if clicking anywhere in the gallery area
-        if (gallery.contains(e.target)) {
-            if (searchInput) searchInput.blur();
-        }
-
-        // Standard logic for initiating selection
+        
         hasDragged = false;
         isMarquee = true;
-        mouseDownItem = clickedFigure;
+        mouseDownItem = e.target.closest('figure');
         
         const galleryRect = gallery.getBoundingClientRect();
         startPos = {
@@ -663,6 +653,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('mousemove', (e) => {
         if (!isMarquee) return;
 
+        // NEW: If the mouse moves over the footer, stop the marquee selection
         if (footer.contains(e.target)) {
             isMarquee = false;
             hasDragged = false;
@@ -727,7 +718,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    // --- MouseUp Listener ---
+    /**
+     * UPDATED endDragAction function
+     */
     const endDragAction = (e) => {
         if (!isMarquee) return;
     
@@ -738,6 +731,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const clickedOnItem = mouseDownItem;
     
             if (clickedOnItem) {
+                // MODIFIED: Shift+Click now acts like Ctrl+Click
                 if (isShift || isModifier) {
                     toggleSelection(clickedOnItem);
                     if (isSelected(clickedOnItem)) {
@@ -745,6 +739,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         lastSelectedItem = clickedOnItem;
                     }
                 } else {
+                    // MODIFIED: A single click on a lone selected item now deselects it
                     if (!isSelected(clickedOnItem) || selectedItems.size > 1) {
                         clearSelection();
                         toggleSelection(clickedOnItem);
@@ -836,6 +831,18 @@ document.addEventListener('DOMContentLoaded', () => {
      * ----------------------------------------------------------------
      */
 
+    async function downloadImage(url, filename) {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
+            const blob = await response.blob();
+            saveAs(blob, filename || 'download');
+        } catch (error) {
+            console.error('Download failed:', error);
+            alert(`Could not download the image. It will open in a new tab for you to save manually.`);
+            window.open(url, '_blank');
+        }
+    }
     const itemContextMenu = document.getElementById('custom-context-menu');
     const galleryContextMenu = document.getElementById('gallery-context-menu');
     let rightClickedItem = null;
@@ -973,107 +980,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
         }
     });
-
-    /**
-     * ----------------------------------------------------------------
-     * Drag-and-Drop Out of Gallery Logic
-     * ----------------------------------------------------------------
-     */
-    gallery.addEventListener('dragstart', (e) => {
-        const figure = e.target.closest('figure');
-        if (!figure) {
-            return;
-        }
-    
-        // Prevent this event from interfering with other logic
-        e.stopPropagation();
-    
-        // Halt the marquee selection process if it was initiated
-        isMarquee = false;
-        marquee.style.visibility = 'hidden';
-    
-        // If the user starts dragging an item that isn't already selected,
-        // clear the previous selection and select only the dragged item.
-        if (!selectedItems.has(figure)) {
-            clearSelection();
-            toggleSelection(figure); // Adds 'selected' class and updates the Set
-            selectionAnchor = figure;
-            lastSelectedItem = figure;
-        }
-    
-        // Prepare the data needed for the drag operation
-        const img = figure.querySelector('img');
-        if (!img || !img.dataset.fullsrc || !img.dataset.filename) {
-            e.preventDefault(); // Cancel the drag if essential data is missing
-            return;
-        }
-    
-        const fullSrc = img.dataset.fullsrc;
-        const filename = img.dataset.filename;
-    
-        // Determine the MIME type from the file's extension
-        let mimeType = 'image/jpeg'; // A sensible default
-        const lowerFilename = filename.toLowerCase();
-        if (lowerFilename.endsWith('.png')) {
-            mimeType = 'image/png';
-        } else if (lowerFilename.endsWith('.webp')) {
-            mimeType = 'image/webp';
-        }
-        
-        // Use the DownloadURL API to enable dragging files out of the browser.
-        // Note: This API only supports dragging a single file.
-        const downloadURL = `${mimeType}:${filename}:${fullSrc}`;
-        e.dataTransfer.setData('DownloadURL', downloadURL);
-        e.dataTransfer.effectAllowed = 'copy';
-    
-        // --- Create a Custom Drag Image for Visual Feedback ---
-        const dragImageContainer = document.createElement('div');
-        dragImageContainer.style.position = 'absolute';
-        dragImageContainer.style.top = '-1000px';
-        dragImageContainer.style.left = '-1000px';
-    
-        const thumbClone = img.cloneNode(true);
-        thumbClone.style.width = '80px';
-        thumbClone.style.height = 'auto';
-        thumbClone.style.opacity = '0.8';
-        thumbClone.style.borderRadius = '4px';
-        thumbClone.style.border = '1px solid rgba(255, 255, 255, 0.5)';
-    
-        dragImageContainer.appendChild(thumbClone);
-    
-        // If multiple items are selected, add a count badge
-        if (selectedItems.size > 1) {
-            const badge = document.createElement('span');
-            badge.textContent = selectedItems.size;
-            Object.assign(badge.style, {
-                position: 'absolute',
-                top: '-10px',
-                right: '-10px',
-                background: 'rgba(20, 120, 255, 0.9)',
-                color: 'white',
-                borderRadius: '50%',
-                width: '24px',
-                height: '24px',
-                textAlign: 'center',
-                lineHeight: '24px',
-                fontSize: '14px',
-                fontWeight: 'bold',
-                boxShadow: '0 0 5px rgba(0,0,0,0.5)',
-                border: '1px solid rgba(255, 255, 255, 0.8)',
-            });
-            dragImageContainer.appendChild(badge);
-        }
-    
-        document.body.appendChild(dragImageContainer);
-        e.dataTransfer.setDragImage(dragImageContainer, 40, 40);
-    
-        // Clean up the temporary drag image from the DOM
-        setTimeout(() => {
-            if (document.body.contains(dragImageContainer)) {
-                document.body.removeChild(dragImageContainer);
-            }
-        }, 0);
-    });
 });
 
 /*Custom Scrollbar Advanced*/
@@ -1177,7 +1083,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initial setup
     setupScrollbar();
     // A small timeout helps ensure all content (like images) has loaded and affected the page height
-    setTimeout(setupScrollbar, 500);
+    setTimeout(setupScrollbar, 500); 
 });
 
 /*
