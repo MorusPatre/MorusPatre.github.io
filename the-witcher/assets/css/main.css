@@ -161,7 +161,7 @@ input, select, textarea {
         line-height: 1.5;
         margin: 0 0 1rem 0;
         text-transform: uppercase;
-	letter-spacing: 0.12rem;
+    letter-spacing: 0.12rem;
     }
 
         h1 a, h2 a, h3 a, h4 a, h5 a, h6 a {
@@ -1278,7 +1278,7 @@ input, select, textarea {
     text-align: left;
     border-radius: 20px;
     width: 25.3em;  /* Adjust this value to change the overall width */
-    padding-left: 0.93em; /* Adds space on the left */
+    padding-left: 35px; /* MODIFIED: Increased padding for the icon */
     padding-right: 0.93em; /* Adds space on the right */
     background-color: rgba(255, 255, 255, 0.05); /* Example: light white with 20% opacity */
     /* Explicitly prevent user text selection */
@@ -1749,19 +1749,19 @@ Custom Download Button Style
 */
 /* Using the 'Subtle & Integrated' style */
 #modal-download-btn.download-btn {
-	background-color: rgba(255, 255, 255, 0.075);
-	color: #ffffff !important;
-	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
-	font-weight: 300;
+    background-color: rgba(255, 255, 255, 0.075);
+    color: #ffffff !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+    font-weight: 300;
 }
 
 #modal-download-btn.download-btn:hover {
-	background-color: rgba(255, 255, 255, 0.15);
-	box-shadow: inset 0 0 0 1px #ffffff;
+    background-color: rgba(255, 255, 255, 0.15);
+    box-shadow: inset 0 0 0 1px #ffffff;
 }
 
 #modal-download-btn.download-btn .fas {
-	margin-right: 0.75em;
+    margin-right: 0.75em;
 }
 
 /*
@@ -1816,17 +1816,27 @@ Custom Context Menu
     cursor: default; /* Use the default cursor, not the pointer */
 }
 
-
 /*
 ==================================================================
-// Search Bar Clear Button
+// Search Icon & Clear Button
 ==================================================================
 */
 #search-container form {
     margin: 0;
     display: flex;
     align-items: center;
-    position: relative; /* This is the positioning context for the button */
+    position: relative; /* This is the positioning context for the icon and button */
+}
+
+.search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #999;
+    pointer-events: none;
+    font-size: 0.8rem;
+    z-index: 1;
 }
 
 .clear-search-button {
@@ -1849,6 +1859,7 @@ Custom Context Menu
 .clear-search-button:hover {
     color: #fff;
 }
+
 
 /*
 ==================================================================
