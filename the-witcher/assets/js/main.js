@@ -1021,7 +1021,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         track.style.display = 'block';
-
+        thumb.classList.remove('is-near');
         track.style.top = `${headerHeight}px`;
         track.style.height = `calc(100% - ${headerHeight}px)`;
 
