@@ -168,10 +168,6 @@
                 primaryKeys.forEach(key => {
                     if (dataset[key] && dataset[key].trim() !== '' && dataset[key].trim() !== '-' && dataset[key].trim() !== '- (-)') {
                         const label = key.charAt(0).toUpperCase() + key.slice(1);
-                        let value = dataset[key];
-                        if (key === 'actors') {
-                            value = value.replace(/\s\(.*?\)/g, '');
-                        }
                         primaryHTML += `<div class="info-item"><dt>${label}</dt><dd>${dataset[key]}</dd></div>`;
                     }
                 });
