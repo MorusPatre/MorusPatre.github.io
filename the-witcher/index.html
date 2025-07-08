@@ -4,15 +4,18 @@
         <title>THE WITCHER</title>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+        
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+
         <link rel="stylesheet" href="assets/css/main.css" />
         <noscript><link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
     </head>
     <body class="is-preload">
-	<div id="loader-wrapper">
+    <div id="loader-wrapper">
             <div class="loader"></div>
         </div>
 
-	
+    
         <div id="wrapper">
 
                 <header id="header">
@@ -21,6 +24,7 @@
                         </div>
                         <div id="search-container">
                             <form onsubmit="return false;">
+                                <span class="search-icon"></span>
                                 <input type="text" id="search-input" placeholder="Search by filename, character, actor, episode, season etc...">
                                 <span id="clear-search" class="clear-search-button">&times;</span>
                             </form>
@@ -67,8 +71,8 @@
                                     }
                                 });
 
-				window.scrollTo(0, 0); 
-				    
+                window.scrollTo(0, 0);
+                    
                             });
 
                             // 3. ADD THIS ENTIRE BLOCK to handle clicks on the 'x'
@@ -87,10 +91,10 @@
                 </div>
 
                 <footer id="footer">
-						<p class="copyright">&copy; The Witcher, 2019 Netflix. All Rights Reserved.</p>
-					</footer>
+                        <p class="copyright">&copy; The Witcher, 2019 Netflix. All Rights Reserved.</p>
+                    </footer>
 
-			</div>
+            </div>
 
     <div id="bg"></div>
 
@@ -107,22 +111,22 @@
         <script src="assets/js/gallery-loader.js"></script>
 
     <div id="image-modal" class="modal-overlay">
-				<span class="modal-close">&times;</span>
-				<span class="modal-prev">&#10094;</span>
-				<span class="modal-next">&#10095;</span>
-				<div class="modal-content">
-					<div class="modal-image-container">
-						<img id="modal-img" src="" alt="Enlarged image">
-					</div>
-					<div class="modal-info-panel">
-						<div class="info-content">
-							<h3 id="modal-filename"></h3>
-							<div id="modal-metadata">
-							</div>
-						</div>
+                <span class="modal-close">&times;</span>
+                <span class="modal-prev">&#10094;</span>
+                <span class="modal-next">&#10095;</span>
+                <div class="modal-content">
+                    <div class="modal-image-container">
+                        <img id="modal-img" src="" alt="Enlarged image">
+                    </div>
+                    <div class="modal-info-panel">
+                        <div class="info-content">
+                            <h3 id="modal-filename"></h3>
+                            <div id="modal-metadata">
+                            </div>
+                        </div>
                         <a id="modal-download-btn" class="button download-btn" download><i class="fas fa-download"></i> Download</a>
-					</div>
-				</div>
+                    </div>
+                </div>
         </div>
 
     <script>
@@ -324,9 +328,9 @@
     <div id="gallery-context-menu" class="context-menu">
                 <ul>
                     <li id="gallery-context-add">Add Image</li>
-					<li class="separator"></li>
-					<li id="gallery-context-sort">Sort By</li>
-					<li id="gallery-context-view">Show View Options</li>
+                    <li class="separator"></li>
+                    <li id="gallery-context-sort">Sort By</li>
+                    <li id="gallery-context-view">Show View Options</li>
                 </ul>
         </div>
 
@@ -334,5 +338,5 @@
             <div id="custom-scrollbar-thumb"></div>
         </div>
 
-	</body>
+    </body>
 </html>
