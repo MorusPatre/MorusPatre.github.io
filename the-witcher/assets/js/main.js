@@ -1079,6 +1079,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('resize', setupScrollbar);
     window.addEventListener('load', setupScrollbar);
     window.addEventListener('orientationchange', setupScrollbar);
+    window.addEventListener('galleryFiltered', setupScrollbar);
 
     // Initial setup
     setupScrollbar();
