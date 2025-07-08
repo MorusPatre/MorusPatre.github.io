@@ -1,5 +1,3 @@
-@import url(fontawesome-all.min.css);
-@import url(fontawesome-all.min.css);
 @import url("https://fonts.googleapis.com/css?family=Source+Sans+Pro:300italic,600italic,300,600");
 
 /*
@@ -1285,6 +1283,18 @@ input, select, textarea {
     -webkit-user-select: none; /* Safari */
     -ms-user-select: none; /* IE 10+ and Edge */
     user-select: none; /* Standard syntax */
+}
+
+/* NEW: Add this rule for the icon */
+.search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #999;
+    pointer-events: none;
+    font-size: 0.8rem;
+    z-index: 1;
 }
 
 
