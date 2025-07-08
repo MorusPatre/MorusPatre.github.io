@@ -1,5 +1,3 @@
-@import url(fontawesome-all.min.css);
-@import url(fontawesome-all.min.css);
 @import url("https://fonts.googleapis.com/css?family=Source+Sans+Pro:300italic,600italic,300,600");
 
 /*
@@ -161,7 +159,7 @@ input, select, textarea {
         line-height: 1.5;
         margin: 0 0 1rem 0;
         text-transform: uppercase;
-	letter-spacing: 0.12rem;
+    letter-spacing: 0.12rem;
     }
 
         h1 a, h2 a, h3 a, h4 a, h5 a, h6 a {
@@ -535,27 +533,27 @@ input, select, textarea {
 
     ::-webkit-input-placeholder {
         color: rgba(255, 255, 255, 0.5) !important;
-        opacity: 1.0;
+        opacity: 0.7;
     }
 
     :-moz-placeholder {
         color: rgba(255, 255, 255, 0.5) !important;
-        opacity: 1.0;
+        opacity: 0.7;
     }
 
     ::-moz-placeholder {
         color: rgba(255, 255, 255, 0.5) !important;
-        opacity: 1.0;
+        opacity: 0.7;
     }
 
     :-ms-input-placeholder {
         color: rgba(255, 255, 255, 0.5) !important;
-        opacity: 1.0;
+        opacity: 0.7;
     }
 
     .formerize-placeholder {
         color: rgba(255, 255, 255, 0.5) !important;
-        opacity: 1.0;
+        opacity: 0.7;
     }
 
 /* Box */
@@ -1277,8 +1275,8 @@ input, select, textarea {
     font-size: 0.65rem;
     text-align: left;
     border-radius: 20px;
-    width: 25.3em;  /* Adjust this value to change the overall width */
-    padding-left: 0.93em; /* Adds space on the left */
+    width: 26.5em;  /* Adjust this value to change the overall width */
+    padding-left: 30px; /* MODIFIED: Increased padding for the icon */
     padding-right: 0.93em; /* Adds space on the right */
     background-color: rgba(255, 255, 255, 0.05); /* Example: light white with 20% opacity */
     /* Explicitly prevent user text selection */
@@ -1749,19 +1747,19 @@ Custom Download Button Style
 */
 /* Using the 'Subtle & Integrated' style */
 #modal-download-btn.download-btn {
-	background-color: rgba(255, 255, 255, 0.075);
-	color: #ffffff !important;
-	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
-	font-weight: 300;
+    background-color: rgba(255, 255, 255, 0.075);
+    color: #ffffff !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+    font-weight: 300;
 }
 
 #modal-download-btn.download-btn:hover {
-	background-color: rgba(255, 255, 255, 0.15);
-	box-shadow: inset 0 0 0 1px #ffffff;
+    background-color: rgba(255, 255, 255, 0.15);
+    box-shadow: inset 0 0 0 1px #ffffff;
 }
 
 #modal-download-btn.download-btn .fas {
-	margin-right: 0.75em;
+    margin-right: 0.75em;
 }
 
 /*
@@ -1816,17 +1814,31 @@ Custom Context Menu
     cursor: default; /* Use the default cursor, not the pointer */
 }
 
-
 /*
 ==================================================================
-// Search Bar Clear Button
+// Search Icon & Clear Button
 ==================================================================
 */
 #search-container form {
     margin: 0;
     display: flex;
     align-items: center;
-    position: relative; /* This is the positioning context for the button */
+    position: relative; /* This is the positioning context for the icon and button */
+}
+
+.search-icon {
+    position: absolute;
+    left: 10px; /* Slightly adjusted for visual centering */
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;  /* Icon width */
+    height: 16px; /* Icon height */
+    z-index: 1;
+    pointer-events: none;
+    background-repeat: no-repeat;
+    background-size: contain;
+    /* The SVG icon is embedded here. You can change stroke-width from '1.5' to '1' for ultra-thin or '2' for thicker. */
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' /%3e%3c/svg%3e");
 }
 
 .clear-search-button {
@@ -1849,6 +1861,7 @@ Custom Context Menu
 .clear-search-button:hover {
     color: #fff;
 }
+
 
 /*
 ==================================================================
