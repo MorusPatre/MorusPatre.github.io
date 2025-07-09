@@ -39,6 +39,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 img.dataset.search = item.search;
                 img.dataset.actors = item.actors;
                 img.dataset.characters = item.characters;
+                img.dataset.size = item.size;
                 img.dataset.dimensions = item.dimensions;
                 img.dataset.season = item.season;
                 if (item.episode) { img.dataset.episode = item.episode; }
