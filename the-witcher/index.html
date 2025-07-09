@@ -177,11 +177,7 @@
                     if (!primaryKeys.includes(key) && !handledKeys.includes(key) && dataset[key] && dataset[key].trim() !== '' && dataset[key].trim() !== '-') {
                         hasDetails = true;
                         let label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-                        let ddContent = dataset[key];
-                        if (key === 'dimensions' && ddContent.includes('×')) {
-                            ddContent = ddContent.replace(/×/g, '<span class="mac-font-char">×</span>');
-                        }
-                        detailsHTML += `<div class="info-item"><dt>${label}</dt><dd>${ddContent}</dd></div>`;
+                        detailsHTML += `<div class="info-item"><dt>${label}</dt><dd>${dataset[key]}</dd></div>`;
                     }
                 }
                 
