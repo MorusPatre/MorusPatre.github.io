@@ -719,7 +719,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     /**
-     * UPDATED endDragAction function
+     * endDragAction function
      */
     const endDragAction = (e) => {
         if (!isMarquee) return;
@@ -981,6 +981,96 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+/*
+==================================================================
+// DYNAMIC IMAGE MODAL LOGIC (v2)
+==================================================================
+*/
+const gallery = document.getElementById('photo-gallery');
+const modal = document.getElementById('modal');
+
+if (gallery && modal) {
+    const modalImg = document.getElementById('modal-img');
+    const metadataContainer = document.getElementById('modal-metadata-list');
+    const closeModalButton = modal.querySelector('.close-button');
+
+    // --- Function to format camelCase keys into proper titles ---
+    const formatKey = (key) => {
+        const result = key.replace(/([A-Z])/g, ' $1'); // 'deviceMake' -> 'device Make'
+        return result.charAt(0).toUpperCase() + result.slice(1); // 'device Make' -> 'Device Make'
+    };
+
+    // --- Function to Open the Modal ---
+    const openModal = (figureElement) => {
+        const img = figureElement.querySelector('img');
+        if (!img || !img.dataset.fullsrc) return;
+
+        // 1. Set the main image in the modal
+        modalImg.src = img.dataset.fullsrc;
+
+        // 2. Clear previous metadata
+        metadataContainer.innerHTML = '';
+
+        const data = img.dataset;
+
+        // 3. Handle "Size" first to ensure it's always at the top
+        if (data.size) {
+            const dt = document.createElement('dt');
+            dt.textContent = 'Size';
+            const dd = document.createElement('dd');
+            dd.textContent = data.size;
+            metadataContainer.appendChild(dt);
+            metadataContainer.appendChild(dd);
+        }
+
+        // 4. Dynamically add all other metadata
+        // Define keys to ignore in the metadata list
+        const keysToIgnore = ['size', 'filename', 'fullsrc', 'search'];
+
+        // Get all other keys from the dataset, filter out ignored ones, and sort them
+        const otherKeys = Object.keys(data)
+            .filter(key => !keysToIgnore.includes(key))
+            .sort(); // Sort alphabetically for a consistent order
+
+        // Loop through the remaining keys and add them to the list
+        otherKeys.forEach(key => {
+            const dt = document.createElement('dt');
+            dt.textContent = formatKey(key); // Make the key look nice
+            const dd = document.createElement('dd');
+            dd.textContent = data[key];
+            metadataContainer.appendChild(dt);
+            metadataContainer.appendChild(dd);
+        });
+
+        // 5. Display the modal
+        modal.style.display = 'block';
+    };
+
+    // --- Function to Close the Modal ---
+    const closeModal = () => {
+        modal.style.display = 'none';
+        modalImg.src = '';
+    };
+
+    // --- Event Listeners ---
+    gallery.addEventListener('dblclick', (e) => {
+        const figure = e.target.closest('figure');
+        if (figure) {
+            openModal(figure);
+        }
+    });
+
+    if (closeModalButton) {
+        closeModalButton.addEventListener('click', closeModal);
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.style.display === 'block') {
+            closeModal();
+        }
+    });
+}
 
 /*Custom Scrollbar Advanced*/
 document.addEventListener('DOMContentLoaded', () => {
