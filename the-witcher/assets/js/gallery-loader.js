@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 const dimensionsSpan = document.createElement('span');
                 dimensionsSpan.className = 'dimensions';
-                dimensionsSpan.innerHTML = item.dimensions.replace('x', '<span class="mac-x">x</span>');
+                dimensionsSpan.innerHTML = item.dimensions.replace('x', '<span style="font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"">x</span>');
                 figcaption.appendChild(dimensionsSpan);
 
                 // 6. Assemble the pieces
