@@ -56,7 +56,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 const dimensionsSpan = document.createElement('span');
                 dimensionsSpan.className = 'dimensions';
-                dimensionsSpan.textContent = item.dimensions;
+                if (item.dimensions && item.dimensions.includes('×')) {
+                    const parts = item.dimensions.split('×');
+                    const xSpan = document.createElement('span');
+                    xSpan.className = 'dimensions-x';
+                    xSpan.textContent = '×';
+                    dimensionsSpan.appendChild(document.createTextNode(parts[0]));
+                    dimensionsSpan.appendChild(xSpan);
+                    dimensionsSpan.appendChild(document.createTextNode(parts[1]));
+                } else {
+                    dimensionsSpan.textContent = item.dimensions;
+                }
                 figcaption.appendChild(dimensionsSpan);
 
                 // 6. Assemble the pieces
