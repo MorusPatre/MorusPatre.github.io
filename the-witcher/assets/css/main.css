@@ -1537,6 +1537,11 @@ Styling for the Finder-Style Photo Gallery
     margin-top: 0.2em;
 }
 
+.dimensions-x {
+    display: inline-block;
+    transform: translateY(1px);
+}
+
 
 
 /* 6. Marquee Selection Box */
@@ -1612,6 +1617,8 @@ Modal / Lightbox Styles
     font-size: 35px;
     font-weight: bold;
     transition: 0.3s;
+    display: inline-block;
+    transform: translateY(-2px);
 }
 
 .modal-close:hover,
