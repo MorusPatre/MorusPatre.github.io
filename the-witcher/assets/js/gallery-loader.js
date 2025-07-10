@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 const dimensionsSpan = document.createElement('span');
                 dimensionsSpan.className = 'dimensions';
-                dimensionsSpan.textContent = item.dimensions;
+                dimensionsSpan.innerHTML = item.dimensions.replace('x', '<span class="mac-x">x</span>');
                 figcaption.appendChild(dimensionsSpan);
 
                 // 6. Assemble the pieces
