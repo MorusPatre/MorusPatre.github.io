@@ -177,7 +177,12 @@
                     if (!primaryKeys.includes(key) && !handledKeys.includes(key) && dataset[key] && dataset[key].trim() !== '' && dataset[key].trim() !== '-') {
                         hasDetails = true;
                         let label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-                        detailsHTML += `<div class="info-item"><dt>${label}</dt><dd>${dataset[key]}</dd></div>`;
+                        let value = dataset[key];
+                        if (label === 'Dimensions' && value.includes('×')) {
+                            const parts = value.split('×');
+                            value = `${parts[0]}<span class="dimensions-x">×</span>${parts[1]}`;
+                        }
+                        detailsHTML += `<div class="info-item"><dt>${label}</dt><dd>${value}</dd></div>`;
                     }
                 }
                 
