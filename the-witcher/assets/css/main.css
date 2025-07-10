@@ -1539,11 +1539,11 @@ Styling for the Finder-Style Photo Gallery
 
 .dimensions-x {
     display: inline-block;
-    transform: translateY(0.5px);
+    transform: translateY(0.75px);
 }
 
 .modal-info-panel .dimensions-x {
-    transform: translateY(0.5px);
+    transform: translateY(0.1px);
 }
 
 
