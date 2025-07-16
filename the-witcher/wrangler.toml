@@ -1,0 +1,20 @@
+name = "the-witcher-gallery"
+account_id = "68b626020517aff750131aca48c539b7"
+compatibility_date = "2023-12-01"
+
+[[r2_buckets]]
+binding = "IMAGE_BUCKET"
+bucket_name = "add-image"
+
+[build]
+command = ""
+
+[env.production]
+
+[[rules]]
+path = "/add-image"
+service = "add-image"
+
+[[rules]]
+path = "/*"
+service = "__STATIC_CONTENT__"
