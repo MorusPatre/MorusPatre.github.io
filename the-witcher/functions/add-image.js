@@ -5,7 +5,7 @@
 
 export default {
   async fetch(request, env) {
-    if (request.method === 'PUT') {
+    if (request.method === 'POST') {
       const key = request.headers.get('X-Custom-File-Name');
       if (!key) {
         return new Response('X-Custom-File-Name header is required', { status: 400 });
@@ -17,8 +17,8 @@ export default {
             contentType: request.headers.get('content-type'),
           },
         });
-        const imageUrl = new URL(request.url).origin + '/' + key;
-        return new Response(JSON.stringify({ imageUrl }), {
+        // Return just the key (filename) of the uploaded image
+        return new Response(JSON.stringify({ key }), {
           headers: { 'Content-Type': 'application/json' },
         });
       } catch (e) {
