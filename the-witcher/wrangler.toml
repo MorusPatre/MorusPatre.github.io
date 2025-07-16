@@ -1,6 +1,0 @@
-name = "the-witcher-gallery"
-compatibility_date = "2023-12-01"
-
-[[r2_buckets]]
-binding = "IMAGE_BUCKET"
-bucket_name = "add-image"
