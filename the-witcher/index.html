@@ -339,9 +339,45 @@
                 </ul>
         </div>
 
+        <input type="file" id="file-input" accept="image/*" style="display: none;">
+
     <div id="custom-scrollbar-track">
             <div id="custom-scrollbar-thumb"></div>
         </div>
 
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const fileInput = document.getElementById('file-input');
+            const addImageButton = document.getElementById('gallery-context-add');
+
+            addImageButton.addEventListener('click', () => {
+                fileInput.click();
+            });
+
+            fileInput.addEventListener('change', async (event) => {
+                const file = event.target.files[0];
+                if (!file) {
+                    return;
+                }
+
+                const response = await fetch('/add-image', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': file.type,
+                        'X-Custom-File-Name': file.name
+                    },
+                    body: file
+                });
+
+                if (response.ok) {
+                    const { imageUrl } = await response.json();
+                    // TODO: Add the uploaded image to the gallery
+                    console.log('Image uploaded successfully:', imageUrl);
+                } else {
+                    console.error('Image upload failed:', await response.text());
+                }
+            });
+        });
+    </script>
     </body>
 </html>
