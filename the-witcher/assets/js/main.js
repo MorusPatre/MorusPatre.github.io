@@ -976,6 +976,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     fileInput.click();
                 }
                 break;
+            case 'gallery-context-sort':
+                alert('Functionality for "Sort By" is not yet implemented.');
+                break;
+            case 'gallery-context-view':
+                alert('Functionality for "Show View Options" is not yet implemented.');
+                break;
         }
     });
 
