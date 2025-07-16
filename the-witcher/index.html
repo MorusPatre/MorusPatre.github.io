@@ -345,5 +345,50 @@
             <div id="custom-scrollbar-thumb"></div>
         </div>
 
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const fileInput = document.getElementById('file-input');
+            const addImageButton = document.getElementById('gallery-context-add');
+
+            addImageButton.addEventListener('click', () => {
+                fileInput.click();
+            });
+
+            fileInput.addEventListener('change', async (event) => {
+                const file = event.target.files[0];
+                if (!file) {
+                    return;
+                }
+
+                // Use a simple alert for upload progress
+                alert(`Uploading ${file.name}...`);
+
+                try {
+                    const response = await fetch('/add-image', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': file.type,
+                            'X-Custom-File-Name': file.name
+                        },
+                        body: file
+                    });
+
+                    if (response.ok) {
+                        const { key } = await response.json();
+                        // On success, show a confirmation alert
+                        alert(`Image "${key}" uploaded successfully!`);
+                    } else {
+                        // If the upload fails, show an error alert
+                        const errorText = await response.text();
+                        console.error('Image upload failed:', errorText);
+                        alert(`Image upload failed: ${errorText}`);
+                    }
+                } catch (error) {
+                    console.error('An error occurred during the upload process:', error);
+                    alert(`An error occurred during the upload process: ${error.message}`);
+                }
+            });
+        });
+    </script>
     </body>
 </html>
