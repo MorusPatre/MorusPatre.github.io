@@ -964,13 +964,17 @@ document.addEventListener('DOMContentLoaded', () => {
         rightClickedItem = null;
     });
 
+    const fileInput = document.getElementById('file-input');
+
     galleryContextMenu.addEventListener('click', (e) => {
         galleryContextMenu.style.display = 'none';
         const targetId = e.target.id;
 
         switch (targetId) {
             case 'gallery-context-add':
-                alert('Functionality for "Add Image" is not yet implemented.');
+                if (fileInput) {
+                    fileInput.click();
+                }
                 break;
             case 'gallery-context-sort':
                 alert('Functionality for "Sort By" is not yet implemented.');
@@ -980,6 +984,40 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
         }
     });
+
+    if (fileInput) {
+        fileInput.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (!file) {
+                return;
+            }
+
+            alert(`Uploading ${file.name}...`);
+
+            try {
+                const response = await fetch('/add-image', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': file.type,
+                        'X-Custom-File-Name': file.name
+                    },
+                    body: file
+                });
+
+                if (response.ok) {
+                    const { key } = await response.json();
+                    alert(`Image "${key}" uploaded successfully!`);
+                } else {
+                    const errorText = await response.text();
+                    console.error('Image upload failed:', errorText);
+                    alert(`Image upload failed: ${errorText}`);
+                }
+            } catch (error) {
+                console.error('An error occurred during the upload process:', error);
+                alert(`An error occurred during the upload process: ${error.message}`);
+            }
+        });
+    }
 });
 
 /*Custom Scrollbar Advanced*/
