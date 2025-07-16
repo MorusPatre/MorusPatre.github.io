@@ -360,21 +360,57 @@
                     return;
                 }
 
-                const response = await fetch('/add-image', {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': file.type,
-                        'X-Custom-File-Name': file.name
-                    },
-                    body: file
-                });
+                const gallery = document.getElementById('photo-gallery');
+                const loadingIndicator = document.createElement('p');
+                loadingIndicator.textContent = `Uploading ${file.name}...`;
+                loadingIndicator.style.textAlign = 'center';
+                loadingIndicator.style.padding = '20px';
+                gallery.prepend(loadingIndicator);
 
-                if (response.ok) {
-                    const { imageUrl } = await response.json();
-                    // TODO: Add the uploaded image to the gallery
-                    console.log('Image uploaded successfully:', imageUrl);
-                } else {
-                    console.error('Image upload failed:', await response.text());
+                try {
+                    const response = await fetch('/add-image', {
+                        method: 'POST', // Changed to POST
+                        headers: {
+                            'Content-Type': file.type,
+                            'X-Custom-File-Name': file.name
+                        },
+                        body: file
+                    });
+
+                    loadingIndicator.remove();
+
+                    if (response.ok) {
+                        const { key } = await response.json();
+                        const imageUrl = `https://cdn.mouseia.com/${key}`;
+
+                        const photoGallery = document.getElementById('photo-gallery');
+
+                        const figure = document.createElement('figure');
+                        const img = document.createElement('img');
+                        img.src = imageUrl;
+                        img.dataset.fullsrc = imageUrl;
+                        img.alt = key;
+                        img.dataset.search = key; 
+
+                        const figcaption = document.createElement('figcaption');
+                        figcaption.textContent = key;
+
+                        figure.appendChild(img);
+                        figure.appendChild(figcaption);
+
+                        photoGallery.prepend(figure);
+
+                        console.log('Image uploaded successfully:', imageUrl);
+
+                    } else {
+                        const errorText = await response.text();
+                        console.error('Image upload failed:', errorText);
+                        alert(`Image upload failed: ${errorText}`);
+                    }
+                } catch (error) {
+                    loadingIndicator.remove();
+                    console.error('An error occurred during upload:', error);
+                    alert(`An error occurred during upload: ${error.message}`);
                 }
             });
         });
