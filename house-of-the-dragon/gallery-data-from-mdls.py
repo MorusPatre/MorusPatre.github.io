@@ -5,14 +5,6 @@ import re
 import unicodedata
 import pandas as pd
 
-# --- CONFIGURATION ---
-SORT_ORDER = ['/WW/', '/MM/', '/EE/', '/RR/'] # Used for sorting by original folder structure
-FILENAME_CHARACTER_EXCLUSIONS = {
-    '03020_RT.jpg': ['Ciri', 'Jaskier'],
-    '04002_RT.jpg': ['Geralt of Rivia', 'Jaskier']
-}
-
-
 # --- HELPER FUNCTIONS ---
 def simplify_text_for_search(text):
     if not text: return ""
@@ -20,11 +12,10 @@ def simplify_text_for_search(text):
     return "".join([c for c in nfkd_form if not unicodedata.combining(c)])
 
 def get_sort_key(row):
-    """Defines the display order: by folder, episode, unit, then original path."""
-    folder_rank = row.get('folder_rank', len(SORT_ORDER))
+    """Defines the display order: by episode, unit, then original path."""
     episode_num = row.get('episode_num', -1)
     unit_num = row.get('unit_num', -1)
-    return (folder_rank, -1 if episode_num is None else episode_num, unit_num, row['Relative File path'])
+    return (-1 if episode_num is None else episode_num, unit_num, row['Relative File path'])
 
 def to_kebab_case(text):
     """Converts 'Device Model' to 'device-model' for data attributes."""
@@ -45,8 +36,6 @@ try:
             row['episode_num'] = int(float(episode_str)) if episode_str else -1
         except (ValueError, TypeError):
             row['episode_num'] = -1
-        
-        row['folder_rank'] = next((i for i, prefix in enumerate(SORT_ORDER) if prefix in row['Relative File path']), len(SORT_ORDER))
         
         unit_num = -1
         unit_match = re.search(r'_[u](?:nit)?(\d+)', row['Relative File path'], re.IGNORECASE)
@@ -72,10 +61,6 @@ try:
         characters_raw = row.get('Characters', '') if pd.notna(row.get('Characters')) else ''
         actors_list = [actor.strip() for actor in actors_raw.split(',') if actor.strip()]
         characters_list = [char.strip() for char in characters_raw.split(',') if char.strip()]
-        
-        if actual_filename in FILENAME_CHARACTER_EXCLUSIONS:
-            exclusions = FILENAME_CHARACTER_EXCLUSIONS[actual_filename]
-            characters_list = [char for char in characters_list if char not in exclusions]
 
         actors_display = ", ".join(actors_list)
         characters_display = ", ".join(characters_list)
@@ -99,8 +84,8 @@ try:
         if characters_raw: search_terms_set.add(simplify_text_for_search(characters_raw.lower()))
         search_attr = " ".join(sorted(list(search_terms_set)))
         
-        final_src_path = f"the-witcher/{actual_filename}"
-        thumbnail_path = f"the-witcher/thumbnail/{name_without_ext}.webp"
+        final_src_path = f"house-of-the-dragon/{actual_filename}"
+        thumbnail_path = f"house-of-the-dragon/thumbnail/{name_without_ext}.webp"
 
         # Create the dictionary for the image, inserting keys in a specific order.
         image_data = {}
@@ -115,7 +100,7 @@ try:
         # 2. Add other metadata from the CSV, preserving column order.
         # Define a set of keys that have already been processed or should be skipped.
         processed_or_skipped_keys = {
-            'Relative File path', 'File name', 'episode_num', 'folder_rank', 'unit_num'
+            'Relative File path', 'File name', 'episode_num', 'unit_num'
         }
 
         # Get the ordered list of headers from the CSV reader
@@ -135,9 +120,6 @@ try:
                 image_data['actors'] = ", ".join(actors_list)
             elif col_header == 'Characters':
                 characters_list = [char.strip() for char in characters_raw.split(',') if char.strip()]
-                if actual_filename in FILENAME_CHARACTER_EXCLUSIONS:
-                    exclusions = FILENAME_CHARACTER_EXCLUSIONS[actual_filename]
-                    characters_list = [char for char in characters_list if char not in exclusions]
                 image_data['characters'] = ", ".join(characters_list)
             elif col_header == 'Dimensions':
                 image_data['dimensions'] = col_value
