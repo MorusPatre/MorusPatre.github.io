@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', function() {
             galleryContainer.innerHTML = 'Error loading gallery. Please check the console.';
         });
 
-    function truncateFilename(filename, maxLength = 45) {
+    function truncateFilename(filename, maxLength = 60) {
         if (filename.length <= maxLength) {
             return filename;
         }
