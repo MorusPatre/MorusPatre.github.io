@@ -154,6 +154,20 @@
                 const figure = visibleFigures[currentImageIndex];
                 const img = figure.querySelector('img');
 
+                // Set the aspect ratio of the container based on the full image dimensions
+                const dimensions = img.dataset.dimensions;
+                if (dimensions) {
+                    const [width, height] = dimensions.split('x').map(Number);
+                    if (width && height) {
+                        imageContainer.style.paddingTop = `${(height / width) * 100}%`;
+                        imageContainer.style.height = '0'; // Important for padding-top trick
+                    }
+                } else {
+                    // Fallback if dimensions are not available
+                    imageContainer.style.paddingTop = '';
+                    imageContainer.style.height = '';
+                }
+
                 modalImg.src = img.src; // Load thumbnail first
                 modalImg.alt = img.alt;
                 modalImg.classList.remove('is-loaded'); // Reset animation
