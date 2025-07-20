@@ -1681,24 +1681,14 @@ Modal / Lightbox Styles
     height: 100%;
     object-fit: contain;
     opacity: 0;
-    transition: opacity 0.5s ease-in-out;
+    transition: opacity 1s ease-in-out;
 }
 
 .modal-image-container img.is-loaded {
     opacity: 1;
 }
 
-.modal-image-container img {
-    max-width: 100%;
-    max-height: 90vh;
-    object-fit: contain;
-    opacity: 0;
-    transition: opacity 0.5s ease-in-out;
-}
 
-.modal-image-container img.is-loaded {
-    opacity: 1;
-}
 
 /* Right side of the modal (the info panel) */
 .modal-info-panel {
