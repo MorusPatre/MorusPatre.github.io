@@ -3,6 +3,7 @@ const path = require('path');
 
 // Define paths
 const witcherDataPath = path.join(__dirname, 'the-witcher', 'gallery-data.json');
+const hotdDataPath = path.join(__dirname, 'house-of-the-dragon', 'gallery-data.json');
 const sitemapPath = path.join(__dirname, 'sitemap.xml'); // Changed to root directory
 const baseUrl = 'https://mouseia.com';
 
@@ -50,11 +51,17 @@ try {
     console.error('Could not read or parse The Witcher gallery data.', error);
 }
 
-// Future-proofing: Add another gallery here if you create one
-// For example:
-// sitemapEntries.push(buildStaticUrl('/house-of-the-dragon/', 'weekly', '0.9'));
-// const hotdData = JSON.parse(fs.readFileSync(path.join(__dirname, 'house-of-the-dragon', 'gallery-data.json'), 'utf8'));
-// sitemapEntries.push(buildGalleryUrls(hotdData, '/house-of-the-dragon/'));
+// Add the main House of the Dragon gallery page
+sitemapEntries.push(buildStaticUrl('/house-of-the-dragon/', 'weekly', '0.9'));
+
+// Add all individual House of the Dragon images
+try {
+    const hotdData = JSON.parse(fs.readFileSync(hotdDataPath, 'utf8'));
+    sitemapEntries.push(buildGalleryUrls(hotdData, '/house-of-the-dragon/'));
+    console.log(`Added ${hotdData.length + 1} URLs for the House of the Dragon gallery.`);
+} catch (error) {
+    console.error('Could not read or parse House of the Dragon gallery data.', error);
+}
 
 // --- Assemble and write the final sitemap ---
 
