@@ -153,11 +153,10 @@
                 currentImageIndex = index;
                 const figure = visibleFigures[currentImageIndex];
                 const img = figure.querySelector('img');
-                const figcaptionText = figure.querySelector('figcaption').childNodes[0].nodeValue.trim();
 
                 modalImg.src = img.dataset.fullsrc || img.src;
                 modalImg.alt = img.alt;
-                modalFilename.textContent = figcaptionText;
+                modalFilename.textContent = img.dataset.filename;
 
                 let primaryHTML = '<dl class="info-grid">';
                 let detailsHTML = '<dl class="info-grid">';
