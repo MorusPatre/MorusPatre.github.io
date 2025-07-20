@@ -51,8 +51,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // 5. Create the <figcaption> for the filename and dimensions
                 const figcaption = document.createElement('figcaption');
-                const filenameNode = document.createTextNode(item.filename);
-                figcaption.appendChild(filenameNode);
+                const filenameSpan = document.createElement('span');
+                filenameSpan.className = 'filename';
+                filenameSpan.textContent = truncateFilename(item.filename);
+                figcaption.appendChild(filenameSpan);
 
                 const dimensionsSpan = document.createElement('span');
                 dimensionsSpan.className = 'dimensions';
@@ -85,4 +87,23 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error loading gallery data:', error);
             galleryContainer.innerHTML = 'Error loading gallery. Please check the console.';
         });
+
+    function truncateFilename(filename, maxLength = 20) {
+        if (filename.length <= maxLength) {
+            return filename;
+        }
+
+        const extension = filename.slice(filename.lastIndexOf('.'));
+        const name = filename.slice(0, filename.lastIndexOf('.'));
+        const remainingLength = maxLength - extension.length - 3; // 3 for '...'
+
+        if (remainingLength <= 0) {
+            return '...' + extension;
+        }
+
+        const startLength = Math.ceil(remainingLength / 2);
+        const endLength = Math.floor(remainingLength / 2);
+
+        return `${name.slice(0, startLength)}...${name.slice(name.length - endLength)}${extension}`;
+    }
 });
