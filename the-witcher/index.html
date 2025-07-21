@@ -178,11 +178,6 @@
                     modalImg.onload = null; // Remove the handler
                 };
 
-                // When the full-res image loads, add the 'is-loaded' class for transition
-                modalImg.addEventListener('load', function handler() {
-                    modalImg.classList.add('is-loaded');
-                    modalImg.removeEventListener('load', handler); // Remove the handler
-                });
                 modalFilename.textContent = img.dataset.filename;
 
                 let primaryHTML = '<dl class="info-grid">';
