@@ -107,7 +107,6 @@ for character, actors in CHARACTER_TO_ACTORS_MAP.items():
         normalized_actor = unicodedata.normalize('NFC', actor)
         ACTOR_TO_CHARACTER_MAP[normalized_actor] = character
 
-# --- CHANGE START ---
 # Define the exact columns to appear in the final CSV, in order.
 FINAL_CSV_HEADERS_KMD = [
     '_relative_filepath', 'kMDItemFSName', '_season', '_episode', 'kMDItemUserTags',
@@ -118,7 +117,6 @@ FINAL_CSV_HEADERS_KMD = [
     'kMDItemRedEyeOnOff', 'kMDItemMeteringMode', 'kMDItemFNumber',
     'kMDItemExposureProgram', 'kMDItemExposureTimeSeconds', 'kMDItemInstructions',
 ]
-# --- CHANGE END ---
 
 # Derive the actual kMDItem keys we need to fetch from the mdls command.
 MDLS_KEYS_TO_FETCH = sorted(list(set(
@@ -148,7 +146,6 @@ METADATA_MAPPINGS = {
     'kMDItemRedEyeOnOff': {True: 'Yes', False: 'No'}
 }
 
-# --- CHANGE START ---
 # Mappings for human-readable column headers
 HEADER_DISPLAY_NAMES = {
     '_relative_filepath': 'Relative File path', '_season': 'Season', '_episode': 'Episode',
@@ -164,14 +161,10 @@ HEADER_DISPLAY_NAMES = {
     'kMDItemDescription': 'Description', 'kMDItemExposureTimeSeconds': 'Exposure time',
     'kMDItemKeywords': 'Keywords',
 }
-# --- CHANGE END ---
-
 
 # --- SORTING HELPERS ---
 FOLDER_TO_SEASON_MAP = {'/WW/': 1, '/MM/': 2, '/EE/': 3, '/RR/': 4}
 
-# --- CHANGE START ---
-# Replaced with the exact function from generate_and_format_metadata.py
 def extract_season_episode(filepath):
     """Extracts season and episode using flexible, prioritized pattern matching."""
     filename = os.path.basename(filepath)
@@ -232,7 +225,6 @@ def extract_season_episode(filepath):
         episode = None
             
     return season, episode
-# --- CHANGE END ---
 
 # --- FORMATTING & METADATA FUNCTIONS ---
 def map_actors_to_characters(actors_str):
@@ -281,17 +273,15 @@ def get_image_metadata(image_path):
         metadata['_filepath'] = image_path
         metadata['_relative_filepath'] = os.path.relpath(image_path)
         
-        # --- CHANGE START ---
         # Logic for blank file name
         filename = metadata.get('kMDItemFSName')
-        if filename and re.match(r'^0\d{3}', filename):
+        if filename and (re.match(r'^0\d{3}', filename) or re.match(r'^[1-9]\d{2}', filename)):
             metadata['kMDItemFSName'] = ''
             
         # Logic for Season and Episode columns
         season, episode = extract_season_episode(image_path)
         metadata['_season'] = season
         metadata['_episode'] = episode
-        # --- CHANGE END ---
         
         width = metadata.get('kMDItemPixelWidth')
         height = metadata.get('kMDItemPixelHeight')
@@ -370,8 +360,6 @@ def collect_metadata_to_csv(folder_path, csv_file_path, recursive):
             all_metadata_raw.append(metadata)
     
     # --- Sorting ---
-    # --- CHANGE START ---
-    # Updated to use the pre-calculated season and episode for efficiency
     def get_sort_key(metadata_item):
         filepath = metadata_item.get('_filepath', '')
         season = metadata_item.get('_season')
@@ -380,7 +368,6 @@ def collect_metadata_to_csv(folder_path, csv_file_path, recursive):
         unit_num = int(unit_num_match.group(1)) if unit_num_match else -1
         # Sort by season, then episode, then unit number, then filepath
         return (season if season is not None else -1, episode if episode is not None else -1, unit_num, filepath)
-    # --- CHANGE END ---
 
     print("Sorting metadata...")
     all_metadata_raw.sort(key=get_sort_key)
