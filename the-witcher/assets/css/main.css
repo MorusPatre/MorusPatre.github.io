@@ -1681,11 +1681,6 @@ Modal / Lightbox Styles
     height: 100%;
     object-fit: contain;
     opacity: 0;
-    transition: opacity 4s ease-in-out;
-}
-
-.modal-image-container img.is-loaded {
-    opacity: 1;
 }
 
 
