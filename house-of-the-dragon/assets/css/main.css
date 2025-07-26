@@ -2028,25 +2028,18 @@ html, body {
 
 /*
 ==================================================================
-// Custom Dragon Cursor (Corrected Path)
+// Custom Dragon Cursor (Final - Root-Relative Path)
 ==================================================================
 */
 
-/* * 1. Set the custom cursor for the whole page.
- * - The '4 4' values are the "hotspot" of the cursor, which is the
- * exact point that clicks. For a 32x32px image, this is near
- * the top-left corner. You may need to adjust these X and Y
- * values to match the "tip" of your dragon image.
- * - 'auto' is the fallback if the image can't be loaded.
+/*
+ * This path now starts from the root of your project directory,
+ * making it independent of the CSS file's location.
  */
 html, body {
-    cursor: url('../../images/dragon-cursor.png') 4 4, auto;
+    cursor: url('/house-of-the-dragon/images/dragon-cursor.png') 4 4, auto;
 }
 
-/* * 2. Apply the cursor to all interactive elements.
- * This rule ensures that buttons, links, and other clickable items
- * also use your custom cursor instead of the default pointer hand.
- */
 a, button, .button,
 input[type="submit"], input[type="reset"], input[type="button"],
 #photo-gallery figure,
@@ -2054,18 +2047,13 @@ input[type="submit"], input[type="reset"], input[type="button"],
 .modal-close, .modal-prev, .modal-next,
 .context-menu ul li:not(.separator),
 .clear-search-button {
-    cursor: url('../../images/dragon-cursor.png') 4 4, auto;
+    cursor: url('/house-of-the-dragon/images/dragon-cursor.png') 4 4, auto;
 }
 
-/* * 3. Override cursor for specific non-interactive or state-based elements.
- * We want the text-selection cursor (I-beam) to appear when editing text,
- * and a standard arrow for the scrollbar thumb.
- */
 #custom-scrollbar-thumb {
-    cursor: default; /* Keep the default arrow for the scrollbar thumb */
+    cursor: default;
 }
 
-/* This existing rule from your CSS already handles text selection, so we don't need to change it. */
 .is-selecting-text .selection-active,
 .is-selecting-text .selection-active * {
     cursor: text !important;
