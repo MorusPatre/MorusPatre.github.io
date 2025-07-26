@@ -1956,8 +1956,8 @@ html, body {
 
 /* Changes the image border to blue and adds a soft glow effect */
 #photo-gallery figure.selected img {
-    border-color: #dba7a7; /* Gold */
-    box-shadow: 0 0 18px rgba(255, 215, 0, 0.5); /* Gold with 50% opacity */
+    border-color: #dbb7a7; /* Gold */
+    box-shadow: 0 0 18px rgba(255, 209, 130, 0.5); /* Gold with 50% opacity */
 }
 
 /*
