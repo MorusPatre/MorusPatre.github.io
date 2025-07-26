@@ -145,6 +145,19 @@
             const infoPanel = document.querySelector('.modal-info-panel');
             let currentImageIndex = -1;
 
+            // NEW: Add event listeners to control body scroll based on mouse position
+            modal.addEventListener('mouseenter', () => {
+                if (modal.classList.contains('is-visible')) {
+                    document.body.style.overflow = 'hidden';
+                }
+            });
+
+            modal.addEventListener('mouseleave', () => {
+                if (modal.classList.contains('is-visible')) {
+                    document.body.style.overflow = '';
+                }
+            });
+
             function showImage(index) {
                 const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
                 if (index < 0 || index >= visibleFigures.length) {
@@ -266,6 +279,9 @@
                 document.body.classList.remove('is-article-visible');
                 modal.classList.remove('is-visible');
                 currentImageIndex = -1;
+
+                // MODIFIED: Ensure body scroll is always restored on close
+                document.body.style.overflow = '';
 
                 setTimeout(() => {
                     modalImg.src = "";
