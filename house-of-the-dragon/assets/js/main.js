@@ -413,7 +413,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const header = document.getElementById('header');
     const footer = document.getElementById('footer');
     const gallery = document.getElementById('photo-gallery');
-    const searchInput = document.getElementById('search-input'); // MOVED
+    const searchInput = document.getElementById('search-input'); 
 
     if (!gallery || !wrapper) return;
 
@@ -427,6 +427,56 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let hasDragged = false;
     let mouseDownItem = null;
+
+    /*
+    ==================================================================
+    // START: SEARCH LOGIC (MOVED FROM INDEX.HTML)
+    ==================================================================
+    */
+    const clearSearchBtn = document.getElementById('clear-search');
+
+    function simplifySearchText(text) {
+        if (!text) return "";
+        return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    }
+
+    searchInput.addEventListener('keyup', function(event) {
+        if (searchInput.value.length > 0) {
+            clearSearchBtn.style.display = 'block';
+            searchInput.style.paddingRight = '30px';
+        } else {
+            clearSearchBtn.style.display = 'none';
+            searchInput.style.paddingRight = '';
+        }
+
+        const searchTerm = simplifySearchText(event.target.value.toLowerCase());
+        const galleryItems = gallery.querySelectorAll('figure');
+
+        galleryItems.forEach(function(item) {
+            const img = item.querySelector('img');
+            if (!img || !img.dataset.search) {
+                item.style.display = 'none';
+                return;
+            }
+
+            const searchData = img.dataset.search.toLowerCase();
+            if (searchData.includes(searchTerm)) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        window.scrollTo(0, 0);
+        window.dispatchEvent(new CustomEvent('galleryFiltered'));
+    });
+
+    clearSearchBtn.addEventListener('click', function() {
+        searchInput.value = '';
+        const keyupEvent = new Event('keyup', { bubbles: true });
+        searchInput.dispatchEvent(keyupEvent);
+        searchInput.focus();
+    });
 
     /*
     ==================================================================
@@ -831,18 +881,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * ----------------------------------------------------------------
      */
 
-    async function downloadImage(url, filename) {
-        try {
-            const response = await fetch(url);
-            if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
-            const blob = await response.blob();
-            saveAs(blob, filename || 'download');
-        } catch (error) {
-            console.error('Download failed:', error);
-            alert(`Could not download the image. It will open in a new tab for you to save manually.`);
-            window.open(url, '_blank');
-        }
-    }
     const itemContextMenu = document.getElementById('custom-context-menu');
     const galleryContextMenu = document.getElementById('gallery-context-menu');
     let rightClickedItem = null;
@@ -978,6 +1016,233 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'gallery-context-view':
                 alert('Functionality for "Show View Options" is not yet implemented.');
                 break;
+        }
+    });
+
+    /*
+    ==================================================================
+    // START: MODAL LOGIC (MOVED FROM INDEX.HTML)
+    ==================================================================
+    */
+    const modal = document.getElementById('image-modal');
+    const modalContent = document.querySelector('.modal-content');
+    const modalImg = document.getElementById('modal-img');
+    const modalFilename = document.getElementById('modal-filename');
+    const modalMetadata = document.getElementById('modal-metadata');
+    const downloadBtn = document.getElementById('modal-download-btn');
+    const closeModal = document.querySelector('.modal-close');
+    const prevButton = document.querySelector('.modal-prev');
+    const nextButton = document.querySelector('.modal-next');
+    const imageContainer = document.querySelector('.modal-image-container');
+    const infoPanel = document.querySelector('.modal-info-panel');
+    let currentImageIndex = -1;
+
+    modalContent.addEventListener('mouseenter', () => {
+        if (modal.classList.contains('is-visible')) {
+            document.body.style.overflow = 'hidden';
+        }
+    });
+
+    modalContent.addEventListener('mouseleave', () => {
+        if (modal.classList.contains('is-visible')) {
+            document.body.style.overflow = '';
+        }
+    });
+
+    function showImage(index) {
+        const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
+        if (index < 0 || index >= visibleFigures.length) {
+            return;
+        }
+        currentImageIndex = index;
+        const figure = visibleFigures[currentImageIndex];
+        const img = figure.querySelector('img');
+
+        const dimensions = img.dataset.dimensions;
+        if (dimensions) {
+            const [width, height] = dimensions.split('x').map(Number);
+            if (width && height) {
+                imageContainer.style.paddingTop = `${(height / width) * 100}%`;
+                imageContainer.style.height = '0';
+            }
+        } else {
+            imageContainer.style.paddingTop = '';
+            imageContainer.style.height = '';
+        }
+
+        modalImg.src = img.src;
+        modalImg.alt = img.alt;
+        modalImg.classList.remove('is-loaded');
+
+        modalImg.onload = () => {
+            modalImg.src = img.dataset.fullsrc;
+            modalImg.onload = null;
+        };
+
+        modalImg.addEventListener('load', function handler() {
+            modalImg.classList.add('is-loaded');
+            modalImg.removeEventListener('load', handler);
+        });
+        modalFilename.textContent = img.dataset.filename;
+
+        let primaryHTML = '<dl class="info-grid">';
+        let detailsHTML = '<dl class="info-grid">';
+        const dataset = img.dataset;
+        const primaryKeys = ['season', 'episode', 'actors', 'characters'];
+        const handledKeys = ['search', 'fullsrc', 'filename'];
+
+        primaryKeys.forEach(key => {
+            if (dataset[key] && dataset[key].trim() !== '' && dataset[key].trim() !== '-' && dataset[key].trim() !== '- (-)') {
+                const label = key.charAt(0).toUpperCase() + key.slice(1);
+                primaryHTML += `<div class="info-item"><dt>${label}</dt><dd>${dataset[key]}</dd></div>`;
+            }
+        });
+
+        let hasDetails = false;
+        for (const key in dataset) {
+            if (!primaryKeys.includes(key) && !handledKeys.includes(key) && dataset[key] && dataset[key].trim() !== '' && dataset[key].trim() !== '-') {
+                hasDetails = true;
+                let label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                let value = dataset[key];
+                if (label === 'Dimensions' && value.includes('×')) {
+                    const parts = value.split('×');
+                    value = `${parts[0]}<span class="dimensions-x">×</span>${parts[1]}`;
+                }
+                detailsHTML += `<div class="info-item"><dt>${label}</dt><dd>${value}</dd></div>`;
+            }
+        }
+        
+        primaryHTML += '</dl>';
+        detailsHTML += '</dl>';
+
+        let finalHTML = primaryHTML;
+        if (hasDetails) {
+            finalHTML += '<h4 class="metadata-header">Metadata</h4>' + detailsHTML;
+        }
+
+        modalMetadata.innerHTML = finalHTML;
+        
+        downloadBtn.href = img.dataset.fullsrc;
+
+        document.body.classList.add('is-article-visible');
+        modal.classList.add('is-visible');
+    }
+
+    downloadBtn.addEventListener('click', function(event) {
+        event.preventDefault();
+        const fullSrc = modalImg.src;
+        const filename = modalFilename.textContent;
+        downloadImage(fullSrc, filename);
+    });
+    
+    downloadBtn.addEventListener('dragstart', function(event) {
+        event.preventDefault();
+    });
+
+    function showNextImage() {
+        const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
+        let nextIndex = (currentImageIndex + 1) % visibleFigures.length;
+        showImage(nextIndex);
+    }
+
+    function showPrevImage() {
+        const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
+        let prevIndex = (currentImageIndex - 1 + visibleFigures.length) % visibleFigures.length;
+        showImage(prevIndex);
+    }
+
+    gallery.addEventListener('dblclick', function(event) {
+        const figure = event.target.closest('figure');
+        if (!figure) return;
+        const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
+        const index = visibleFigures.indexOf(figure);
+        if (index > -1) {
+            showImage(index);
+        }
+    });
+
+    function hideModal() {
+        document.body.classList.remove('is-article-visible');
+        modal.classList.remove('is-visible');
+        currentImageIndex = -1;
+
+        document.body.style.overflow = '';
+
+        setTimeout(() => {
+            modalImg.src = "";
+            modalFilename.textContent = "";
+            modalMetadata.innerHTML = "";
+        }, 250);
+    }
+    
+    modalContent.addEventListener('click', function(event) {
+        event.stopPropagation();
+    });
+
+    closeModal.addEventListener('click', hideModal);
+    prevButton.addEventListener('click', showPrevImage);
+    nextButton.addEventListener('click', showNextImage);
+
+    let mouseDownOnOverlay = false;
+
+    modal.addEventListener('mousedown', function(event) {
+        if (event.target === modal) {
+            mouseDownOnOverlay = true;
+        }
+    });
+
+    modal.addEventListener('mouseup', function(event) {
+        if (event.target === modal && mouseDownOnOverlay) {
+            hideModal();
+        }
+        mouseDownOnOverlay = false;
+    });
+
+    document.addEventListener('keydown', function(event) {
+        if (modal.classList.contains('is-visible')) {
+            if (event.key === 'Escape') {
+                hideModal();
+            } else if (event.key === 'ArrowRight') {
+                showNextImage();
+            } else if (event.key === 'ArrowLeft') {
+                showPrevImage();
+            }
+        }
+    });
+    
+    imageContainer.addEventListener('mousedown', (e) => {
+        if (e.button === 0) {
+            document.body.classList.add('is-selecting-text');
+        }
+    });
+
+    infoPanel.addEventListener('mousedown', (e) => {
+        const validTargets = '.info-grid dt, .info-grid dd, #modal-filename, .metadata-header';
+        if (e.button === 0) {
+            document.body.classList.add('is-selecting-text');
+            if (e.target.matches(validTargets)) {
+                e.target.classList.add('selection-active');
+            }
+        }
+        else if (e.button === 2) {
+            if (e.target.matches(validTargets)) {
+                const targetElement = e.target;
+                const selection = window.getSelection();
+                const range = document.createRange();
+                range.selectNodeContents(targetElement);
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
+        }
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (document.body.classList.contains('is-selecting-text')) {
+            document.body.classList.remove('is-selecting-text');
+            const activeElement = document.querySelector('.selection-active');
+            if (activeElement) {
+                activeElement.classList.remove('selection-active');
+            }
         }
     });
 });
