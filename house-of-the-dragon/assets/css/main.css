@@ -1453,6 +1453,10 @@ input, select, textarea {
             opacity: 0;
         }
 
+        body.is-article-visible {
+            overflow: hidden;
+        }
+
 /*
 ============================================
 Styling for the Finder-Style Photo Gallery
