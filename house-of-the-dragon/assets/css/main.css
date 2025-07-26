@@ -2019,9 +2019,9 @@ html, body {
 */
 
 ::selection {
-  background-color: rgba(80, 139, 200, 0.3); /* A muted, semi-transparent blue */
+  background-color: rgba(200, 146, 80, 0.3); /* An antique, semi-transparent, gold */
 }
 
 ::-moz-selection { /* Firefox compatibility */
-  background-color: rgba(80, 139, 200, 0.3);
+  background-color: rgba(200, 146, 80, 0.3);
 }
