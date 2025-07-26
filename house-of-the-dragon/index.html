@@ -145,14 +145,14 @@
             const infoPanel = document.querySelector('.modal-info-panel');
             let currentImageIndex = -1;
 
-            // NEW: Add event listeners to control body scroll based on mouse position
-            modal.addEventListener('mouseenter', () => {
+            // MODIFIED: Events are now attached to the central modal content, not the full overlay.
+            modalContent.addEventListener('mouseenter', () => {
                 if (modal.classList.contains('is-visible')) {
                     document.body.style.overflow = 'hidden';
                 }
             });
 
-            modal.addEventListener('mouseleave', () => {
+            modalContent.addEventListener('mouseleave', () => {
                 if (modal.classList.contains('is-visible')) {
                     document.body.style.overflow = '';
                 }
@@ -248,7 +248,6 @@
                 downloadImage(fullSrc, filename);
             });
             
-            // **NEW**: Prevent the default drag behavior on the download button
             downloadBtn.addEventListener('dragstart', function(event) {
                 event.preventDefault();
             });
@@ -280,7 +279,6 @@
                 modal.classList.remove('is-visible');
                 currentImageIndex = -1;
 
-                // MODIFIED: Ensure body scroll is always restored on close
                 document.body.style.overflow = '';
 
                 setTimeout(() => {
