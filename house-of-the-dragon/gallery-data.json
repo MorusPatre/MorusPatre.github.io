@@ -1,20 +1,5 @@
 [
   {
-    "src": "https://cdn.mouseia.com/house-of-the-dragon/0101024.jpg",
-    "thumbnail": "https://cdn.mouseia.com/house-of-the-dragon/thumbnail/0101024.webp",
-    "filename": "",
-    "alt": "Characters:  | Actors: Syrax",
-    "search": "0101024 0101024.jpg e1 episode 1 s1 s1e1 season 1 syrax",
-    "season": 1,
-    "episode": 1,
-    "actors": "Syrax",
-    "size": "273 KB",
-    "dimensions": "1920 × 1080",
-    "colorSpace": "RGB",
-    "colorProfile": "sRGB IEC61966-2.1",
-    "alphaChannel": "No"
-  },
-  {
     "src": "https://cdn.mouseia.com/house-of-the-dragon/101_166564252_04c640.jpg",
     "thumbnail": "https://cdn.mouseia.com/house-of-the-dragon/thumbnail/101_166564252_04c640.webp",
     "filename": "",
@@ -20430,21 +20415,6 @@
     "fNumber": "f/2,8",
     "exposureProgram": "Manual",
     "exposureTime": "1/1.000"
-  },
-  {
-    "src": "https://cdn.mouseia.com/house-of-the-dragon/204_083023_TW_1764.jpg",
-    "thumbnail": "https://cdn.mouseia.com/house-of-the-dragon/thumbnail/204_083023_TW_1764.webp",
-    "filename": "",
-    "alt": "Characters:  | Actors: Red",
-    "search": "204_083023_tw_1764 204_083023_tw_1764.jpg e4 episode 4 red s2 s2e4 season 2",
-    "season": 2,
-    "episode": 4,
-    "actors": "Red",
-    "size": "628 KB",
-    "dimensions": "1920 × 1080",
-    "colorSpace": "RGB",
-    "colorProfile": "sRGB IEC61966-2.1",
-    "alphaChannel": "No"
   },
   {
     "src": "https://cdn.mouseia.com/house-of-the-dragon/204_083023_TW_1773.jpg",
