@@ -981,10 +981,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             } else {
                                 console.error("FileSaver.js (saveAs) is not loaded.");
                             }
-                            document.body.style.cursor = 'default';
+                            document.body.style.cursor = '';
                         }).catch(zipError => {
                             console.error("Error generating zip file:", zipError);
-                            document.body.style.cursor = 'default';
+                            document.body.style.cursor = '';
                         });
                     });
                 } else {
