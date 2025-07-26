@@ -145,14 +145,6 @@
             const infoPanel = document.querySelector('.modal-info-panel');
             let currentImageIndex = -1;
 
-            modal.addEventListener('mouseenter', () => {
-                document.body.style.overflow = 'hidden';
-            });
-
-            modal.addEventListener('mouseleave', () => {
-                document.body.style.overflow = '';
-            });
-
             function showImage(index) {
                 const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
                 if (index < 0 || index >= visibleFigures.length) {
