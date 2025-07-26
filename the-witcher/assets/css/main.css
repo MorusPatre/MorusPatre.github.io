@@ -1863,7 +1863,7 @@ Custom Context Menu
     right: 12px; /* Position from the right edge of the form */
     top: 50%; /* Center vertically */
     transform: translateY(-50%);
-    cursor: pointer;
+    cursor: default;
     display: none; /* Hidden by default */
     color: #999;
     font-size: 1.2rem;
