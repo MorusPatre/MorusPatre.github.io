@@ -433,24 +433,36 @@ document.addEventListener('DOMContentLoaded', () => {
     // START: SEARCH LOGIC (MOVED FROM INDEX.HTML)
     ==================================================================
     */
+
+    const searchInputWrapper = document.getElementById('search-input-wrapper');
     const clearSearchBtn = document.getElementById('clear-search');
+    let searchTags = new Set(); // Use a Set to store unique search tags
+
+    // When the wrapper is clicked, focus the actual input field
+    searchInputWrapper.addEventListener('click', () => {
+        searchInput.focus();
+    });
 
     function simplifySearchText(text) {
         if (!text) return "";
         return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     }
 
-    searchInput.addEventListener('keyup', function(event) {
-        if (searchInput.value.length > 0) {
+    /**
+     * NEW: Performs the gallery search based on the tags in the `searchTags` set.
+     */
+    function performSearch() {
+        const galleryItems = gallery.querySelectorAll('figure');
+        const tags = Array.from(searchTags);
+
+        // Update clear button visibility
+        if (tags.length > 0) {
             clearSearchBtn.style.display = 'block';
-            searchInput.style.paddingRight = '30px';
+            searchInputWrapper.style.paddingRight = '30px';
         } else {
             clearSearchBtn.style.display = 'none';
-            searchInput.style.paddingRight = '';
+            searchInputWrapper.style.paddingRight = ''; // Revert to original padding
         }
-
-        const searchTerm = simplifySearchText(event.target.value.toLowerCase());
-        const galleryItems = gallery.querySelectorAll('figure');
 
         galleryItems.forEach(function(item) {
             const img = item.querySelector('img');
@@ -460,7 +472,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const searchData = img.dataset.search.toLowerCase();
-            if (searchData.includes(searchTerm)) {
+            // Check if the item's search data includes ALL of the active tags
+            const isMatch = tags.every(tag => searchData.includes(simplifySearchText(tag.toLowerCase())));
+            
+            if (isMatch) {
                 item.style.display = 'flex';
             } else {
                 item.style.display = 'none';
@@ -469,15 +484,85 @@ document.addEventListener('DOMContentLoaded', () => {
 
         window.scrollTo(0, 0);
         window.dispatchEvent(new CustomEvent('galleryFiltered'));
+    }
+
+
+    /**
+     * NEW: Creates and adds a search tag to the input wrapper.
+     * @param {string} text The text content of the tag.
+     */
+    function addTag(text) {
+        const cleanedText = text.trim();
+        if (!cleanedText || searchTags.has(cleanedText)) {
+            searchInput.value = ''; // Clear input even if tag exists or is empty
+            return;
+        }
+
+        searchTags.add(cleanedText);
+
+        const tagEl = document.createElement('div');
+        tagEl.className = 'search-tag';
+
+        const tagText = document.createElement('span');
+        tagText.textContent = cleanedText;
+
+        const closeBtn = document.createElement('span');
+        closeBtn.className = 'tag-close';
+        closeBtn.innerHTML = '&times;';
+        closeBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent the wrapper's click event from firing
+            removeTag(tagEl, cleanedText);
+        });
+
+        tagEl.appendChild(tagText);
+        tagEl.appendChild(closeBtn);
+        
+        // Insert the new tag before the input element
+        searchInputWrapper.insertBefore(tagEl, searchInput);
+
+        searchInput.value = '';
+        performSearch();
+        // Hide suggestions after adding a tag
+        const suggestionsContainer = document.getElementById('suggestions-container');
+        if(suggestionsContainer) suggestionsContainer.style.display = 'none';
+    }
+
+    /**
+     * NEW: Removes a tag from the DOM and the search set.
+     * @param {HTMLElement} tagEl The tag element to remove.
+     * @param {string} text The text of the tag to remove from the set.
+     */
+    function removeTag(tagEl, text) {
+        searchTags.delete(text);
+        tagEl.remove();
+        performSearch();
+    }
+
+    // MODIFIED: Handle key presses in the search input
+    searchInput.addEventListener('keydown', function(event) {
+        // Add tag on Enter or Comma
+        if ((event.key === 'Enter' || event.key === ',') && searchInput.value) {
+            event.preventDefault();
+            addTag(searchInput.value);
+        }
+        // Handle backspace to delete the last tag
+        else if (event.key === 'Backspace' && searchInput.value === '' && searchTags.size > 0) {
+            const lastTag = Array.from(searchInputWrapper.querySelectorAll('.search-tag')).pop();
+            if (lastTag) {
+                const tagText = lastTag.querySelector('span:first-child').textContent;
+                removeTag(lastTag, tagText);
+            }
+        }
     });
 
+    // MODIFIED: Clear button now removes all tags
     clearSearchBtn.addEventListener('click', function() {
-        searchInput.value = '';
-        const keyupEvent = new Event('keyup', { bubbles: true });
-        searchInput.dispatchEvent(keyupEvent);
+        searchTags.clear();
+        searchInputWrapper.querySelectorAll('.search-tag').forEach(tag => tag.remove());
+        performSearch();
         searchInput.focus();
     });
-
+    
     /*
     ==================================================================
     // START: FINDER-STYLE ARROW KEY NAVIGATION LOGIC
@@ -1435,14 +1520,15 @@ document.addEventListener('galleryLoaded', () => {
             return;
         }
 
-        const matches = sortedSearchTerms.filter(term => term.toLowerCase().startsWith(query)).slice(0, 7);
+        const matches = sortedSearchTerms.filter(term =>
+            !searchTags.has(term) && term.toLowerCase().startsWith(query)
+        ).slice(0, 7);
 
         if (matches.length > 0) {
             matches.forEach(term => {
                 const item = document.createElement('div');
                 item.className = 'suggestion-item';
                 item.textContent = term;
-                // Use 'mousedown' to prevent the input's 'blur' event from hiding the suggestions before the click registers.
                 item.addEventListener('mousedown', (e) => {
                     e.preventDefault();
                     selectSuggestion(term);
@@ -1455,12 +1541,13 @@ document.addEventListener('galleryLoaded', () => {
         }
     }
 
-    // Handles the selection of a suggestion from the list.
+    /**
+     * MODIFIED: Handles the selection of a suggestion from the list.
+     * @param {string} value The selected suggestion.
+     */
     function selectSuggestion(value) {
-        searchInput.value = value;
+        addTag(value); // Instead of setting input value, just add the tag
         suggestionsContainer.style.display = 'none';
-        // Manually trigger the original 'keyup' event to perform the search.
-        searchInput.dispatchEvent(new Event('keyup', { bubbles: true }));
     }
     
     // Manages the 'active' class for keyboard navigation.
@@ -1480,29 +1567,25 @@ document.addEventListener('galleryLoaded', () => {
     // Update suggestions on every input change.
     searchInput.addEventListener('input', updateSuggestions);
 
-    // Handle keyboard navigation (arrows, Enter, Escape).
+    // MODIFIED: Handle keyboard navigation (arrows, Enter, Escape).
     searchInput.addEventListener('keydown', (e) => {
         const items = suggestionsContainer.querySelectorAll('.suggestion-item');
-        if (items.length === 0) return;
+        if (items.length === 0 || suggestionsContainer.style.display === 'none') return;
 
         switch (e.key) {
             case 'ArrowDown':
                 e.preventDefault();
-                if (activeSuggestionIndex < items.length - 1) {
-                    activeSuggestionIndex++;
-                    updateActiveSuggestion(items);
-                }
+                activeSuggestionIndex = (activeSuggestionIndex < items.length - 1) ? activeSuggestionIndex + 1 : 0;
+                updateActiveSuggestion(items);
                 break;
             case 'ArrowUp':
                 e.preventDefault();
-                if (activeSuggestionIndex > 0) {
-                    activeSuggestionIndex--;
-                    updateActiveSuggestion(items);
-                }
+                activeSuggestionIndex = (activeSuggestionIndex > 0) ? activeSuggestionIndex - 1 : items.length - 1;
+                updateActiveSuggestion(items);
                 break;
             case 'Enter':
-                if (activeSuggestionIndex > -1) {
-                    e.preventDefault();
+                 if (activeSuggestionIndex > -1) {
+                    e.preventDefault(); // Prevent form submission
                     selectSuggestion(items[activeSuggestionIndex].textContent);
                 }
                 break;
@@ -1514,7 +1597,7 @@ document.addEventListener('galleryLoaded', () => {
 
     // Hide the suggestions when clicking anywhere else on the page.
     document.addEventListener('click', (e) => {
-        if (!searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+        if (!searchInputWrapper.contains(e.target)) {
             suggestionsContainer.style.display = 'none';
         }
     });
