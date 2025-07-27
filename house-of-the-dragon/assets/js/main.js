@@ -1392,13 +1392,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /*
 ==================================================================
-// Image-Based Cursor Tail Logic
+// Ghostly Fire Cursor Trail Logic (Connected Chain Method)
 ==================================================================
 */
 document.addEventListener('DOMContentLoaded', () => {
     const trailContainer = document.getElementById('cursor-trail');
     if (!trailContainer) return;
 
+    // --- Main Cursor Image ---
     const mainCursor = new Image();
     mainCursor.src = '/house-of-the-dragon/images/dragon-cursor.png';
     mainCursor.style.position = 'fixed';
@@ -1410,50 +1411,68 @@ document.addEventListener('DOMContentLoaded', () => {
     mainCursor.style.height = '24px';
     document.body.appendChild(mainCursor);
 
-    let lastX = -100;
-    let lastY = -100;
-    let isMoving = false;
-    let moveTimeout;
+    // --- Trail Logic ---
+    const particleCount = 20; // How many segments in the tail
+    const particles = [];
+    const coords = new Array(particleCount).fill({ x: 0, y: 0 });
+    const ease = 0.25; // How much the tail lags behind. Lower is more "flowy".
 
-    const animate = () => {
-        if (isMoving) {
-            // CHANGE #1: Create an 'img' element instead of a 'div'
-            const particle = document.createElement('img');
-            
-            // CHANGE #2: Set the image source for the particle
-            particle.src = '/house-of-the-dragon/images/dragon-cursor.png';
-            
-            particle.className = 'trail-particle';
-            trailContainer.appendChild(particle);
+    // Create the particle elements
+    for (let i = 0; i < particleCount; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'trail-particle';
+        trailContainer.appendChild(particle);
+        particles.push(particle);
+    }
 
-            particle.style.left = `${lastX}px`;
-            particle.style.top = `${lastY}px`;
+    let mouseX = -100, mouseY = -100;
 
-            setTimeout(() => {
-                particle.style.transform = 'translate(-50%, -50%) scale(0)';
-                particle.style.opacity = '0';
-            }, 10);
-
-            setTimeout(() => {
-                particle.remove();
-            }, 600);
-        }
-        
-        requestAnimationFrame(animate);
-    };
-
+    // Update mouse position
     window.addEventListener('mousemove', (e) => {
-        mainCursor.style.transform = `translate3d(${e.clientX - 4}px, ${e.clientY - 4}px, 0)`;
-
-        lastX = e.clientX;
-        lastY = e.clientY;
-        isMoving = true;
-
-        clearTimeout(moveTimeout);
-        moveTimeout = setTimeout(() => {
-            isMoving = false;
-        }, 100);
+        mouseX = e.clientX;
+        mouseY = e.clientY;
     });
+
+    // Animation loop
+    function animate() {
+        // Update the main dragon cursor's position
+        mainCursor.style.transform = `translate3d(${mouseX - 4}px, ${mouseY - 4}px, 0)`;
+
+        let prevX = coords[0].x;
+        let prevY = coords[0].y;
+
+        // The first segment follows the mouse directly
+        coords[0] = { x: mouseX, y: mouseY };
+
+        // Each subsequent segment smoothly follows the one in front of it
+        for (let i = 1; i < particleCount; i++) {
+            const nextX = coords[i].x;
+            const nextY = coords[i].y;
+
+            coords[i] = {
+                x: prevX + (nextX - prevX) * (1 - ease),
+                y: prevY + (nextY - prevY) * (1 - ease)
+            };
+            
+            prevX = nextX;
+            prevY = nextY;
+        }
+
+        // Render the particles
+        particles.forEach((p, i) => {
+            // The tail tapers: particles get smaller and more transparent further down the chain
+            const scale = (particleCount - i) / particleCount;
+            p.style.transform = `translate(${coords[i].x}px, ${coords[i].y}px) scale(${scale})`;
+            p.style.opacity = scale * 0.7; // Make the tail fade out
+            
+            // Adjust size based on position in the chain
+            const size = scale * 40; // Max size of 40px
+            p.style.width = `${size}px`;
+            p.style.height = `${size}px`;
+        });
+
+        requestAnimationFrame(animate);
+    }
 
     animate();
 });
