@@ -433,49 +433,202 @@ document.addEventListener('DOMContentLoaded', () => {
     // START: SEARCH LOGIC (MOVED FROM INDEX.HTML)
     ==================================================================
     */
+    const searchInput = document.getElementById('search-input');
+    const tagsContainer = document.getElementById('search-tags-container');
+    const suggestionsContainer = document.getElementById('suggestions-container');
     const clearSearchBtn = document.getElementById('clear-search');
+    const gallery = document.getElementById('photo-gallery');
 
-    function simplifySearchText(text) {
-        if (!text) return "";
-        return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    }
+    let allSearchableTerms = [];
+    let activeTags = new Set();
+    let activeSuggestionIndex = -1;
 
-    searchInput.addEventListener('keyup', function(event) {
-        if (searchInput.value.length > 0) {
-            clearSearchBtn.style.display = 'block';
-            searchInput.style.paddingRight = '30px';
-        } else {
-            clearSearchBtn.style.display = 'none';
-            searchInput.style.paddingRight = '';
-        }
-
-        const searchTerm = simplifySearchText(event.target.value.toLowerCase());
-        const galleryItems = gallery.querySelectorAll('figure');
-
-        galleryItems.forEach(function(item) {
-            const img = item.querySelector('img');
-            if (!img || !img.dataset.search) {
-                item.style.display = 'none';
-                return;
+    // Build the list of searchable terms once the gallery is loaded
+    document.addEventListener('galleryLoaded', () => {
+        const terms = new Set();
+        const galleryItems = gallery.querySelectorAll('figure img');
+        galleryItems.forEach(img => {
+            if (img.dataset.actors) {
+                img.dataset.actors.split(',').forEach(term => {
+                    const cleaned = term.trim();
+                    if (cleaned && cleaned.toLowerCase() !== 'red') terms.add(cleaned);
+                });
             }
+            if (img.dataset.characters) {
+                img.dataset.characters.split(',').forEach(term => {
+                    const cleaned = term.trim();
+                    if (cleaned) terms.add(cleaned);
+                });
+            }
+        });
+        allSearchableTerms = Array.from(terms).sort((a, b) => a.localeCompare(b));
+    });
 
-            const searchData = img.dataset.search.toLowerCase();
-            if (searchData.includes(searchTerm)) {
-                item.style.display = 'flex';
+    // Main function to filter the gallery based on active tags and input
+    const filterGallery = () => {
+        const query = searchInput.value.toLowerCase().trim();
+        const tags = Array.from(activeTags).map(t => t.toLowerCase());
+
+        gallery.querySelectorAll('figure').forEach(figure => {
+            const searchData = figure.querySelector('img').dataset.search.toLowerCase();
+            const hasAllTags = tags.every(tag => searchData.includes(tag));
+            const matchesQuery = !query || searchData.includes(query);
+
+            if (hasAllTags && matchesQuery) {
+                figure.style.display = 'flex';
             } else {
-                item.style.display = 'none';
+                figure.style.display = 'none';
             }
         });
 
-        window.scrollTo(0, 0);
+        clearSearchBtn.style.display = (activeTags.size > 0 || query.length > 0) ? 'block' : 'none';
         window.dispatchEvent(new CustomEvent('galleryFiltered'));
+    };
+    
+    // Creates and adds a tag to the search bar
+    const addTag = (value) => {
+        if (!value || activeTags.has(value)) {
+            searchInput.value = ''; // Clear input even if tag exists
+            return;
+        }
+
+        activeTags.add(value);
+
+        const tag = document.createElement('div');
+        tag.className = 'search-tag';
+        tag.textContent = value;
+        tag.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.querySelectorAll('.search-tag').forEach(t => t.classList.remove('selected'));
+            tag.classList.add('selected');
+            searchInput.focus();
+        });
+
+        const removeBtn = document.createElement('span');
+        removeBtn.className = 'remove-tag';
+        removeBtn.innerHTML = '&times;';
+        removeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            activeTags.delete(value);
+            tagsContainer.removeChild(tag);
+            filterGallery();
+        });
+
+        tag.appendChild(removeBtn);
+        tagsContainer.appendChild(tag);
+        searchInput.value = '';
+        filterGallery();
+    };
+
+    // Updates the autocomplete suggestions
+    const updateSuggestions = () => {
+        const query = searchInput.value.toLowerCase();
+        suggestionsContainer.innerHTML = '';
+        activeSuggestionIndex = -1;
+
+        if (query.length === 0) {
+            suggestionsContainer.style.display = 'none';
+            return;
+        }
+
+        const matches = allSearchableTerms
+            .filter(term => term.toLowerCase().startsWith(query) && !activeTags.has(term))
+            .slice(0, 7);
+
+        if (matches.length > 0) {
+            matches.forEach(term => {
+                const item = document.createElement('div');
+                item.className = 'suggestion-item';
+                item.textContent = term;
+                item.addEventListener('mousedown', e => {
+                    e.preventDefault();
+                    addTag(term);
+                    suggestionsContainer.style.display = 'none';
+                    searchInput.focus();
+                });
+                suggestionsContainer.appendChild(item);
+            });
+            suggestionsContainer.style.display = 'block';
+        } else {
+            suggestionsContainer.style.display = 'none';
+        }
+    };
+
+    // Handles keyboard navigation and actions in the search input
+    searchInput.addEventListener('keydown', (e) => {
+        const suggestions = suggestionsContainer.querySelectorAll('.suggestion-item');
+        
+        switch (e.key) {
+            case 'Enter':
+                if (activeSuggestionIndex > -1 && suggestions[activeSuggestionIndex]) {
+                    e.preventDefault();
+                    addTag(suggestions[activeSuggestionIndex].textContent);
+                    suggestionsContainer.style.display = 'none';
+                } else if (searchInput.value.trim() !== '') {
+                    e.preventDefault();
+                    addTag(searchInput.value.trim()); // Allow adding custom tags
+                }
+                break;
+            case 'ArrowDown':
+                if (suggestions.length > 0) {
+                    e.preventDefault();
+                    activeSuggestionIndex = Math.min(activeSuggestionIndex + 1, suggestions.length - 1);
+                    updateActiveSuggestion(suggestions);
+                }
+                break;
+            case 'ArrowUp':
+                if (suggestions.length > 0) {
+                    e.preventDefault();
+                    activeSuggestionIndex = Math.max(activeSuggestionIndex - 1, 0);
+                    updateActiveSuggestion(suggestions);
+                }
+                break;
+            case 'Backspace':
+                if (searchInput.value === '' && tagsContainer.lastChild) {
+                    const selectedTag = tagsContainer.querySelector('.search-tag.selected');
+                    if (selectedTag) {
+                        selectedTag.querySelector('.remove-tag').click();
+                    } else {
+                        tagsContainer.lastChild.querySelector('.remove-tag').click();
+                    }
+                }
+                break;
+            case 'Escape':
+                suggestionsContainer.style.display = 'none';
+                break;
+        }
     });
 
-    clearSearchBtn.addEventListener('click', function() {
+    // Updates the highlight on suggestions for keyboard navigation
+    function updateActiveSuggestion(items) {
+        items.forEach((item, index) => {
+            item.classList.toggle('active', index === activeSuggestionIndex);
+            if (index === activeSuggestionIndex) {
+                item.scrollIntoView({ block: 'nearest' });
+            }
+        });
+    }
+
+    searchInput.addEventListener('input', () => {
+        updateSuggestions();
+        filterGallery();
+    });
+    
+    // Clear button functionality
+    clearSearchBtn.addEventListener('click', () => {
         searchInput.value = '';
-        const keyupEvent = new Event('keyup', { bubbles: true });
-        searchInput.dispatchEvent(keyupEvent);
+        activeTags.clear();
+        tagsContainer.innerHTML = '';
+        filterGallery();
         searchInput.focus();
+    });
+
+    // Global listeners to handle deselection and suggestion hiding
+    document.addEventListener('click', (e) => {
+        if (!document.getElementById('search-input-wrapper').contains(e.target)) {
+            suggestionsContainer.style.display = 'none';
+            document.querySelectorAll('.search-tag.selected').forEach(t => t.classList.remove('selected'));
+        }
     });
 
     /*
