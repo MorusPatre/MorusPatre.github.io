@@ -1392,7 +1392,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /*
 ==================================================================
-// Fiery Cursor Tail Logic
+// Image-Based Cursor Tail Logic
 ==================================================================
 */
 document.addEventListener('DOMContentLoaded', () => {
@@ -1415,10 +1415,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let isMoving = false;
     let moveTimeout;
 
-    // This loop runs constantly to check if it should create a particle.
     const animate = () => {
         if (isMoving) {
-            const particle = document.createElement('div');
+            // CHANGE #1: Create an 'img' element instead of a 'div'
+            const particle = document.createElement('img');
+            
+            // CHANGE #2: Set the image source for the particle
+            particle.src = '/house-of-the-dragon/images/dragon-cursor.png';
+            
             particle.className = 'trail-particle';
             trailContainer.appendChild(particle);
 
@@ -1430,31 +1434,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 particle.style.opacity = '0';
             }, 10);
 
-            // Remove the particle from the page after its animation finishes.
             setTimeout(() => {
                 particle.remove();
-            }, 600); // Must match the CSS transition duration.
+            }, 600);
         }
         
         requestAnimationFrame(animate);
     };
 
     window.addEventListener('mousemove', (e) => {
-        // Adjust the "tip" of the cursor by subtracting your hotspot values.
         mainCursor.style.transform = `translate3d(${e.clientX - 4}px, ${e.clientY - 4}px, 0)`;
 
         lastX = e.clientX;
         lastY = e.clientY;
         isMoving = true;
 
-        // Reset the timeout every time the mouse moves.
         clearTimeout(moveTimeout);
-        // If the mouse stops for 100ms, we'll stop creating particles.
         moveTimeout = setTimeout(() => {
             isMoving = false;
         }, 100);
     });
 
-    // Start the animation loop.
     animate();
 });
