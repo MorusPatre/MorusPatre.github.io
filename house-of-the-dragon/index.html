@@ -18,36 +18,33 @@
     
         <div id="wrapper">
 
-            <header id="header">
-                <div class="logo">
-                    <img src="images/targaryen_sigil.png" alt="Targaryen Sigil" draggable="false" />
-                </div>
-                <div id="search-container">
-                    <div id="search-input-wrapper" onclick="document.getElementById('search-input').focus()">
-                        <span class="search-icon"></span>
-                        <div id="search-tags-container"></div>
-                        <form onsubmit="return false;" style="flex-grow: 1; display: flex;">
-                            <input type="text" id="search-input" placeholder="Search..." autocomplete="off">
-                        </form>
-                        <span id="clear-search" class="clear-search-button">&times;</span>
-                        <div id="suggestions-container"></div>
-                    </div>
-                </div>
-            </header>
+                <header id="header">
+                        <div class="logo">
+                            <img src="images/targaryen_sigil.png" alt="Targaryen Sigil" draggable="false" />
+                        </div>
+                        <div id="search-container">
+                            <form onsubmit="return false;">
+                                <span class="search-icon"></span>
+                                <input type="text" id="search-input" placeholder="Search by filename, character, actor, episode, season etc..." autocomplete="off">
+                                <span id="clear-search" class="clear-search-button">&times;</span>
+                                <div id="suggestions-container"></div>
+                            </form>
+                        </div>
+                    </header>
 
-            <div id="photo-gallery">
-                <div id="marquee"></div>
+                <div id="photo-gallery">
+                    <div id="marquee"></div>
+                </div>
+
+                <footer id="footer">
+                        <p class="copyright">&copy; House of the Dragon, 2022 HBO. All Rights Reserved.</p>
+                    </footer>
+
             </div>
 
-            <footer id="footer">
-                    <p class="copyright">&copy; House of the Dragon, 2022 HBO. All Rights Reserved.</p>
-                </footer>
+    <div id="bg"></div>
 
-        </div>
-
-        <div id="bg"></div>
-
-        <script src="assets/js/jquery.min.js"></script>
+    <script src="assets/js/jquery.min.js"></script>
         <script src="assets/js/browser.min.js"></script>
         <script src="assets/js/breakpoints.min.js"></script>
         <script src="assets/js/util.js"></script>
@@ -59,46 +56,46 @@
 
         <script src="assets/js/gallery-loader.js"></script>
 
-        <div id="image-modal" class="modal-overlay">
-                    <span class="modal-close">&times;</span>
-                    <span class="modal-prev">&#10094;</span>
-                    <span class="modal-next">&#10095;</span>
-                    <div class="modal-content">
-                        <div class="modal-image-container">
-                            <img id="modal-img" src="" alt="Enlarged image">
-                        </div>
-                        <div class="modal-info-panel">
-                            <div class="info-content">
-                                <h3 id="modal-filename"></h3>
-                                <div id="modal-metadata">
-                                </div>
-                            </div>
-                            <a id="modal-download-btn" class="button download-btn" download><i class="fas fa-download"></i> Download</a>
-                        </div>
+    <div id="image-modal" class="modal-overlay">
+                <span class="modal-close">&times;</span>
+                <span class="modal-prev">&#10094;</span>
+                <span class="modal-next">&#10095;</span>
+                <div class="modal-content">
+                    <div class="modal-image-container">
+                        <img id="modal-img" src="" alt="Enlarged image">
                     </div>
-            </div>
+                    <div class="modal-info-panel">
+                        <div class="info-content">
+                            <h3 id="modal-filename"></h3>
+                            <div id="modal-metadata">
+                            </div>
+                        </div>
+                        <a id="modal-download-btn" class="button download-btn" download><i class="fas fa-download"></i> Download</a>
+                    </div>
+                </div>
+        </div>
 
-        <div id="custom-context-menu" class="context-menu">
-                    <ul>
-                        <li id="context-menu-open">Open</li>
-                        <li id="context-menu-open-tab">Open Image in New Tab</li>
-                        <li class="separator"></li>
-                        <li id="context-menu-save">Save Image to "Downloads"</li>
-                    </ul>
-            </div>
+    <div id="custom-context-menu" class="context-menu">
+                <ul>
+                    <li id="context-menu-open">Open</li>
+                    <li id="context-menu-open-tab">Open Image in New Tab</li>
+                    <li class="separator"></li>
+                    <li id="context-menu-save">Save Image to "Downloads"</li>
+                </ul>
+        </div>
 
-        <div id="gallery-context-menu" class="context-menu">
-                    <ul>
-                        <li id="gallery-context-add">Add Image</li>
-                        <li class="separator"></li>
-                        <li id="gallery-context-sort">Sort By</li>
-                        <li id="gallery-context-view">Show View Options</li>
-                    </ul>
-            </div>
+    <div id="gallery-context-menu" class="context-menu">
+                <ul>
+                    <li id="gallery-context-add">Add Image</li>
+                    <li class="separator"></li>
+                    <li id="gallery-context-sort">Sort By</li>
+                    <li id="gallery-context-view">Show View Options</li>
+                </ul>
+        </div>
 
-        <div id="custom-scrollbar-track">
-                <div id="custom-scrollbar-thumb"></div>
-            </div>
+    <div id="custom-scrollbar-track">
+            <div id="custom-scrollbar-thumb"></div>
+        </div>
 
     </body>
 </html>
