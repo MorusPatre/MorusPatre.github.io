@@ -1426,12 +1426,18 @@ document.addEventListener('galleryLoaded', () => {
     // Build a unique, sorted list of searchable terms from the JSON data.
     const searchTerms = new Set();
     galleryItems.forEach(img => {
-        if (img.dataset.actors) {
-            img.dataset.actors.split(',').forEach(term => {
-                const cleaned = term.trim();
-                if (cleaned && cleaned.toLowerCase() !== 'red') searchTerms.add(cleaned);
-            });
-        }
+        // MODIFICATION: Check for the new data attributes: cast, crew, and castAndCrew.
+        const peopleSources = [img.dataset.cast, img.dataset.crew, img.dataset.castAndCrew];
+
+        peopleSources.forEach(source => {
+            if (source) { // Check if the source (e.g., img.dataset.cast) exists
+                source.split(',').forEach(term => {
+                    const cleaned = term.trim();
+                    if (cleaned && cleaned.toLowerCase() !== 'red') searchTerms.add(cleaned);
+                });
+            }
+        });
+
         if (img.dataset.characters) {
             img.dataset.characters.split(',').forEach(term => {
                 const cleaned = term.trim();
