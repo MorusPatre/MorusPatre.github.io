@@ -2040,7 +2040,7 @@ html, body {
  * - 'auto' is the fallback if the image can't be loaded.
  */
 html, body {
-    cursor: url('../../images/dragon-cursor.png') 4 4, auto;
+    cursor: url('../../images/dragon-cursor.png') 10 4, auto;
 }
 
 /* * 2. Apply the cursor to all interactive elements.
@@ -2054,7 +2054,7 @@ input[type="submit"], input[type="reset"], input[type="button"],
 .modal-close, .modal-prev, .modal-next,
 .context-menu ul li:not(.separator),
 .clear-search-button {
-    cursor: url('../../images/dragon-cursor.png') 4 4, auto;
+    cursor: url('../../images/dragon-cursor.png') 10 4, auto;
 }
 
 /* * 3. Override cursor for specific non-interactive or state-based elements.
