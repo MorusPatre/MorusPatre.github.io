@@ -1389,3 +1389,78 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+/*
+==================================================================
+// Cursor Comet Tail Logic
+==================================================================
+*/
+document.addEventListener('DOMContentLoaded', () => {
+    const trailContainer = document.getElementById('cursor-trail');
+    if (!trailContainer) return;
+
+    // Use your custom dragon image for the main cursor element
+    const mainCursor = new Image();
+    mainCursor.src = '/house-of-the-dragon/images/dragon-cursor.png';
+    mainCursor.style.position = 'fixed'; // Use fixed to position relative to viewport
+    mainCursor.style.left = '0';
+    mainCursor.style.top = '0';
+    mainCursor.style.pointerEvents = 'none'; // Clicks pass through
+    mainCursor.style.zIndex = '10000'; // Keep it on top
+    mainCursor.style.width = '24px'; // Set your desired size
+    mainCursor.style.height = '24px';
+    // Set transform-origin based on your hotspot (e.g., 4px from left, 4px from top)
+    mainCursor.style.transformOrigin = '4px 4px';
+    document.body.appendChild(mainCursor);
+
+
+    let lastX = -100;
+    let lastY = -100;
+    let isMoving = false;
+    let animationFrameId;
+
+    // This function runs every time the browser is ready to paint a new frame
+    const animate = () => {
+        if (isMoving) {
+            // Create a new particle
+            const particle = document.createElement('div');
+            particle.className = 'trail-particle';
+            trailContainer.appendChild(particle);
+
+            // Set its initial position to where the mouse is
+            particle.style.left = `${lastX}px`;
+            particle.style.top = `${lastY}px`;
+
+            // Animate the particle to shrink and fade, then remove it
+            setTimeout(() => {
+                particle.style.transform = 'translate(-50%, -50%) scale(0)';
+                particle.style.opacity = '0';
+            }, 10); // A tiny delay to ensure the transition triggers
+
+            // Remove the particle from the DOM after the animation is complete
+            setTimeout(() => {
+                particle.remove();
+            }, 500); // This must match the transition duration in the CSS
+
+            isMoving = false;
+        }
+
+        // Keep the animation loop going
+        animationFrameId = requestAnimationFrame(animate);
+    };
+
+    window.addEventListener('mousemove', (e) => {
+        // Update the position of the main dragon cursor image
+        // Using translate3d for better performance
+        // Subtract your hotspot coordinates
+        mainCursor.style.transform = `translate3d(${e.clientX - 10}px, ${e.clientY - 4}px, 0)`;
+
+        // Store the latest mouse coordinates
+        lastX = e.clientX;
+        lastY = e.clientY;
+        isMoving = true;
+    });
+
+    // Start the animation loop
+    animate();
+});
