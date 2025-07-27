@@ -2025,37 +2025,3 @@ html, body {
 ::-moz-selection { /* Firefox compatibility */
   background-color: rgba(255, 222, 150, 0.3);
 }
-
-/*
-==================================================================
-// Ghostly Fire Cursor Trail
-==================================================================
-*/
-
-/* Hide the default cursor */
-body, a, button, .button, input[type="submit"], input[type="reset"], input[type="button"] {
-    cursor: none;
-}
-
-/* The invisible trail container */
-#cursor-trail {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    pointer-events: none;
-    z-index: 9999;
-    overflow: hidden;
-}
-
-/* Style for each segment of the trail */
-.trail-particle {
-    position: absolute;
-    border-radius: 50%;
-    /* A soft, fiery radial gradient */
-    background: radial-gradient(circle, rgba(255, 200, 100, 0.5) 0%, rgba(255, 100, 0, 0) 70%);
-    /* This blend mode makes the segments glow where they overlap */
-    mix-blend-mode: screen;
-    /* The 'transition' property is removed, as JS now handles the animation smoothing */
-}
