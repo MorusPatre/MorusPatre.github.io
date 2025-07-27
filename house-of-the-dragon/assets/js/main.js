@@ -449,7 +449,8 @@ document.addEventListener('DOMContentLoaded', () => {
             searchInput.style.paddingRight = '';
         }
 
-        const searchTerm = simplifySearchText(event.target.value.toLowerCase());
+        // Split the search query into individual terms, ignoring any empty strings
+        const searchTerms = simplifySearchText(event.target.value.toLowerCase()).split(' ').filter(term => term.length > 0);
         const galleryItems = gallery.querySelectorAll('figure');
 
         galleryItems.forEach(function(item) {
@@ -460,7 +461,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const searchData = img.dataset.search.toLowerCase();
-            if (searchData.includes(searchTerm)) {
+            
+            // Check if ALL of the search terms are present in the image's search data
+            const isMatch = searchTerms.every(term => searchData.includes(term));
+
+            if (isMatch) {
                 item.style.display = 'flex';
             } else {
                 item.style.display = 'none';
