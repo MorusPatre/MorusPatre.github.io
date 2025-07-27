@@ -981,10 +981,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             } else {
                                 console.error("FileSaver.js (saveAs) is not loaded.");
                             }
-                            document.body.style.cursor = '';
+                            document.body.style.cursor = 'default';
                         }).catch(zipError => {
                             console.error("Error generating zip file:", zipError);
-                            document.body.style.cursor = '';
+                            document.body.style.cursor = 'default';
                         });
                     });
                 } else {
@@ -1388,91 +1388,4 @@ document.addEventListener('DOMContentLoaded', () => {
             ticking = true; // Set the flag
         }
     });
-});
-
-/*
-==================================================================
-// Ghostly Fire Cursor Trail Logic (Connected Chain Method)
-==================================================================
-*/
-document.addEventListener('DOMContentLoaded', () => {
-    const trailContainer = document.getElementById('cursor-trail');
-    if (!trailContainer) return;
-
-    // --- Main Cursor Image ---
-    const mainCursor = new Image();
-    mainCursor.src = '/house-of-the-dragon/images/dragon-cursor.png';
-    mainCursor.style.position = 'fixed';
-    mainCursor.style.left = '0';
-    mainCursor.style.top = '0';
-    mainCursor.style.pointerEvents = 'none';
-    mainCursor.style.zIndex = '10000';
-    mainCursor.style.width = '24px';
-    mainCursor.style.height = '24px';
-    document.body.appendChild(mainCursor);
-
-    // --- Trail Logic ---
-    const particleCount = 20; // How many segments in the tail
-    const particles = [];
-    const coords = new Array(particleCount).fill({ x: 0, y: 0 });
-    const ease = 0.25; // How much the tail lags behind. Lower is more "flowy".
-
-    // Create the particle elements
-    for (let i = 0; i < particleCount; i++) {
-        const particle = document.createElement('div');
-        particle.className = 'trail-particle';
-        trailContainer.appendChild(particle);
-        particles.push(particle);
-    }
-
-    let mouseX = -100, mouseY = -100;
-
-    // Update mouse position
-    window.addEventListener('mousemove', (e) => {
-        mouseX = e.clientX;
-        mouseY = e.clientY;
-    });
-
-    // Animation loop
-    function animate() {
-        // Update the main dragon cursor's position
-        mainCursor.style.transform = `translate3d(${mouseX - 4}px, ${mouseY - 4}px, 0)`;
-
-        let prevX = coords[0].x;
-        let prevY = coords[0].y;
-
-        // The first segment follows the mouse directly
-        coords[0] = { x: mouseX, y: mouseY };
-
-        // Each subsequent segment smoothly follows the one in front of it
-        for (let i = 1; i < particleCount; i++) {
-            const nextX = coords[i].x;
-            const nextY = coords[i].y;
-
-            coords[i] = {
-                x: prevX + (nextX - prevX) * (1 - ease),
-                y: prevY + (nextY - prevY) * (1 - ease)
-            };
-            
-            prevX = nextX;
-            prevY = nextY;
-        }
-
-        // Render the particles
-        particles.forEach((p, i) => {
-            // The tail tapers: particles get smaller and more transparent further down the chain
-            const scale = (particleCount - i) / particleCount;
-            p.style.transform = `translate(${coords[i].x}px, ${coords[i].y}px) scale(${scale})`;
-            p.style.opacity = scale * 0.7; // Make the tail fade out
-            
-            // Adjust size based on position in the chain
-            const size = scale * 40; // Max size of 40px
-            p.style.width = `${size}px`;
-            p.style.height = `${size}px`;
-        });
-
-        requestAnimationFrame(animate);
-    }
-
-    animate();
 });
