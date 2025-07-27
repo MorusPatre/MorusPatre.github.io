@@ -1094,7 +1094,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const img = figure.querySelector('img');
 
         // (Image loading logic remains the same)
-        modalImg.src = img.dataset.fullsrc;
+        // --- MODIFICATION START: Restore progressive image loading ---
+        // 1. Immediately display the low-resolution thumbnail that's already loaded.
+        modalImg.src = img.src;
+
+        // 2. Create a new image object in memory to load the high-res version.
+        const highResImage = new Image();
+        highResImage.src = img.dataset.fullsrc;
+
+        // 3. Once the high-res image has finished loading, swap it into the modal.
+        //    Because it's already downloaded, the change will be instant.
+        highResImage.onload = function() {
+            modalImg.src = highResImage.src;
+        };
         modalImg.alt = img.alt;
         
         modalFilename.textContent = img.dataset.filename;
