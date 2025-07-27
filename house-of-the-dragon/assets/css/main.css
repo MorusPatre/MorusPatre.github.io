@@ -2028,45 +2028,40 @@ html, body {
 
 /*
 ==================================================================
-// Custom Dragon Cursor (Corrected Path)
+// Cursor Comet Tail Effect
 ==================================================================
 */
 
-/* * 1. Set the custom cursor for the whole page.
- * - The '4 4' values are the "hotspot" of the cursor, which is the
- * exact point that clicks. For a 32x32px image, this is near
- * the top-left corner. You may need to adjust these X and Y
- * values to match the "tip" of your dragon image.
- * - 'auto' is the fallback if the image can't be loaded.
- */
-html, body {
-    cursor: url('../../images/dragon-cursor.png') 10 4, auto;
+/* Step 1: Hide the default cursor and the one set on the body/html. */
+/* We apply this to specific elements to avoid cursor:none on scrollbars etc. */
+body, a, button, .button, input[type="submit"], input[type="reset"], input[type="button"] {
+    cursor: none;
 }
 
-/* * 2. Apply the cursor to all interactive elements.
- * This rule ensures that buttons, links, and other clickable items
- * also use your custom cursor instead of the default pointer hand.
- */
-a, button, .button,
-input[type="submit"], input[type="reset"], input[type="button"],
-#photo-gallery figure,
-#main article .close,
-.modal-close, .modal-prev, .modal-next,
-.context-menu ul li:not(.separator),
-.clear-search-button {
-    cursor: url('../../images/dragon-cursor.png') 10 4, auto;
+/* Step 2: Style the container for the trail. It's invisible and just holds the particles. */
+#cursor-trail {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none; /* Allows clicks to pass through */
+    z-index: 9999;
+    overflow: hidden;
 }
 
-/* * 3. Override cursor for specific non-interactive or state-based elements.
- * We want the text-selection cursor (I-beam) to appear when editing text,
- * and a standard arrow for the scrollbar thumb.
- */
-#custom-scrollbar-thumb {
-    cursor: default; /* Keep the default arrow for the scrollbar thumb */
-}
+/* Step 3: This is the style for each particle in the comet tail. */
+.trail-particle {
+    position: absolute;
+    border-radius: 50%; /* Makes them circles */
+    background: radial-gradient(circle, rgba(255,223,150,0.8) 0%, rgba(255,180,70,0) 70%); /* Golden glow */
+    width: 20px;
+    height: 20px;
+    
+    /* Animation: fade out and shrink over 0.5 seconds */
+    transition: transform 0.5s linear, opacity 0.5s linear;
 
-/* This existing rule from your CSS already handles text selection, so we don't need to change it. */
-.is-selecting-text .selection-active,
-.is-selecting-text .selection-active * {
-    cursor: text !important;
+    /* This will be set by JS to the cursor's starting position */
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
 }
