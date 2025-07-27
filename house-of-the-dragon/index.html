@@ -22,14 +22,17 @@
 						<div class="logo">
 							<img src="images/targaryen_sigil.png" alt="Targaryen Sigil" draggable="false" />
 						</div>
-						<div id="search-container">
-							<form onsubmit="return false;">
-								<span class="search-icon"></span>
-								<input type="text" id="search-input" placeholder="Search by filename, character, actor, episode, season etc..." autocomplete="off">
-								<span id="clear-search" class="clear-search-button">&times;</span>
-								<div id="suggestions-container"></div>
-							</form>
-						</div>
+                        <div id="search-container">
+                            <div id="search-input-wrapper" onclick="document.getElementById('search-input').focus()">
+                                <span class="search-icon"></span>
+                                <div id="search-tags-container"></div>
+                                <form onsubmit="return false;" style="flex-grow: 1; display: flex;">
+                                    <input type="text" id="search-input" placeholder="Search..." autocomplete="off">
+                                </form>
+                                <span id="clear-search" class="clear-search-button">&times;</span>
+                            </div>
+                            <div id="suggestions-container"></div>
+                        </div>
 					</header>
 
 				<div id="photo-gallery">
