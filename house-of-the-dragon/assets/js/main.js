@@ -1389,3 +1389,133 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+/*
+==================================================================
+// Autocomplete Search Suggestions Logic
+==================================================================
+*/
+document.addEventListener('galleryLoaded', () => {
+    const searchInput = document.getElementById('search-input');
+    const suggestionsContainer = document.getElementById('suggestions-container');
+    const galleryItems = document.querySelectorAll('#photo-gallery figure img');
+    
+    if (!searchInput || !suggestionsContainer || galleryItems.length === 0) {
+        return;
+    }
+    
+    // Build a unique, sorted list of searchable terms from the JSON data.
+    const searchTerms = new Set();
+    galleryItems.forEach(img => {
+        if (img.dataset.actors) {
+            img.dataset.actors.split(',').forEach(term => {
+                const cleaned = term.trim();
+                if (cleaned && cleaned.toLowerCase() !== 'red') searchTerms.add(cleaned);
+            });
+        }
+        if (img.dataset.characters) {
+            img.dataset.characters.split(',').forEach(term => {
+                const cleaned = term.trim();
+                if (cleaned) searchTerms.add(cleaned);
+            });
+        }
+    });
+    const sortedSearchTerms = Array.from(searchTerms).sort((a, b) => a.localeCompare(b));
+    
+    let activeSuggestionIndex = -1;
+
+    // Updates and displays the suggestion list based on user input.
+    function updateSuggestions() {
+        const query = searchInput.value.toLowerCase();
+        suggestionsContainer.innerHTML = '';
+        activeSuggestionIndex = -1;
+
+        if (query.length === 0) {
+            suggestionsContainer.style.display = 'none';
+            return;
+        }
+
+        const matches = sortedSearchTerms.filter(term => term.toLowerCase().startsWith(query)).slice(0, 7);
+
+        if (matches.length > 0) {
+            matches.forEach(term => {
+                const item = document.createElement('div');
+                item.className = 'suggestion-item';
+                item.textContent = term;
+                // Use 'mousedown' to prevent the input's 'blur' event from hiding the suggestions before the click registers.
+                item.addEventListener('mousedown', (e) => {
+                    e.preventDefault(); 
+                    selectSuggestion(term);
+                });
+                suggestionsContainer.appendChild(item);
+            });
+            suggestionsContainer.style.display = 'block';
+        } else {
+            suggestionsContainer.style.display = 'none';
+        }
+    }
+
+    // Handles the selection of a suggestion from the list.
+    function selectSuggestion(value) {
+        searchInput.value = value;
+        suggestionsContainer.style.display = 'none';
+        // Manually trigger the original 'keyup' event to perform the search.
+        searchInput.dispatchEvent(new Event('keyup', { bubbles: true }));
+    }
+    
+    // Manages the 'active' class for keyboard navigation.
+    function updateActiveSuggestion(items) {
+        items.forEach((item, index) => {
+            if (index === activeSuggestionIndex) {
+                item.classList.add('active');
+                item.scrollIntoView({ block: 'nearest' });
+            } else {
+                item.classList.remove('active');
+            }
+        });
+    }
+
+    // --- Event Listeners ---
+    
+    // Update suggestions on every input change.
+    searchInput.addEventListener('input', updateSuggestions);
+
+    // Handle keyboard navigation (arrows, Enter, Escape).
+    searchInput.addEventListener('keydown', (e) => {
+        const items = suggestionsContainer.querySelectorAll('.suggestion-item');
+        if (items.length === 0) return;
+
+        switch (e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                if (activeSuggestionIndex < items.length - 1) {
+                    activeSuggestionIndex++;
+                    updateActiveSuggestion(items);
+                }
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                if (activeSuggestionIndex > 0) {
+                    activeSuggestionIndex--;
+                    updateActiveSuggestion(items);
+                }
+                break;
+            case 'Enter':
+                if (activeSuggestionIndex > -1) {
+                    e.preventDefault();
+                    selectSuggestion(items[activeSuggestionIndex].textContent);
+                }
+                break;
+            case 'Escape':
+                suggestionsContainer.style.display = 'none';
+                break;
+        }
+    });
+
+    // Hide the suggestions when clicking anywhere else on the page.
+    document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+            suggestionsContainer.style.display = 'none';
+        }
+    });
+});
