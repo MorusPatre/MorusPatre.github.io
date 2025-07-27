@@ -17,14 +17,10 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(galleryData => {
             galleryData.forEach(item => {
-                // 1. Create the <figure> element for each grid item
                 const figure = document.createElement('figure');
-
-                // 2. Create the container for the image
                 const imageContainer = document.createElement('div');
                 imageContainer.className = 'image-container';
                 
-                // 3. Create the <img> element for the thumbnail
                 const img = document.createElement('img');
                 img.loading = 'lazy';
                 img.src = item.thumbnail;
@@ -33,15 +29,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     figure.classList.add('is-visible');
                 });
 
-                // 4. Add all the data attributes needed for the modal and search
                 img.dataset.fullsrc = item.src;
                 img.dataset.filename = item.filename;
                 img.dataset.search = item.search;
                 
                 // --- MODIFICATION START ---
-                // Conditionally set data attributes only if they exist in the JSON item.
-                // This prevents JavaScript's `undefined` value from becoming the string "undefined".
-                if (item.actors) { img.dataset.actors = item.actors; }
+                // Read the new, specific keys and create corresponding data-attributes.
+                if (item.cast) { img.dataset.cast = item.cast; }
+                if (item.crew) { img.dataset.crew = item.crew; }
+                if (item.castAndCrew) { img.dataset.castAndCrew = item.castAndCrew; }
                 if (item.characters) { img.dataset.characters = item.characters; }
                 if (item.size) { img.dataset.size = item.size; }
                 if (item.dimensions) { img.dataset.dimensions = item.dimensions; }
@@ -55,7 +51,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
 
-                // 5. Create the <figcaption> for the filename and dimensions
                 const figcaption = document.createElement('figcaption');
                 const filenameSpan = document.createElement('span');
                 filenameSpan.className = 'filename';
@@ -77,16 +72,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 figcaption.appendChild(dimensionsSpan);
 
-                // 6. Assemble the pieces
-                imageContainer.appendChild(img); // Image goes into its container
-                figure.appendChild(imageContainer); // Image container goes into the figure
-                figure.appendChild(figcaption); // Caption goes into the figure
-
-                // 7. Add the completed figure to the gallery
+                imageContainer.appendChild(img);
+                figure.appendChild(imageContainer);
+                figure.appendChild(figcaption);
                 galleryContainer.appendChild(figure);
             });
             
-            // Send a custom event to let the other scripts know the gallery is ready
             document.dispatchEvent(new CustomEvent('galleryLoaded'));
         })
         .catch(error => {
@@ -98,18 +89,14 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!filename || filename.length <= maxLength) {
             return filename;
         }
-
         const extension = filename.slice(filename.lastIndexOf('.'));
         const name = filename.slice(0, filename.lastIndexOf('.'));
-        const remainingLength = maxLength - extension.length - 3; // 3 for '...'
-
+        const remainingLength = maxLength - extension.length - 3;
         if (remainingLength <= 0) {
             return '...' + extension;
         }
-
         const startLength = Math.ceil(remainingLength / 2);
         const endLength = Math.floor(remainingLength / 2);
-
         return `${name.slice(0, startLength)}...${name.slice(name.length - endLength)}${extension}`;
     }
 });
