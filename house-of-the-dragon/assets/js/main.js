@@ -409,30 +409,7 @@ async function downloadImage(url, filename) {
 
 
 document.addEventListener('DOMContentLoaded', () => {
-    const wrapper = document.getElementById('wrapper');
-    const header = document.getElementById('header');
-    const footer = document.getElementById('footer');
-    const gallery = document.getElementById('photo-gallery');
-    const searchInput = document.getElementById('search-input'); 
-
-    if (!gallery || !wrapper) return;
-
-    const marquee = document.getElementById('marquee');
-    const items = gallery.getElementsByTagName('figure');
-
-    let selectedItems = new Set();
-    let isMarquee = false;
-    let startPos = { x: 0, y: 0 };
-    let preMarqueeSelectedItems = new Set();
-
-    let hasDragged = false;
-    let mouseDownItem = null;
-
-    /*
-    ==================================================================
-    // START: SEARCH LOGIC (MOVED FROM INDEX.HTML)
-    ==================================================================
-    */
+    // --- START: Tag-Based Search with Autocomplete ---
     const searchInput = document.getElementById('search-input');
     const tagsContainer = document.getElementById('search-tags-container');
     const suggestionsContainer = document.getElementById('suggestions-container');
@@ -630,7 +607,26 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.search-tag.selected').forEach(t => t.classList.remove('selected'));
         }
     });
+    
+    // --- START: Original Gallery and Modal Logic ---
 
+    const wrapper = document.getElementById('wrapper');
+    const header = document.getElementById('header');
+    const footer = document.getElementById('footer');
+
+    if (!gallery || !wrapper) return;
+
+    const marquee = document.getElementById('marquee');
+    const items = gallery.getElementsByTagName('figure');
+
+    let selectedItems = new Set();
+    let isMarquee = false;
+    let startPos = { x: 0, y: 0 };
+    let preMarqueeSelectedItems = new Set();
+
+    let hasDragged = false;
+    let mouseDownItem = null;
+    
     /*
     ==================================================================
     // START: FINDER-STYLE ARROW KEY NAVIGATION LOGIC
@@ -824,14 +820,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- MouseDown Listener ---
     wrapper.addEventListener('mousedown', (e) => {
         // MODIFIED: If click starts in search bar, exit to allow native text selection.
-        if (e.target === searchInput) {
+        if (document.getElementById('search-input-wrapper').contains(e.target)) {
             return;
         }
 
         // MODIFIED: Check if the event target is within the header or footer
         if (e.button !== 0 || header.contains(e.target) || footer.contains(e.target)) {
             isMarquee = false; // Ensure marquee selection is not initiated if starting in header/footer
-            return; 
+            return;
         }
         
         if(gallery.contains(e.target) || e.target === gallery) {
@@ -1018,7 +1014,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
             const activeEl = document.activeElement;
             if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
-                return; 
+                return;
             }
             e.preventDefault();
             const visibleItems = Array.from(items).filter(item => item.style.display !== 'none');
@@ -1039,7 +1035,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let rightClickedItem = null;
 
     gallery.addEventListener('contextmenu', (e) => {
-        e.preventDefault(); 
+        e.preventDefault();
 
         const figure = e.target.closest('figure');
 
@@ -1047,7 +1043,7 @@ document.addEventListener('DOMContentLoaded', () => {
         galleryContextMenu.style.display = 'none';
         
         if (figure) {
-            rightClickedItem = figure; 
+            rightClickedItem = figure;
 
             if (!selectedItems.has(figure)) {
                 clearSelection();
@@ -1502,7 +1498,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initial setup
     setupScrollbar();
     // A small timeout helps ensure all content (like images) has loaded and affected the page height
-    setTimeout(setupScrollbar, 500); 
+    setTimeout(setupScrollbar, 500);
 });
 
 /*
