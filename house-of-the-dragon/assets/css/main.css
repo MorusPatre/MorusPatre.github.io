@@ -2028,40 +2028,41 @@ html, body {
 
 /*
 ==================================================================
-// Cursor Comet Tail Effect
+// Fiery Cursor Tail Effect
 ==================================================================
 */
 
-/* Step 1: Hide the default cursor and the one set on the body/html. */
-/* We apply this to specific elements to avoid cursor:none on scrollbars etc. */
+/* Hide the default cursor. */
 body, a, button, .button, input[type="submit"], input[type="reset"], input[type="button"] {
     cursor: none;
 }
 
-/* Step 2: Style the container for the trail. It's invisible and just holds the particles. */
+/* The invisible trail container. */
 #cursor-trail {
     position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    pointer-events: none; /* Allows clicks to pass through */
+    pointer-events: none;
     z-index: 9999;
     overflow: hidden;
 }
 
-/* Step 3: This is the style for each particle in the comet tail. */
+/* NEW: Style for the fiery particles. */
 .trail-particle {
     position: absolute;
-    border-radius: 50%; /* Makes them circles */
-    background: radial-gradient(circle, rgba(255,223,150,0.8) 0%, rgba(255,180,70,0) 70%); /* Golden glow */
-    width: 20px;
-    height: 20px;
+    width: 40px;  /* Increased size for better blending */
+    height: 40px;
     
-    /* Animation: fade out and shrink over 0.5 seconds */
-    transition: transform 0.5s linear, opacity 0.5s linear;
-
-    /* This will be set by JS to the cursor's starting position */
+    /* This gradient creates a soft, fiery yellow-orange core that fades out. */
+    background: radial-gradient(circle, rgba(255, 220, 100, 0.6) 0%, rgba(255, 165, 0, 0) 65%);
+    
+    /* This makes overlapping particles blend their light, creating a continuous trail. */
+    mix-blend-mode: screen;
+    
+    border-radius: 50%;
+    transition: transform 0.6s ease-out, opacity 0.6s ease-out; /* Slower, smoother fade */
     transform: translate(-50%, -50%) scale(1);
     opacity: 1;
 }
