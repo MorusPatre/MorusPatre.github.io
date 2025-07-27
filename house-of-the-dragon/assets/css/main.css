@@ -1268,21 +1268,22 @@ input, select, textarea {
 }
 
 
-/* Style for the Search Input */
-#search-input {
-    height: 1.5rem; /* Adjust this value to your desired height */
-    line-height: 1.5rem; /* Match this to the height for vertical centering */
-    font-size: 0.65rem;
-    text-align: left;
-    border-radius: 20px;
-    width: 26.5em;  /* Adjust this value to change the overall width */
-    padding-left: 30px; /* MODIFIED: Increased padding for the icon */
-    padding-right: 0.93em; /* Adds space on the right */
-    background-color: rgba(255, 255, 255, 0.05); /* Example: light white with 20% opacity */
-    /* Explicitly prevent user text selection */
-    -webkit-user-select: none; /* Safari */
-    -ms-user-select: none; /* IE 10+ and Edge */
-    user-select: none; /* Standard syntax */
+/* Style for the Search Input Wrapper */
+#search-input-wrapper #search-input {
+    border: none !important;
+    background: transparent !important;
+    color: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    height: 100% !important;
+    width: 100% !important;
+    font-size: 0.65rem !important;
+    outline: none !important;
+    flex-grow: 1 !important;
+    box-shadow: none !important;
+    -webkit-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
 }
 
 
