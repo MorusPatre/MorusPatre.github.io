@@ -2082,3 +2082,71 @@ html, body {
 #suggestions-container::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.5);
 }
+
+/*
+==================================================================
+// NEW: Tag-Based Search Input Styles
+==================================================================
+*/
+.search-input-wrapper {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap; /* Allows tags to wrap to the next line */
+    min-height: 1.5rem;
+    line-height: 1.5rem;
+    font-size: 0.65rem;
+    border-radius: 20px;
+    width: 26.5em;
+    padding: 3px 30px 3px 30px; /* Top/Bottom padding for tags */
+    background-color: rgba(255, 255, 255, 0.05);
+    cursor: text; /* Makes the whole area feel like an input */
+    transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.search-input-wrapper:focus-within {
+    background-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 0 1px #a3adaf;
+}
+
+/* Style for the actual <input> element inside the wrapper */
+#search-input {
+    flex-grow: 1; /* Allows it to take up remaining space */
+    border: none;
+    outline: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    min-width: 120px; /* Ensures there's always some space to type */
+    height: 1.5rem;
+    line-height: 1.5rem;
+}
+
+/* Individual search tag style */
+.search-tag {
+    display: flex;
+    align-items: center;
+    background-color: rgba(163, 173, 175, 0.4);
+    color: #fff;
+    border-radius: 10px;
+    padding: 2px 8px;
+    margin: 2px 4px 2px 0;
+    font-weight: 300;
+    cursor: default;
+    white-space: nowrap;
+}
+
+/* The 'x' button on each tag */
+.tag-close {
+    margin-left: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 0.8rem;
+    line-height: 1;
+    transform: translateY(1px);
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+.tag-close:hover {
+    opacity: 1;
+}
