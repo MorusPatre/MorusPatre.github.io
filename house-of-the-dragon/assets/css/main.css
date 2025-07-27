@@ -2082,3 +2082,124 @@ html, body {
 #suggestions-container::-webkit-scrollbar-thumb:hover {
 	background: rgba(255, 255, 255, 0.5);
 }
+
+/*
+============================================
+Styles for Tag-Based Search Input
+============================================
+*/
+
+#search-container {
+    position: relative; /* New context for suggestions */
+}
+
+#search-input-wrapper {
+    display: flex;
+    align-items: center;
+    position: relative;
+    height: 2.5rem;
+    width: 30em;
+    padding: 0 30px; /* Space for icon and clear button */
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    border: 1px solid transparent;
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    cursor: text;
+}
+
+#search-input-wrapper:focus-within {
+    background: rgba(255, 255, 255, 0.075);
+    border-color: #a3adaf;
+    box-shadow: 0 0 0 0.5px #a3adaf;
+}
+
+#search-input-wrapper #search-input {
+    border: none;
+    background: transparent;
+    color: #ffffff;
+    padding: 0;
+    margin: 0;
+    height: 100%;
+    width: 100%;
+    font-size: 0.65rem;
+    outline: none;
+    flex-grow: 1;
+}
+
+#search-input-wrapper form {
+    margin: 0;
+}
+
+/* Container for tags */
+#search-tags-container {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-right: 6px;
+    flex-shrink: 0;
+}
+
+/* Individual tag style */
+.search-tag {
+    display: flex;
+    align-items: center;
+    background-color: #4a5058;
+    color: #fff;
+    border-radius: 5px;
+    padding: 3px 8px;
+    font-size: 0.6rem;
+    white-space: nowrap;
+    cursor: default;
+    transition: background-color 0.2s ease;
+}
+
+.search-tag.selected {
+    background-color: #007aff;
+}
+
+.remove-tag {
+    margin-left: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.8rem;
+    line-height: 1;
+    padding-bottom: 2px;
+}
+
+.remove-tag:hover {
+    color: #ffdddd;
+}
+
+/* Suggestions Dropdown */
+#suggestions-container {
+    display: none;
+    position: absolute;
+    top: calc(100% + 5px);
+    left: 0;
+    width: 100%;
+    background-color: rgba(31, 27, 24, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    z-index: 1001;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.suggestion-item {
+    padding: 8px 15px;
+    cursor: default;
+    font-size: 0.65rem;
+    color: #ccc;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.suggestion-item:hover,
+.suggestion-item.active {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
