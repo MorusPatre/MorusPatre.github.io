@@ -2025,3 +2025,60 @@ html, body {
 ::-moz-selection { /* Firefox compatibility */
   background-color: rgba(255, 222, 150, 0.3);
 }
+
+/*
+==================================================================
+// Search Suggestions / Autocomplete
+==================================================================
+*/
+#search-container form {
+	position: relative;
+}
+
+#suggestions-container {
+	display: none;
+	position: absolute;
+	top: calc(100% + 2px);
+	left: 0;
+	width: 100%;
+	background-color: rgba(31, 27, 24, 0.85);
+	backdrop-filter: blur(10px);
+	-webkit-backdrop-filter: blur(10px);
+	border: 1px solid rgba(255, 255, 255, 0.15);
+	border-radius: 4px;
+	z-index: 1001;
+	max-height: 280px;
+	overflow-y: auto;
+	overflow-x: hidden;
+}
+
+.suggestion-item {
+	padding: 8px 30px;
+	cursor: default;
+	font-size: 0.65rem;
+	color: #ccc;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	transition: background-color 0.2s ease-in-out;
+}
+
+.suggestion-item:hover,
+.suggestion-item.active {
+	background-color: rgba(255, 255, 255, 0.1);
+	color: #fff;
+}
+
+#suggestions-container::-webkit-scrollbar {
+	width: 8px;
+}
+#suggestions-container::-webkit-scrollbar-track {
+	background: transparent;
+}
+#suggestions-container::-webkit-scrollbar-thumb {
+	background: rgba(255, 255, 255, 0.3);
+	border-radius: 4px;
+}
+#suggestions-container::-webkit-scrollbar-thumb:hover {
+	background: rgba(255, 255, 255, 0.5);
+}
