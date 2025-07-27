@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     const jsonPath = 'gallery-data.json';
-    const galleryContainerId = 'photo-gallery'; // Corrected from 'wrapper'
+    const galleryContainerId = 'photo-gallery';
     const galleryContainer = document.getElementById(galleryContainerId);
 
     if (!galleryContainer) {
@@ -37,12 +37,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 img.dataset.fullsrc = item.src;
                 img.dataset.filename = item.filename;
                 img.dataset.search = item.search;
-                img.dataset.actors = item.actors;
-                img.dataset.characters = item.characters;
-                img.dataset.size = item.size;
-                img.dataset.dimensions = item.dimensions;
-                img.dataset.season = item.season;
+                
+                // --- MODIFICATION START ---
+                // Conditionally set data attributes only if they exist in the JSON item.
+                // This prevents JavaScript's `undefined` value from becoming the string "undefined".
+                if (item.actors) { img.dataset.actors = item.actors; }
+                if (item.characters) { img.dataset.characters = item.characters; }
+                if (item.size) { img.dataset.size = item.size; }
+                if (item.dimensions) { img.dataset.dimensions = item.dimensions; }
+                if (item.season) { img.dataset.season = item.season; }
                 if (item.episode) { img.dataset.episode = item.episode; }
+                // --- MODIFICATION END ---
+                
                 for (const key in item) {
                     if (!img.dataset[key] && key !== 'src' && key !== 'thumbnail' && key !== 'alt') {
                         img.dataset[key] = item[key];
@@ -89,7 +95,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
     function truncateFilename(filename, maxLength = 48) {
-        if (filename.length <= maxLength) {
+        if (!filename || filename.length <= maxLength) {
             return filename;
         }
 
