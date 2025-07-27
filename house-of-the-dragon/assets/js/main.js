@@ -449,9 +449,23 @@ document.addEventListener('DOMContentLoaded', () => {
             searchInput.style.paddingRight = '';
         }
 
-        // Split the search query into individual terms, ignoring any empty strings
-        const searchTerms = simplifySearchText(event.target.value.toLowerCase()).split(' ').filter(term => term.length > 0);
+        const originalQuery = simplifySearchText(event.target.value.toLowerCase());
         const galleryItems = gallery.querySelectorAll('figure');
+
+        // This regex looks for patterns like "season 1", "s1", "e2", "s1e2", etc.
+        const phraseRegex = /\b(s\d+e\d+|season\s*\d+|episode\s*\d+|s\d+|e\d+)\b/g;
+
+        // Pull out all the special phrases (e.g., ["season 1", "episode 2"])
+        const phraseTerms = originalQuery.match(phraseRegex) || [];
+
+        // Get the rest of the query by removing the phrases we just found
+        const remainingText = originalQuery.replace(phraseRegex, '').trim();
+
+        // Split the rest of the query into individual words
+        const wordTerms = remainingText.split(' ').filter(term => term.length > 0);
+
+        // Combine them into the final list of terms to search for
+        const searchTerms = [...phraseTerms, ...wordTerms];
 
         galleryItems.forEach(function(item) {
             const img = item.querySelector('img');
@@ -462,7 +476,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const searchData = img.dataset.search.toLowerCase();
             
-            // Check if ALL of the search terms are present in the image's search data
+            // Check if ALL terms (both phrases and individual words) are present
             const isMatch = searchTerms.every(term => searchData.includes(term));
 
             if (isMatch) {
