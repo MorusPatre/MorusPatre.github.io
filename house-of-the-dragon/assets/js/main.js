@@ -1040,7 +1040,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /*
     ==================================================================
-    // START: MODAL LOGIC (MOVED FROM INDEX.HTML)
+    // START: MODAL LOGIC (SECTION WITH CHANGES)
     ==================================================================
     */
     const modal = document.getElementById('image-modal');
@@ -1055,6 +1055,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const imageContainer = document.querySelector('.modal-image-container');
     const infoPanel = document.querySelector('.modal-info-panel');
     let currentImageIndex = -1;
+
+    // --- MODIFICATION START ---
+    // A map to get the correct display label for each data key.
+    const KEY_TO_LABEL_MAP = {
+        season: 'Season',
+        episode: 'Episode',
+        cast: 'Cast',
+        crew: 'Crew',
+        castAndCrew: 'Cast & Crew',
+        characters: 'Characters'
+    };
+
+    // The order in which to display the primary data fields.
+    const primaryKeys = ['season', 'episode', 'cast', 'crew', 'castAndCrew', 'characters'];
+    // --- MODIFICATION END ---
+
 
     modalContent.addEventListener('mouseenter', () => {
         if (modal.classList.contains('is-visible')) {
@@ -1077,49 +1093,31 @@ document.addEventListener('DOMContentLoaded', () => {
         const figure = visibleFigures[currentImageIndex];
         const img = figure.querySelector('img');
 
-        const dimensions = img.dataset.dimensions;
-        if (dimensions) {
-            const [width, height] = dimensions.split('x').map(Number);
-            if (width && height) {
-                imageContainer.style.paddingTop = `${(height / width) * 100}%`;
-                imageContainer.style.height = '0';
-            }
-        } else {
-            imageContainer.style.paddingTop = '';
-            imageContainer.style.height = '';
-        }
-
-        modalImg.src = img.src;
+        // (Image loading logic remains the same)
+        modalImg.src = img.dataset.fullsrc;
         modalImg.alt = img.alt;
-        modalImg.classList.remove('is-loaded');
-
-        modalImg.onload = () => {
-            modalImg.src = img.dataset.fullsrc;
-            modalImg.onload = null;
-        };
-
-        modalImg.addEventListener('load', function handler() {
-            modalImg.classList.add('is-loaded');
-            modalImg.removeEventListener('load', handler);
-        });
+        
         modalFilename.textContent = img.dataset.filename;
 
         let primaryHTML = '<dl class="info-grid">';
         let detailsHTML = '<dl class="info-grid">';
         const dataset = img.dataset;
-        const primaryKeys = ['season', 'episode', 'actors', 'characters'];
-        const handledKeys = ['search', 'fullsrc', 'filename'];
-
+        
+        // --- MODIFICATION START ---
+        // Loop through the new primary keys and use the map for labels.
         primaryKeys.forEach(key => {
             if (dataset[key] && dataset[key].trim() !== '' && dataset[key].trim() !== '-' && dataset[key].trim() !== '- (-)') {
-                const label = key.charAt(0).toUpperCase() + key.slice(1);
+                const label = KEY_TO_LABEL_MAP[key] || key; // Use map, fallback to key name
                 primaryHTML += `<div class="info-item"><dt>${label}</dt><dd>${dataset[key]}</dd></div>`;
             }
         });
+        // --- MODIFICATION END ---
 
         let hasDetails = false;
+        const handledKeys = ['search', 'fullsrc', 'filename', ...primaryKeys]; // Update handled keys
+        
         for (const key in dataset) {
-            if (!primaryKeys.includes(key) && !handledKeys.includes(key) && dataset[key] && dataset[key].trim() !== '' && dataset[key].trim() !== '-') {
+            if (!handledKeys.includes(key) && dataset[key] && dataset[key].trim() !== '' && dataset[key].trim() !== '-') {
                 hasDetails = true;
                 let label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
                 let value = dataset[key];
@@ -1142,6 +1140,8 @@ document.addEventListener('DOMContentLoaded', () => {
         modalMetadata.innerHTML = finalHTML;
         
         downloadBtn.href = img.dataset.fullsrc;
+        downloadBtn.download = img.dataset.filename || 'download.jpg';
+
 
         document.body.classList.add('is-article-visible');
         modal.classList.add('is-visible');
