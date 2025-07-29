@@ -1098,6 +1098,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const figure = visibleFigures[currentImageIndex];
         const img = figure.querySelector('img');
 
+        downloadBtn.dataset.fullsrc = img.dataset.fullsrc; // Always store the high-res URL
+
         // Immediately display the low-resolution thumbnail.
         modalImg.src = img.src;
 
@@ -1156,7 +1158,7 @@ document.addEventListener('DOMContentLoaded', () => {
         event.preventDefault();
         event.stopPropagation();
     
-        const url = modalImg.src;
+        const url = event.currentTarget.dataset.fullsrc; // Use the stored high-res URL
         // Get filename, with a fallback for missing names
         const filename = modalFilename.textContent || url.split('/').pop();
     
