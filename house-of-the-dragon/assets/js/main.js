@@ -729,7 +729,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let rawX = e.clientX - galleryRect.left;
         let rawY = e.clientY - galleryRect.top;
         let currentX = Math.max(0, Math.min(rawX, galleryRect.width));
-        let currentY = Math.max(0, Math.min(rawY, galleryRect.height));
+        let currentY = Math.min(rawY, galleryRect.height);
         
         const marqueeRect = {
             x: Math.min(startPos.x, currentX),
