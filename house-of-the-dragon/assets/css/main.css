@@ -1,11 +1,5 @@
 @import url("https://fonts.googleapis.com/css?family=Source+Sans+Pro:300italic,600italic,300,600");
 
-/*
-    Dimension by HTML5 UP
-    html5up.net | @ajlkn
-    Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
-*/
-
 html, body, div, span, applet, object,
 iframe, h1, h2, h3, h4, h5, h6, p, blockquote,
 pre, a, abbr, acronym, address, big, cite,
@@ -1560,17 +1554,14 @@ Styling for the Finder-Style Photo Gallery
     z-index: 9; /* Changed from 10 to 9 */
 }
 
-/* NEW: Disables interaction with the search bar during a marquee drag */
+/* FINAL FIX: Prevents object-highlighting on the search input during a drag */
 body.is-marquee-dragging #search-input {
     pointer-events: none;
     outline: none;
     -webkit-user-drag: none;
 }
 
-/*
-   NEW: Globally disables default browser selection and highlights
-   during a marquee drag to prevent selecting container elements.
-*/
+/* FINAL FIX: Globally disables default browser selection during a marquee drag */
 body.is-marquee-dragging,
 body.is-marquee-dragging * {
     cursor: default !important;
