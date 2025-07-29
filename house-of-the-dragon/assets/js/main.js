@@ -1578,3 +1578,46 @@ document.addEventListener('galleryLoaded', () => {
         }
     });
 });
+
+document.addEventListener('keydown', (e) => {
+    // Check for Ctrl+C or Command+C
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+        const gallery = document.getElementById('photo-gallery');
+        const searchInput = document.getElementById('search-input');
+        const modal = document.getElementById('image-modal');
+
+        // Ignore if the user is focused on the search input or if the modal is visible
+        if (document.activeElement === searchInput || (modal && modal.classList.contains('is-visible'))) {
+            return;
+        }
+
+        // The 'selectedItems' Set is defined in main.js, so we can access it if the context allows.
+        // For robustness, we will query the DOM to get the currently selected items.
+        const selectedFigures = gallery.querySelectorAll('figure.selected');
+
+        if (selectedFigures.length > 0) {
+            // Prevent the browser's default copy behavior
+            e.preventDefault();
+
+            // Create an array of filenames from the selected figures
+            const filenames = Array.from(selectedFigures).map(figure => {
+                const img = figure.querySelector('img');
+                return img ? img.dataset.filename : '';
+            }).filter(name => name); // Filter out any empty or undefined names
+
+            // If there are valid filenames to copy...
+            if (filenames.length > 0) {
+                // Join the filenames with a newline character for easy pasting
+                const textToCopy = filenames.join('\n');
+
+                // Use the modern Clipboard API to write the text
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    console.log(`${filenames.length} filenames copied to clipboard.`);
+                    // You could add a visual confirmation here if desired
+                }).catch(err => {
+                    console.error('Could not copy filenames to clipboard: ', err);
+                });
+            }
+        }
+    }
+});
