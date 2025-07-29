@@ -1957,7 +1957,7 @@ html, body {
 /* Makes the filename text color and glow match the selected image's border. */
 #photo-gallery figure.selected figcaption .filename {
     color: #dbb7a7; /* Same color as the selected image border */
-    text-shadow: 0 0 12px rgba(255, 184, 130, 0.6); /* Similar glow, optimized for text */
+    text-shadow: 0 0 18px rgba(255, 184, 130, 0.6); /* Similar glow, optimized for text */
 }
 
 /*
