@@ -1,23 +1,3 @@
-function downloadImage(url, filename) {
-    try {
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename || 'download';
-
-        // This part is crucial for some browsers, especially Firefox
-        a.style.display = 'none';
-        document.body.appendChild(a);
-
-        a.click();
-
-        document.body.removeChild(a);
-    } catch (error) {
-        console.error('Download initiation failed:', error);
-        // Fallback for when even this method fails
-        window.open(url, '_blank');
-    }
-}
-
 (function($) {
 
     var    $window = $(window),
@@ -948,7 +928,34 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    itemContextMenu.addEventListener('click', (e) => {
+    // =================================================================
+    // START: UNIFIED DOWNLOAD LOGIC
+    // =================================================================
+    
+    /**
+     * Asynchronously fetches an image from a URL and returns its blob data.
+     * @param {string} url - The URL of the image to fetch.
+     * @returns {Promise<Blob>} A promise that resolves with the image blob.
+     */
+    async function fetchImageBlob(url) {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status} for URL: ${url}`);
+        }
+        return response.blob();
+    }
+
+    /**
+     * Triggers a browser download for a given blob and filename.
+     * @param {Blob} blob - The data blob to be downloaded.
+     * @param {string} filename - The desired filename for the download.
+     */
+    function triggerDownload(blob, filename) {
+        // This function uses FileSaver.js (saveAs)
+        saveAs(blob, filename);
+    }
+
+    itemContextMenu.addEventListener('click', async (e) => {
         const targetId = e.target.id;
         if (!targetId) return;
 
@@ -972,55 +979,48 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             }
             case 'context-menu-save': {
-                if (selectedItems.size > 1) {
-                    // ZIP DOWNLOAD LOGIC
-                    document.body.style.cursor = 'wait';
-                    const zip = new JSZip();
-                    const promises = [];
+                try {
+                    if (selectedItems.size > 1) {
+                        // MULTIPLE IMAGES (ZIP)
+                        const zip = new JSZip();
+                        const promises = [];
 
-                    for (const figure of selectedItems) {
-                        const itemImg = figure.querySelector('img');
-                        const itemSrc = itemImg.dataset.fullsrc;
-                        const itemFilename = itemImg.dataset.filename;
-                        
-                        if (itemSrc) {
-                            const promise = fetch(itemSrc)
-                                .then(response => {
-                                    if (!response.ok) throw new Error(`Fetch failed for ${itemFilename}: ${response.statusText}`);
-                                    return response.blob();
-                                })
-                                .then(blob => {
-                                    if (blob) zip.file(itemFilename, blob);
-                                })
-                                .catch(error => {
-                                    console.error(error);
-                                    alert(`Could not download: ${itemFilename}\nReason: ${error.message}`);
-                                });
+                        for (const item of selectedItems) {
+                            const img = item.querySelector('img');
+                            const url = img.dataset.fullsrc;
+                            let filename = img.dataset.filename || url.split('/').pop();
+
+                            const promise = fetchImageBlob(url).then(blob => {
+                                zip.file(filename, blob);
+                            }).catch(err => {
+                                console.error(`Failed to fetch ${filename}:`, err);
+                            });
                             promises.push(promise);
                         }
-                    }
 
-                    Promise.all(promises).then(() => {
-                        zip.generateAsync({ type: "blob" }).then(content => {
-                            if (typeof saveAs !== 'undefined') {
-                                saveAs(content, "witcher_images.zip");
-                            } else {
-                                console.error("FileSaver.js (saveAs) is not loaded.");
-                            }
-                            document.body.style.cursor = 'default';
-                        }).catch(zipError => {
-                            console.error("Error generating zip file:", zipError);
-                            document.body.style.cursor = 'default';
-                        });
-                    });
-                } else {
-                    // SINGLE IMAGE DOWNLOAD LOGIC
-                    const img = primaryTarget.querySelector('img');
-                    const fullSrc = img.dataset.fullsrc;
-                    const filename = img.dataset.filename;
-                    if (fullSrc && filename) {
-                        downloadImage(fullSrc, filename);
+                        await Promise.all(promises);
+                        const zipBlob = await zip.generateAsync({ type: "blob" });
+                        
+                        // Create dynamic filename
+                        const date = new Date().toISOString().split('T')[0];
+                        const imageCount = selectedItems.size;
+                        const dynamicFilename = `HOTD-Selection_${imageCount}-images_${date}.zip`;
+
+                        triggerDownload(zipBlob, dynamicFilename);
+
+                    } else {
+                        // SINGLE IMAGE
+                        const item = Array.from(selectedItems)[0];
+                        const img = item.querySelector('img');
+                        const url = img.dataset.fullsrc;
+                        let filename = img.dataset.filename || url.split('/').pop();
+                        
+                        const blob = await fetchImageBlob(url);
+                        triggerDownload(blob, filename);
                     }
+                } catch (error) {
+                    console.error("Download failed:", error);
+                    alert("An error occurred while trying to download the file(s). Please check the console for details.");
                 }
                 break;
             }
@@ -1063,7 +1063,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const infoPanel = document.querySelector('.modal-info-panel');
     let currentImageIndex = -1;
 
-    // --- MODIFICATION START ---
     // A map to get the correct display label for each data key.
     const KEY_TO_LABEL_MAP = {
         season: 'Season',
@@ -1076,7 +1075,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // The order in which to display the primary data fields.
     const primaryKeys = ['season', 'episode', 'cast', 'crew', 'castAndCrew', 'characters'];
-    // --- MODIFICATION END ---
 
 
     modalContent.addEventListener('mouseenter', () => {
@@ -1100,17 +1098,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const figure = visibleFigures[currentImageIndex];
         const img = figure.querySelector('img');
 
-        // (Image loading logic remains the same)
-        // --- MODIFICATION START: Restore progressive image loading ---
-        // 1. Immediately display the low-resolution thumbnail that's already loaded.
+        // Immediately display the low-resolution thumbnail.
         modalImg.src = img.src;
 
-        // 2. Create a new image object in memory to load the high-res version.
+        // Load the high-res version in the background.
         const highResImage = new Image();
         highResImage.src = img.dataset.fullsrc;
-
-        // 3. Once the high-res image has finished loading, swap it into the modal.
-        //    Because it's already downloaded, the change will be instant.
         highResImage.onload = function() {
             modalImg.src = highResImage.src;
         };
@@ -1122,18 +1115,15 @@ document.addEventListener('DOMContentLoaded', () => {
         let detailsHTML = '<dl class="info-grid">';
         const dataset = img.dataset;
         
-        // --- MODIFICATION START ---
-        // Loop through the new primary keys and use the map for labels.
         primaryKeys.forEach(key => {
             if (dataset[key] && dataset[key].trim() !== '' && dataset[key].trim() !== '-' && dataset[key].trim() !== '- (-)') {
-                const label = KEY_TO_LABEL_MAP[key] || key; // Use map, fallback to key name
+                const label = KEY_TO_LABEL_MAP[key] || key;
                 primaryHTML += `<div class="info-item"><dt>${label}</dt><dd>${dataset[key]}</dd></div>`;
             }
         });
-        // --- MODIFICATION END ---
 
         let hasDetails = false;
-        const handledKeys = ['search', 'fullsrc', 'filename', ...primaryKeys]; // Update handled keys
+        const handledKeys = ['search', 'fullsrc', 'filename', ...primaryKeys];
         
         for (const key in dataset) {
             if (!handledKeys.includes(key) && dataset[key] && dataset[key].trim() !== '' && dataset[key].trim() !== '-') {
@@ -1157,20 +1147,45 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         modalMetadata.innerHTML = finalHTML;
-        
-        downloadBtn.href = img.dataset.fullsrc;
-        downloadBtn.download = img.dataset.filename || 'download.jpg';
-
 
         document.body.classList.add('is-article-visible');
         modal.classList.add('is-visible');
     }
 
-    downloadBtn.addEventListener('click', function(event) {
+    downloadBtn.addEventListener('click', async (event) => {
         event.preventDefault();
-        const fullSrc = modalImg.src;
-        const filename = modalFilename.textContent;
-        downloadImage(fullSrc, filename);
+        event.stopPropagation();
+    
+        const url = modalImg.src;
+        // Get filename, with a fallback for missing names
+        const filename = modalFilename.textContent || url.split('/').pop();
+    
+        if (!url || !filename) {
+            console.error("Modal download failed: URL or filename not found.");
+            alert("Could not download the image because its data is missing.");
+            return;
+        }
+    
+        const buttonText = downloadBtn.textContent;
+        try {
+            // Provide visual feedback to the user
+            downloadBtn.textContent = 'Downloading...';
+            downloadBtn.disabled = true;
+    
+            // Fetch the image blob and trigger the download
+            const blob = await fetchImageBlob(url);
+            triggerDownload(blob, filename);
+    
+        } catch (error) {
+            console.error("Modal download failed:", error);
+            alert("An error occurred while trying to download the image.");
+        } finally {
+            // Restore the button to its original state after a moment
+            setTimeout(() => {
+                downloadBtn.textContent = buttonText;
+                downloadBtn.disabled = false;
+            }, 1000);
+        }
     });
     
     downloadBtn.addEventListener('dragstart', function(event) {
