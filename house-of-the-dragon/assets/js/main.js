@@ -708,17 +708,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- MouseMove Listener ---
     document.addEventListener('mousemove', (e) => {
         if (!isMarquee) return;
-
-        // NEW: If the mouse moves over the footer, stop the marquee selection
-        if (footer.contains(e.target)) {
-            isMarquee = false;
-            hasDragged = false;
-            marquee.style.visibility = 'hidden';
-            marquee.style.width = '0px';
-            marquee.style.height = '0px';
-            preMarqueeSelectedItems.clear();
-            return;
-        }
         
         e.preventDefault();
         hasDragged = true;
