@@ -1957,9 +1957,9 @@ html, body {
 /* Makes the filename text color and glow match the selected image's border. */
 #photo-gallery figure.selected figcaption .filename {
     color: #dbb7a7; /* Same color as the selected image border */
-    text-shadow: 0 0 18px rgba(255, 184, 130, 0.8); /* Similar glow, optimized for text */
+    /* This multi-layered shadow creates a softer, more diffuse glow */
+    text-shadow: 0 0 7px rgba(255, 184, 130, 0.5), 0 0 20px rgba(255, 184, 130, 0.4);
 }
-
 /*
 ==================================================================
 // Lazy Load Image Fade-in
