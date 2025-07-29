@@ -1591,8 +1591,6 @@ document.addEventListener('keydown', (e) => {
             return;
         }
 
-        // The 'selectedItems' Set is defined in main.js, so we can access it if the context allows.
-        // For robustness, we will query the DOM to get the currently selected items.
         const selectedFigures = gallery.querySelectorAll('figure.selected');
 
         if (selectedFigures.length > 0) {
@@ -1605,15 +1603,13 @@ document.addEventListener('keydown', (e) => {
                 return img ? img.dataset.filename : '';
             }).filter(name => name); // Filter out any empty or undefined names
 
-            // If there are valid filenames to copy...
             if (filenames.length > 0) {
-                // Join the filenames with a newline character for easy pasting
-                const textToCopy = filenames.join('\n');
+                // Join the filenames with a single space for pasting into the search bar
+                const textToCopy = filenames.join(' ');
 
                 // Use the modern Clipboard API to write the text
                 navigator.clipboard.writeText(textToCopy).then(() => {
                     console.log(`${filenames.length} filenames copied to clipboard.`);
-                    // You could add a visual confirmation here if desired
                 }).catch(err => {
                     console.error('Could not copy filenames to clipboard: ', err);
                 });
