@@ -1556,6 +1556,11 @@ Styling for the Finder-Style Photo Gallery
     z-index: 9; /* Changed from 10 to 9 */
 }
 
+/* NEW: Disables interaction with the search bar during a marquee drag */
+body.is-marquee-dragging #search-input {
+    pointer-events: none;
+}
+
 /*
 ============================================
 Modal / Lightbox Styles
