@@ -1559,6 +1559,8 @@ Styling for the Finder-Style Photo Gallery
 /* NEW: Disables interaction with the search bar during a marquee drag */
 body.is-marquee-dragging #search-input {
     pointer-events: none;
+    outline: none;
+    -webkit-user-drag: none;
 }
 
 /*
