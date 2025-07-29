@@ -1,12 +1,19 @@
 function downloadImage(url, filename) {
     try {
-        // Use the FileSaver.js `saveAs` function directly with the URL.
-        // It handles the blob conversion internally and bypasses many common fetch/CORS issues.
-        saveAs(url, filename || 'download');
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename || 'download';
+
+        // This part is crucial for some browsers, especially Firefox
+        a.style.display = 'none';
+        document.body.appendChild(a);
+
+        a.click();
+
+        document.body.removeChild(a);
     } catch (error) {
-        // This catch block will now likely only trigger if FileSaver.js itself fails.
-        console.error('Download failed:', error);
-        alert(`Could not download the image. It will open in a new tab for you to save manually.`);
+        console.error('Download initiation failed:', error);
+        // Fallback for when even this method fails
         window.open(url, '_blank');
     }
 }
