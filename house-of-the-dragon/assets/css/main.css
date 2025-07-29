@@ -1564,6 +1564,19 @@ body.is-marquee-dragging #search-input {
 }
 
 /*
+   NEW: Globally disables default browser selection and highlights
+   during a marquee drag to prevent selecting container elements.
+*/
+body.is-marquee-dragging,
+body.is-marquee-dragging * {
+    cursor: default !important;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/*
 ============================================
 Modal / Lightbox Styles
 ============================================
