@@ -1945,7 +1945,7 @@ html, body {
 /* Adds a smooth transition to the elements that change during selection */
 #photo-gallery figure img,
 #photo-gallery figure figcaption .filename {
-    transition: background-color 0.2s ease-out, border-color 0.2s ease-out, box-shadow 0.2s ease-out, color 0.2s ease-out;
+    transition: background-color 0.2s ease-out, border-color 0.2s ease-out, box-shadow 0.2s ease-out, color 0.2s ease-out, text-shadow 0.2s ease-out;
 }
 
 /* Changes the image border to gold and adds a soft glow effect */
@@ -1954,12 +1954,10 @@ html, body {
     box-shadow: 0 0 18px rgba(255, 184, 130, 0.5); /* Gold with 50% opacity */
 }
 
-/* Highlights ONLY the filename to mimic text selection when its parent item is selected. */
+/* Makes the filename text color and glow match the selected image's border. */
 #photo-gallery figure.selected figcaption .filename {
-    background-color: rgba(255, 222, 150, 0.3); /* Same color as ::selection */
-    color: #fff; /* Improves readability */
-    border-radius: 3px; /* Softens the highlight's edges */
-    padding: 0 0.4em; /* Adds a little horizontal room for the highlight */
+    color: #dbb7a7; /* Same color as the selected image border */
+    text-shadow: 0 0 12px rgba(255, 184, 130, 0.6); /* Similar glow, optimized for text */
 }
 
 /*
