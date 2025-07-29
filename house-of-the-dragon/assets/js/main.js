@@ -1,10 +1,10 @@
-async function downloadImage(url, filename) {
+function downloadImage(url, filename) {
     try {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
-        const blob = await response.blob();
-        saveAs(blob, filename || 'download');
+        // Use the FileSaver.js `saveAs` function directly with the URL.
+        // It handles the blob conversion internally and bypasses many common fetch/CORS issues.
+        saveAs(url, filename || 'download');
     } catch (error) {
+        // This catch block will now likely only trigger if FileSaver.js itself fails.
         console.error('Download failed:', error);
         alert(`Could not download the image. It will open in a new tab for you to save manually.`);
         window.open(url, '_blank');
@@ -974,7 +974,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     for (const figure of selectedItems) {
                         const itemImg = figure.querySelector('img');
                         const itemSrc = itemImg.dataset.fullsrc;
-                        const itemFilename = figure.querySelector('figcaption').childNodes[0].nodeValue.trim();
+                        const itemFilename = itemImg.dataset.filename;
                         
                         if (itemSrc) {
                             const promise = fetch(itemSrc)
@@ -1010,7 +1010,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // SINGLE IMAGE DOWNLOAD LOGIC
                     const img = primaryTarget.querySelector('img');
                     const fullSrc = img.dataset.fullsrc;
-                    const filename = primaryTarget.querySelector('figcaption').childNodes[0].nodeValue.trim();
+                    const filename = img.dataset.filename;
                     if (fullSrc && filename) {
                         downloadImage(fullSrc, filename);
                     }
