@@ -1204,29 +1204,33 @@ input, select, textarea {
 
     }
 
-/* Header */
- #header {
-     width: 100%;
-     position: fixed;
-     top: 0; /* MODIFIED: Sticks it to the very top of the viewport */
-     left: 0; /* Add left: 0 to span full width */
-     z-index: 10; /* MODIFIED: Ensures it stays on top of all other content */
-     transition: transform 0.325s ease-in-out, filter 0.325s ease-in-out, opacity 0.325s ease-in-out;
-     height: 2.5rem;
+#header {
+    width: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 10;
+    transition: transform 0.325s ease-in-out, filter 0.325s ease-in-out, opacity 0.325s ease-in-out;
+    height: 2.5rem;
 
-     /* === NEW: Background for visibility when scrolling === */
-     background-color: rgba(25, 25, 25, 0.8); /* Semi-transparent background */
-     backdrop-filter: blur(12px); /* Blurs the content scrolling underneath */
-     -webkit-backdrop-filter: blur(12px); /* Adds blur effect for Safari */
-     border-bottom: 1px solid rgba(255, 255, 255, 0.1); /* Adds a subtle separator line */
-     /* NEW: Set cursor to default for the entire header */
-     cursor: default;
-     
-     /* These lines center the content inside the header */
-     display: flex;
-     justify-content: center; /* Horizontally centers */
-     align-items: center;     /* Vertically centers */
-     gap: 0.3rem;             /* Sets space between logo and search */
+    /* === NEW: Background for visibility when scrolling === */
+    background-color: rgba(25, 25, 25, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    cursor: default;
+
+    /* Add these lines to disable selection on the header itself */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+
+    /* These lines center the content inside the header */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.3rem;
 }
 
     /* Medallion */
