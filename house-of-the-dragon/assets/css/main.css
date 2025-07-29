@@ -1942,16 +1942,26 @@ html, body {
 
 /* ===== Enhanced Selection Style ===== */
 
-/* Adds a smooth transition to the figure and image elements for a less jarring change */
+/* Adds a smooth transition to the figure, image, AND figcaption for a less jarring change */
 #photo-gallery figure,
-#photo-gallery figure img {
-    transition: background-color 0.2s ease-out, border-color 0.2s ease-out, box-shadow 0.2s ease-out;
+#photo-gallery figure img,
+#photo-gallery figure figcaption {
+    transition: background-color 0.2s ease-out, border-color 0.2s ease-out, box-shadow 0.2s ease-out, color 0.2s ease-out;
 }
 
-/* Changes the image border to blue and adds a soft glow effect */
+/* Changes the image border to gold and adds a soft glow effect */
 #photo-gallery figure.selected img {
     border-color: #dbb7a7; /* Gold */
     box-shadow: 0 0 18px rgba(255, 184, 130, 0.5); /* Gold with 50% opacity */
+}
+
+/* Highlights the filename to mimic text selection when its parent item is selected. */
+#photo-gallery figure.selected figcaption {
+    display: inline-block; /* Makes the element wrap its content */
+    background-color: rgba(255, 222, 150, 0.3); /* Same color as ::selection */
+    color: #fff; /* Improves readability */
+    border-radius: 3px; /* Softens the highlight's edges */
+    padding: 0 0.4em; /* Adds a little horizontal room for the highlight */
 }
 
 /*
