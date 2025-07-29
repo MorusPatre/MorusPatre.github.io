@@ -711,6 +711,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         e.preventDefault();
         hasDragged = true;
+        document.body.classList.add('is-marquee-dragging');
         
         marquee.style.visibility = 'visible';
         
@@ -767,6 +768,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * UPDATED endDragAction function
      */
     const endDragAction = (e) => {
+        document.body.classList.remove('is-marquee-dragging');
         if (!isMarquee) return;
     
         if (!hasDragged) {
