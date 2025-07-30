@@ -89,7 +89,7 @@
         #project-links {
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: flex-start; /* MODIFIED: Aligns items to the top */
             gap: 4rem;
             flex-wrap: wrap;
         }
@@ -97,20 +97,28 @@
         .project-link figure {
             margin: 0;
             position: relative;
+            display: flex; /* MODIFIED: Added for alignment */
+            justify-content: center; /* MODIFIED: Added for alignment */
+            align-items: center; /* MODIFIED: Added for alignment */
+            width: 350px;   /* MODIFIED: Width is on the container now */
+            max-height: 250px; /* MODIFIED: Set a max-height for consistency */
         }
 
         .project-link img {
             display: block;
-            width: 350px;
-            height: 250px;
-            object-fit: contain; /* MODIFIED: Changed from 'cover' to 'contain' */
+            max-width: 100%; /* MODIFIED: Image scales to container width */
+            height: auto;   /* MODIFIED: Height is automatic to maintain aspect ratio */
             border-radius: 8px;
             border: 1px solid rgba(255, 255, 255, 0.25);
             transition: all 0.3s ease;
         }
 
         .project-link figcaption {
-            margin-top: 1rem;
+            /* This is a new container for the text to position it correctly */
+            position: absolute;
+            bottom: -3.5rem; /* Position below the figure */
+            left: 0;
+            right: 0;
             font-size: 1rem;
             font-weight: 600;
             letter-spacing: 0.2rem;
@@ -145,8 +153,8 @@
 
         @media screen and (max-width: 736px) {
             h1 { font-size: 1.75rem; }
-            #project-links { flex-direction: column; gap: 3rem; }
-            .project-link img { width: 300px; height: 215px; }
+            #project-links { flex-direction: column; gap: 5rem; } /* Increased gap for caption */
+            .project-link figure { width: 300px; max-height: 215px; }
         }
 
     </style>
