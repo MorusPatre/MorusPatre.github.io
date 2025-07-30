@@ -2,6 +2,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const jsonPath = 'gallery-data.json';
     const galleryContainerId = 'photo-gallery';
     const galleryContainer = document.getElementById(galleryContainerId);
+    const footer = document.getElementById('footer');
+    let firstImageLoaded = false;
 
     if (!galleryContainer) {
         console.error(`Error: The element with ID '${galleryContainerId}' was not found.`);
@@ -16,6 +18,14 @@ document.addEventListener('DOMContentLoaded', function() {
             return response.json();
         })
         .then(galleryData => {
+            
+            // If there are no images, show the footer immediately.
+            if (galleryData.length === 0 && footer) {
+                footer.style.opacity = '1';
+                footer.style.pointerEvents = 'auto';
+                return;
+            }
+
             galleryData.forEach(item => {
                 const figure = document.createElement('figure');
                 const imageContainer = document.createElement('div');
@@ -27,14 +37,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 img.alt = item.alt;
                 img.addEventListener('load', () => {
                     figure.classList.add('is-visible');
+                    
+                    // When the first image loads, make the footer visible.
+                    if (!firstImageLoaded && footer) {
+                        footer.style.opacity = '1';
+                        footer.style.pointerEvents = 'auto';
+                        firstImageLoaded = true; // Ensure this only runs once
+                    }
                 });
 
                 img.dataset.fullsrc = item.src;
                 img.dataset.filename = item.filename;
                 img.dataset.search = item.search;
                 
-                // --- MODIFICATION START ---
-                // Read the new, specific keys and create corresponding data-attributes.
                 if (item.cast) { img.dataset.cast = item.cast; }
                 if (item.crew) { img.dataset.crew = item.crew; }
                 if (item.castAndCrew) { img.dataset.castAndCrew = item.castAndCrew; }
@@ -43,7 +58,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (item.dimensions) { img.dataset.dimensions = item.dimensions; }
                 if (item.season) { img.dataset.season = item.season; }
                 if (item.episode) { img.dataset.episode = item.episode; }
-                // --- MODIFICATION END ---
                 
                 for (const key in item) {
                     if (!img.dataset[key] && key !== 'src' && key !== 'thumbnail' && key !== 'alt') {
@@ -83,6 +97,12 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => {
             console.error('Error loading gallery data:', error);
             galleryContainer.innerHTML = 'Error loading gallery. Please check the console.';
+            
+            // If the gallery fails to load, still show the footer.
+            if (footer) {
+                footer.style.opacity = '1';
+                footer.style.pointerEvents = 'auto';
+            }
         });
 
     function truncateFilename(filename, maxLength = 48) {
