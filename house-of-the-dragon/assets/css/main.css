@@ -93,17 +93,6 @@ input, select, textarea {
         background: #1f1b18;
     }
 
-        body.is-preload *, body.is-preload *:before, body.is-preload *:after {
-            -moz-animation: none !important;
-            -webkit-animation: none !important;
-            -ms-animation: none !important;
-            animation: none !important;
-            -moz-transition: none !important;
-            -webkit-transition: none !important;
-            -ms-transition: none !important;
-            transition: none !important;
-        }
-
 /* Type */
 
     html {
@@ -1146,10 +1135,6 @@ input, select, textarea {
             filter: blur(0.2rem);
         }
 
-        body.is-preload #bg:before {
-            background-color: #000000;
-        }
-
 /* Wrapper */
 #wrapper {
     display: -moz-flex;
@@ -1444,10 +1429,6 @@ input, select, textarea {
             -webkit-filter: blur(0.1rem);
             -ms-filter: blur(0.1rem);
             filter: blur(0.1rem);
-            opacity: 0;
-        }
-
-        body.is-preload #footer {
             opacity: 0;
         }
 
