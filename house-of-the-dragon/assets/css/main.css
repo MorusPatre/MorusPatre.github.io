@@ -1149,6 +1149,10 @@ input, select, textarea {
     -webkit-align-items: center;
     -ms-align-items: center;
     align-items: center;
+    -moz-justify-content: space-between;
+    -webkit-justify-content: space-between;
+    -ms-justify-content: space-between;
+    justify-content: space-between;
     position: relative;
     min-height: 100vh;
     width: 100%;
@@ -1402,6 +1406,9 @@ input, select, textarea {
         -ms-user-select: none;
         user-select: none;
         cursor: default;
+
+        /* ADD THIS LINE to push the footer to the bottom */
+        margin-top: auto;
     }
 
         #footer .copyright {
