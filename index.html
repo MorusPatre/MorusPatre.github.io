@@ -154,7 +154,7 @@
                     <img src="images/rhaenyra-promo.jpg" alt="House of the Dragon">
                     <figcaption>
                         House of the Dragon
-                        <span class="image-count" id="hotd-count">-- Items</span>
+                        <span class="image-count" id="hotd-count">-- items</span>
                     </figcaption>
                 </figure>
             </a>
@@ -164,7 +164,7 @@
                     <img src="images/witcher-promo.png" alt="The Witcher">
                     <figcaption>
                         The Witcher
-                        <span class="image-count" id="witcher-count">-- Items</span>
+                        <span class="image-count" id="witcher-count">-- items</span>
                     </figcaption>
                 </figure>
             </a>
@@ -191,7 +191,7 @@
                     .then(data => {
                         const element = document.getElementById(project.id);
                         if (element) {
-                            element.textContent = `${data.length} Items`;
+                            element.textContent = `${data.length} items`;
                         }
                     })
                     .catch(error => {
