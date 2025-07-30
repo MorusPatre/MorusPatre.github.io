@@ -19,6 +19,9 @@
             font-weight: 300;
             font-size: 16pt;
             line-height: 1.65;
+            -webkit-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
         }
 
         a {
@@ -82,10 +85,12 @@
             justify-content: center;
             align-items: flex-start;
             flex-wrap: wrap;
+            gap: 2.5rem;
         }
         
         .project-link {
-            width: 350px;
+            width: 450px;
+            cursor: default; /* ADDED: Keeps the cursor as the native arrow */
         }
 
         .project-link figure {
@@ -100,7 +105,7 @@
             display: block;
             max-width: 100%;
             height: auto;
-            max-height: 250px;
+            max-height: 320px;
             border: 1px solid rgba(255, 255, 255, 0.25);
             transition: all 0.3s ease;
         }
@@ -123,9 +128,12 @@
         }
 
         @media screen and (max-width: 736px) {
-            #project-links { flex-direction: column; gap: 3rem; }
-            .project-link { width: 300px; }
-            .project-link img { max-height: 215px; }
+            #project-links {
+                flex-direction: column;
+                gap: 3rem;
+            }
+            .project-link { width: 350px; }
+            .project-link img { max-height: 250px; }
         }
 
     </style>
