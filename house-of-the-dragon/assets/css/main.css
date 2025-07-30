@@ -1409,7 +1409,18 @@ input, select, textarea {
 
         /* ADD THIS LINE to push the footer to the bottom */
         margin-top: auto;
+
+        /* MODIFIED: Hide footer by default */
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.5s ease-in-out, visibility 0.5s ease-in-out;
     }
+
+        /* NEW: Class to make footer visible */
+        #footer.is-visible {
+            opacity: 1;
+            visibility: visible;
+        }
 
         #footer .copyright {
             letter-spacing: 0.2rem;
