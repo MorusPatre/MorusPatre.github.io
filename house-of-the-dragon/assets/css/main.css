@@ -1407,6 +1407,8 @@ input, select, textarea {
         user-select: none;
         cursor: default;
         margin-top: auto; /* Push the footer to the bottom */
+        opacity: 0; /* Hide the footer initially */
+        pointer-events: none; /* Prevent interactions while invisible */
     }
 
         #footer .copyright {
