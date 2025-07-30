@@ -102,7 +102,7 @@
             margin: 0;
             position: relative;
             display: flex;
-            flex-direction: column; /* MODIFIED: Stacks items vertically */
+            flex-direction: column;
             align-items: center;
         }
 
@@ -110,18 +110,18 @@
             display: block;
             max-width: 100%;
             height: auto;
-            max-height: 250px; /* MODIFIED: Set a max-height on the image itself */
+            max-height: 250px;
             border-radius: 8px;
             border: 1px solid rgba(255, 255, 255, 0.25);
             transition: all 0.3s ease;
         }
 
         .project-link figcaption {
-            margin-top: 1rem; /* MODIFIED: No longer needs absolute positioning */
+            margin-top: 1rem;
             font-size: 1rem;
             font-weight: 600;
             letter-spacing: 0.2rem;
-            text-transform: uppercase;
+            /* text-transform: uppercase; REMOVED */
             transition: color 0.3s ease;
         }
         
@@ -133,21 +133,6 @@
 
         .project-link:hover figcaption {
             color: #dbb7a7;
-        }
-
-
-        #footer {
-           position: absolute;
-           bottom: 2rem;
-           width: 100%;
-           text-align: center;
-        }
-
-        .copyright {
-            letter-spacing: 0.2rem;
-            font-size: 0.6rem;
-            opacity: 0.75;
-            text-transform: uppercase;
         }
 
         @media screen and (max-width: 736px) {
@@ -180,10 +165,6 @@
                 </figure>
             </a>
         </div>
-        
-        <footer id="footer">
-             <p class="copyright">&copy; Portfolio. All rights reserved.</p>
-        </footer>
     </div>
     
     <div id="bg"></div>
