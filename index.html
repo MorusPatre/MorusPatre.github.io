@@ -1,7 +1,7 @@
 <!DOCTYPE HTML>
 <html>
 <head>
-    <title>Project Selection</title>
+    <title>Mouseia</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,600">
@@ -90,7 +90,7 @@
         
         .project-link {
             width: 450px;
-            cursor: default; /* ADDED: Keeps the cursor as the native arrow */
+            cursor: default;
         }
 
         .project-link figure {
@@ -115,6 +115,14 @@
             font-size: 1rem;
             font-weight: 300;
             transition: color 0.3s ease;
+            line-height: 1.4;
+        }
+        
+        .image-count {
+            display: block;
+            font-size: 0.65rem;
+            opacity: 0.7;
+            margin-top: 0.3em;
         }
         
         .project-link:hover img {
@@ -144,20 +152,58 @@
             <a href="/house-of-the-dragon" class="project-link">
                 <figure>
                     <img src="images/rhaenyra-promo.jpg" alt="House of the Dragon">
-                    <figcaption>House of the Dragon</figcaption>
+                    <figcaption>
+                        House of the Dragon
+                        <span class="image-count" id="hotd-count">-- Items</span>
+                    </figcaption>
                 </figure>
             </a>
 
             <a href="/the-witcher" class="project-link">
                 <figure>
                     <img src="images/witcher-promo.png" alt="The Witcher">
-                    <figcaption>The Witcher</figcaption>
+                    <figcaption>
+                        The Witcher
+                        <span class="image-count" id="witcher-count">-- Items</span>
+                    </figcaption>
                 </figure>
             </a>
         </div>
     </div>
     
     <div id="bg"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const projects = [
+                { id: 'hotd-count', path: 'house-of-the-dragon/gallery-data.json' },
+                { id: 'witcher-count', path: 'the-witcher/gallery-data.json' }
+            ];
+
+            projects.forEach(project => {
+                fetch(project.path)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        const element = document.getElementById(project.id);
+                        if (element) {
+                            element.textContent = `${data.length} Items`;
+                        }
+                    })
+                    .catch(error => {
+                        console.error(`Could not load image count for ${project.path}:`, error);
+                        const element = document.getElementById(project.id);
+                        if (element) {
+                            element.textContent = 'Count Unavailable';
+                        }
+                    });
+            });
+        });
+    </script>
 
 </body>
 </html>
