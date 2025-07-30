@@ -89,36 +89,35 @@
         #project-links {
             display: flex;
             justify-content: center;
-            align-items: flex-start; /* MODIFIED: Aligns items to the top */
+            align-items: flex-start;
             gap: 4rem;
             flex-wrap: wrap;
+        }
+        
+        .project-link {
+            width: 350px;
         }
 
         .project-link figure {
             margin: 0;
             position: relative;
-            display: flex; /* MODIFIED: Added for alignment */
-            justify-content: center; /* MODIFIED: Added for alignment */
-            align-items: center; /* MODIFIED: Added for alignment */
-            width: 350px;   /* MODIFIED: Width is on the container now */
-            max-height: 250px; /* MODIFIED: Set a max-height for consistency */
+            display: flex;
+            flex-direction: column; /* MODIFIED: Stacks items vertically */
+            align-items: center;
         }
 
         .project-link img {
             display: block;
-            max-width: 100%; /* MODIFIED: Image scales to container width */
-            height: auto;   /* MODIFIED: Height is automatic to maintain aspect ratio */
+            max-width: 100%;
+            height: auto;
+            max-height: 250px; /* MODIFIED: Set a max-height on the image itself */
             border-radius: 8px;
             border: 1px solid rgba(255, 255, 255, 0.25);
             transition: all 0.3s ease;
         }
 
         .project-link figcaption {
-            /* This is a new container for the text to position it correctly */
-            position: absolute;
-            bottom: -3.5rem; /* Position below the figure */
-            left: 0;
-            right: 0;
+            margin-top: 1rem; /* MODIFIED: No longer needs absolute positioning */
             font-size: 1rem;
             font-weight: 600;
             letter-spacing: 0.2rem;
@@ -153,8 +152,9 @@
 
         @media screen and (max-width: 736px) {
             h1 { font-size: 1.75rem; }
-            #project-links { flex-direction: column; gap: 5rem; } /* Increased gap for caption */
-            .project-link figure { width: 300px; max-height: 215px; }
+            #project-links { flex-direction: column; gap: 3rem; }
+            .project-link { width: 300px; }
+            .project-link img { max-height: 215px; }
         }
 
     </style>
