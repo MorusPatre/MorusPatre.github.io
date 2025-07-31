@@ -1,1713 +1,2095 @@
-(function($) {
+@import url("https://fonts.googleapis.com/css?family=Source+Sans+Pro:300italic,600italic,300,600");
 
-    var    $window = $(window),
-        $body = $('body'),
-        $wrapper = $('#wrapper'),
-        $header = $('#header'),
-        $footer = $('#footer'),
-        $main = $('#main'),
-        $main_articles = $main.children('article');
+html, body, div, span, applet, object,
+iframe, h1, h2, h3, h4, h5, h6, p, blockquote,
+pre, a, abbr, acronym, address, big, cite,
+code, del, dfn, em, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var, b,
+u, i, center, dl, dt, dd, ol, ul, li, fieldset,
+form, label, legend, table, caption, tbody,
+tfoot, thead, tr, th, td, article, aside,
+canvas, details, embed, figure, figcaption,
+footer, header, hgroup, menu, nav, output, ruby,
+section, summary, time, mark, audio, video {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-size: 100%;
+    font: inherit;
+    vertical-align: baseline;
+}
 
-    // Breakpoints.
-        breakpoints({
-            xlarge:   [ '1281px',  '1680px' ],
-            large:    [ '981px',   '1280px' ],
-            medium:   [ '737px',   '980px'  ],
-            small:    [ '481px',   '736px'  ],
-            xsmall:   [ '361px',   '480px'  ],
-            xxsmall:  [ null,      '360px'  ]
-        });
+article, aside, details, figcaption, figure,
+footer, header, hgroup, menu, nav, section {
+    display: block;
+}
 
-    // Fix: Flexbox min-height bug on IE.
-        if (browser.name == 'ie') {
+body {
+    line-height: 1;
+}
 
-            var flexboxFixTimeoutId;
+ol, ul {
+    list-style: none;
+}
 
-            $window.on('resize.flexbox-fix', function() {
+blockquote, q {
+    quotes: none;
+}
 
-                clearTimeout(flexboxFixTimeoutId);
+    blockquote:before, blockquote:after, q:before, q:after {
+        content: '';
+        content: none;
+    }
 
-                flexboxFixTimeoutId = setTimeout(function() {
+table {
+    border-collapse: collapse;
+    border-spacing: 0;
+}
 
-                    if ($wrapper.prop('scrollHeight') > $window.height())
-                        $wrapper.css('height', 'auto');
-                    else
-                        $wrapper.css('height', '100vh');
+body {
+    -webkit-text-size-adjust: none;
+}
 
-                }, 250);
+mark {
+    background-color: transparent;
+    color: inherit;
+}
 
-            }).triggerHandler('resize.flexbox-fix');
+input::-moz-focus-inner {
+    border: 0;
+    padding: 0;
+}
+
+input, select, textarea {
+    -moz-appearance: none;
+    -webkit-appearance: none;
+    -ms-appearance: none;
+    appearance: none;
+}
+
+/* Basic */
+
+    @-ms-viewport {
+        width: device-width;
+    }
+
+    @media screen and (max-width: 480px) {
+
+        html, body {
+            min-width: 320px;
+        }
+
+    }
+
+    html {
+        box-sizing: border-box;
+    }
+
+    *, *:before, *:after {
+        box-sizing: inherit;
+    }
+
+    body {
+        background: #1f1b18;
+    }
+
+/* Type */
+
+    html {
+        font-size: 16pt;
+    }
+
+
+
+    body, input, select, textarea {
+        color: #ffffff;
+        font-family: "Source Sans Pro", sans-serif;
+        font-weight: 300;
+        font-size: 1rem;
+        line-height: 1.65;
+    }
+
+    a {
+        -moz-transition: color 0.2s ease-in-out, background-color 0.2s ease-in-out, border-bottom-color 0.2s ease-in-out;
+        -webkit-transition: color 0.2s ease-in-out, background-color 0.2s ease-in-out, border-bottom-color 0.2s ease-in-out;
+        -ms-transition: color 0.2s ease-in-out, background-color 0.2s ease-in-out, border-bottom-color 0.2s ease-in-out;
+        transition: color 0.2s ease-in-out, background-color 0.2s ease-in-out, border-bottom-color 0.2s ease-in-out;
+        border-bottom: dotted 1px rgba(255, 255, 255, 0.5);
+        text-decoration: none;
+        color: inherit;
+    }
+
+        a:hover {
+            border-bottom-color: transparent;
+        }
+
+    strong, b {
+        color: #ffffff;
+        font-weight: 600;
+    }
+
+    em, i {
+        font-style: italic;
+    }
+
+    p {
+        margin: 0 0 2rem 0;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        color: #ffffff;
+        font-weight: 600;
+        line-height: 1.5;
+        margin: 0 0 1rem 0;
+        text-transform: uppercase;
+    letter-spacing: 0.12rem;
+    }
+
+        h1 a, h2 a, h3 a, h4 a, h5 a, h6 a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        h1.major, h2.major, h3.major, h4.major, h5.major, h6.major {
+            border-bottom: solid 1px #ffffff;
+            width: -moz-max-content;
+            width: -webkit-max-content;
+            width: -ms-max-content;
+            width: max-content;
+            padding-bottom: 0.5rem;
+            margin: 0 0 2rem 0;
+        }
+
+    h1 {
+        font-size: 2.25rem;
+        line-height: 1.3;
+        letter-spacing: 0.5rem;
+    }
+
+    h2 {
+        font-size: 1.5rem;
+        line-height: 1.4;
+        letter-spacing: 0.5rem;
+    }
+
+    h3 {
+        font-size: 1rem;
+    }
+
+    h4 {
+        font-size: 0.8rem;
+    }
+
+    h5 {
+        font-size: 0.7rem;
+    }
+
+    h6 {
+        font-size: 0.6rem;
+    }
+
+    @media screen and (max-width: 736px) {
+
+        h1 {
+            font-size: 1.75rem;
+            line-height: 1.4;
+        }
+
+        h2 {
+            font-size: 1.25em;
+            line-height: 1.5;
+        }
+
+    }
+
+    sub {
+        font-size: 0.8rem;
+        position: relative;
+        top: 0.5rem;
+    }
+
+    sup {
+        font-size: 0.8rem;
+        position: relative;
+        top: -0.5rem;
+    }
+
+    blockquote {
+        border-left: solid 4px #ffffff;
+        font-style: italic;
+        margin: 0 0 2rem 0;
+        padding: 0.5rem 0 0.5rem 2rem;
+    }
+
+    code {
+        background: rgba(255, 255, 255, 0.075);
+        border-radius: 4px;
+        font-family: "Courier New", monospace;
+        font-size: 0.9rem;
+        margin: 0 0.25rem;
+        padding: 0.25rem 0.65rem;
+    }
+
+    pre {
+        -webkit-overflow-scrolling: touch;
+        font-family: "Courier New", monospace;
+        font-size: 0.9rem;
+        margin: 0 0 2rem 0;
+    }
+
+        pre code {
+            display: block;
+            line-height: 1.75;
+            padding: 1rem 1.5rem;
+            overflow-x: auto;
+        }
+
+    hr {
+        border: 0;
+        border-bottom: solid 1px #ffffff;
+        margin: 2.75rem 0;
+    }
+
+    .align-left {
+        text-align: left;
+    }
+
+    .align-center {
+        text-align: center;
+    }
+
+    .align-right {
+        text-align: right;
+    }
+
+/* Form */
+
+    form {
+        margin: 0 0 2rem 0;
+    }
+
+        form > :last-child {
+            margin-bottom: 0;
+        }
+
+        form > .fields {
+            display: -moz-flex;
+            display: -webkit-flex;
+            display: -ms-flex;
+            display: flex;
+            -moz-flex-wrap: wrap;
+            -webkit-flex-wrap: wrap;
+            -ms-flex-wrap: wrap;
+            flex-wrap: wrap;
+            width: calc(100% + 3rem);
+            margin: -1.5rem 0 2rem -1.5rem;
+        }
+
+            form > .fields > .field {
+                -moz-flex-grow: 0;
+                -webkit-flex-grow: 0;
+                -ms-flex-grow: 0;
+                flex-grow: 0;
+                -moz-flex-shrink: 0;
+                -webkit-flex-shrink: 0;
+                -ms-flex-shrink: 0;
+                flex-shrink: 0;
+                padding: 1.5rem 0 0 1.5rem;
+                width: calc(100% - 1.5rem);
+            }
+
+                form > .fields > .field.half {
+                    width: calc(50% - 0.75rem);
+                }
+
+                form > .fields > .field.third {
+                    width: calc(100%/3 - 0.5rem);
+                }
+
+                form > .fields > .field.quarter {
+                    width: calc(25% - 0.375rem);
+                }
+
+        @media screen and (max-width: 480px) {
+
+            form > .fields {
+                width: calc(100% + 3rem);
+                margin: -1.5rem 0 2rem -1.5rem;
+            }
+
+                form > .fields > .field {
+                    padding: 1.5rem 0 0 1.5rem;
+                    width: calc(100% - 1.5rem);
+                }
+
+                    form > .fields > .field.half {
+                        width: calc(100% - 1.5rem);
+                    }
+
+                    form > .fields > .field.third {
+                        width: calc(100% - 1.5rem);
+                    }
+
+                    form > .fields > .field.quarter {
+                        width: calc(100% - 1.5rem);
+                    }
 
         }
 
-    // Nav.
-        var $nav = $header.children('nav'),
-            $nav_li = $nav.find('li');
+    label {
+        color: #ffffff;
+        display: block;
+        font-size: 0.8rem;
+        font-weight: 300;
+        letter-spacing: 0.2rem;
+        line-height: 1.5;
+        margin: 0 0 1rem 0;
+        text-transform: uppercase;
+    }
 
-        // Add "middle" alignment classes if we're dealing with an even number of items.
-            if ($nav_li.length % 2 == 0) {
+    input[type="text"],
+    input[type="password"],
+    input[type="email"],
+    input[type="tel"],
+    select,
+    textarea {
+        -moz-appearance: none;
+        -webkit-appearance: none;
+        -ms-appearance: none;
+        appearance: none;
+        -moz-transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
+        -webkit-transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
+        -ms-transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
+        transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
+        background-color: transparent;
+        border-radius: 4px;
+        border: solid 1px transparent;
+        color: inherit;
+        display: block;
+        outline: 0;
+        padding: 0 1rem;
+        text-decoration: none;
+        width: 100%;
+    }
 
-                $nav.addClass('use-middle');
-                $nav_li.eq( ($nav_li.length / 2) ).addClass('is-middle');
+        input[type="text"]:invalid,
+        input[type="password"]:invalid,
+        input[type="email"]:invalid,
+        input[type="tel"]:invalid,
+        select:invalid,
+        textarea:invalid {
+            box-shadow: none;
+        }
 
+        input[type="text"]:focus,
+        input[type="password"]:focus,
+        input[type="email"]:focus,
+        input[type="tel"]:focus,
+        select:focus,
+        textarea:focus {
+            background: rgba(255, 255, 255, 0.075);
+            border-color: #a3adaf;
+            box-shadow: 0 0 0 0.5px #a3adaf;
+        }
+
+    select {
+        background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' preserveAspectRatio='none' viewBox='0 0 40 40'%3E%3Cpath d='M9.4,12.3l10.4,10.4l10.4-10.4c0.2-0.2,0.5-0.4,0.9-0.4c0.3,0,0.6,0.1,0.9,0.4l3.3,3.3c0.2,0.2,0.4,0.5,0.4,0.9 c0,0.4-0.1,0.6-0.4,0.9L20.7,31.9c-0.2,0.2-0.5,0.4-0.9,0.4c-0.3,0-0.6-0.1-0.9-0.4L4.3,17.3c-0.2-0.2-0.4-0.5-0.4-0.9 c0-0.4,0.1-0.6,0.4-0.9l3.3-3.3c0.2-0.2,0.5-0.4,0.9-0.4S9.1,12.1,9.4,12.3z' fill='%23ffffff' /%3E%3C/svg%3E");
+        background-size: 1.25rem;
+        background-repeat: no-repeat;
+        background-position: calc(100% - 1rem) center;
+        height: 2.75rem;
+        padding-right: 2.75rem;
+        text-overflow: ellipsis;
+    }
+
+        select option {
+            color: #ffffff;
+            background: #1b1f22;
+        }
+
+        select:focus::-ms-value {
+            background-color: transparent;
+        }
+
+        select::-ms-expand {
+            display: none;
+        }
+
+    input[type="text"],
+    input[type="password"],
+    input[type="email"],
+    select {
+        height: 2.75rem;
+    }
+
+    textarea {
+        padding: 0.75rem 1rem;
+    }
+
+    input[type="checkbox"],
+    input[type="radio"] {
+        -moz-appearance: none;
+        -webkit-appearance: none;
+        -ms-appearance: none;
+        appearance: none;
+        display: block;
+        float: left;
+        margin-right: -2rem;
+        opacity: 0;
+        width: 1rem;
+        z-index: -1;
+    }
+
+        input[type="checkbox"] + label,
+        input[type="radio"] + label {
+            text-decoration: none;
+            -moz-user-select: none;
+            -webkit-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            color: #ffffff;
+            cursor: pointer;
+            display: inline-block;
+            font-size: 0.8rem;
+            font-weight: 300;
+            margin: 0 0 0.5rem 0;
+            padding-left: 2.65rem;
+            padding-right: 0.75rem;
+            position: relative;
+        }
+
+            input[type="checkbox"] + label:before,
+            input[type="radio"] + label:before {
+                -moz-osx-font-smoothing: grayscale;
+                -webkit-font-smoothing: antialiased;
+                display: inline-block;
+                font-style: normal;
+                font-variant: normal;
+                text-rendering: auto;
+                line-height: 1;
+                text-transform: none !important;
+                font-family: 'Font Awesome 5 Free';
+                font-weight: 900;
             }
 
-    // Main.
-        var    delay = 325,
-            locked = false;
+            input[type="checkbox"] + label:before,
+            input[type="radio"] + label:before {
+                -moz-transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
+                -webkit-transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
+                -ms-transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
+                transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
+                border-radius: 4px;
+                border: solid 1px #ffffff;
+                content: '';
+                display: inline-block;
+                height: 1.65rem;
+                left: 0;
+                line-height: 1.65rem;
+                position: absolute;
+                text-align: center;
+                top: -0.15rem;
+                width: 1.65rem;
+            }
 
-        // Methods.
-            $main._show = function(id, initial) {
+        input[type="checkbox"]:checked + label:before,
+        input[type="radio"]:checked + label:before {
+            background: #ffffff !important;
+            border-color: #ffffff !important;
+            color: #1b1f22;
+            content: '\f00c';
+        }
 
-                var $article = $main_articles.filter('#' + id);
+        input[type="checkbox"]:focus + label:before,
+        input[type="radio"]:focus + label:before {
+            background: rgba(255, 255, 255, 0.075);
+            border-color: #ffffff;
+            box-shadow: 0 0 0 1px #ffffff;
+        }
 
-                // No such article? Bail.
-                    if ($article.length == 0)
-                        return;
+    input[type="checkbox"] + label:before {
+        border-radius: 4px;
+    }
 
-                // Handle lock.
+    input[type="radio"] + label:before {
+        border-radius: 100%;
+    }
 
-                    // Already locked? Speed through "show" steps w/o delays.
-                        if (locked || (typeof initial != 'undefined' && initial === true)) {
+    ::-webkit-input-placeholder {
+        color: rgba(255, 255, 255, 0.5) !important;
+        opacity: 0.7;
+    }
 
-                            // Mark as switching.
-                                $body.addClass('is-switching');
+    :-moz-placeholder {
+        color: rgba(255, 255, 255, 0.5) !important;
+        opacity: 0.7;
+    }
 
-                            // Mark as visible.
-                                $body.addClass('is-article-visible');
+    ::-moz-placeholder {
+        color: rgba(255, 255, 255, 0.5) !important;
+        opacity: 0.7;
+    }
 
-                            // Deactivate all articles (just in case one's already active).
-                                $main_articles.removeClass('active');
+    :-ms-input-placeholder {
+        color: rgba(255, 255, 255, 0.5) !important;
+        opacity: 0.7;
+    }
 
-                            // Hide header, footer.
-                                $header.hide();
-                                $footer.hide();
+    .formerize-placeholder {
+        color: rgba(255, 255, 255, 0.5) !important;
+        opacity: 0.7;
+    }
 
-                            // Show main, article.
-                                $main.show();
-                                $article.show();
+/* Box */
 
-                            // Activate article.
-                                $article.addClass('active');
+    .box {
+        border-radius: 4px;
+        border: solid 1px #ffffff;
+        margin-bottom: 2rem;
+        padding: 1.5em;
+    }
 
-                            // Unlock.
-                                locked = false;
+        .box > :last-child,
+        .box > :last-child > :last-child,
+        .box > :last-child > :last-child > :last-child {
+            margin-bottom: 0;
+        }
 
-                            // Unmark as switching.
-                                setTimeout(function() {
-                                    $body.removeClass('is-switching');
-                                }, (initial ? 1000 : 0));
+        .box.alt {
+            border: 0;
+            border-radius: 0;
+            padding: 0;
+        }
 
-                            return;
+/* Icon */
 
+    .icon {
+        text-decoration: none;
+        border-bottom: none;
+        position: relative;
+    }
+
+        .icon:before {
+            -moz-osx-font-smoothing: grayscale;
+            -webkit-font-smoothing: antialiased;
+            display: inline-block;
+            font-style: normal;
+            font-variant: normal;
+            text-rendering: auto;
+            line-height: 1;
+            text-transform: none !important;
+            font-family: 'Font Awesome 5 Free';
+            font-weight: 400;
+        }
+
+        .icon > .label {
+            display: none;
+        }
+
+        .icon:before {
+            line-height: inherit;
+        }
+
+        .icon.solid:before {
+            font-weight: 900;
+        }
+
+        .icon.brands:before {
+            font-family: 'Font Awesome 5 Brands';
+        }
+
+/* Image */
+
+    .image {
+        border-radius: 4px;
+        border: 0;
+        display: inline-block;
+        position: relative;
+    }
+
+        .image:before {
+            pointer-events: none;
+            background-image: url("../../images/overlay.png");
+            background-color: rgba(19, 21, 25, 0.5);
+            border-radius: 4px;
+            content: '';
+            display: block;
+            height: 100%;
+            left: 0;
+            opacity: 0.5;
+            position: absolute;
+            top: 0;
+            width: 100%;
+        }
+
+        .image img {
+            border-radius: 4px;
+            display: block;
+        }
+
+        .image.left, .image.right {
+            max-width: 40%;
+        }
+
+            .image.left img, .image.right img {
+                width: 100%;
+            }
+
+        .image.left {
+            float: left;
+            padding: 0 1.5em 1em 0;
+            top: 0.25em;
+        }
+
+        .image.right {
+            float: right;
+            padding: 0 0 1em 1.5em;
+            top: 0.25em;
+        }
+
+        .image.fit {
+            display: block;
+            margin: 0 0 2rem 0;
+            width: 100%;
+        }
+
+            .image.fit img {
+                width: 100%;
+            }
+
+        .image.main {
+            display: block;
+            margin: 2.5rem 0;
+            width: 100%;
+        }
+
+            .image.main img {
+                width: 100%;
+            }
+
+        @media screen and (max-width: 736px) {
+
+            .image.main {
+                margin: 2rem 0;
+            }
+
+        }
+
+        @media screen and (max-width: 480px) {
+
+            .image.main {
+                margin: 1.5rem 0;
+            }
+
+        }
+
+/* List */
+
+    ol {
+        list-style: decimal;
+        margin: 0 0 2rem 0;
+        padding-left: 1.25em;
+    }
+
+        ol li {
+            padding-left: 0.25em;
+        }
+
+    ul {
+        list-style: disc;
+        margin: 0 0 2rem 0;
+        padding-left: 1em;
+    }
+
+        ul li {
+            padding-left: 0.5em;
+        }
+
+        ul.alt {
+            list-style: none;
+            padding-left: 0;
+        }
+
+            ul.alt li {
+                border-top: solid 1px #ffffff;
+                padding: 0.5em 0;
+            }
+
+                ul.alt li:first-child {
+                    border-top: 0;
+                    padding-top: 0;
+                }
+
+    dl {
+        margin: 0 0 2rem 0;
+    }
+
+        dl dt {
+            display: block;
+            font-weight: 600;
+            margin: 0 0 1rem 0;
+        }
+
+        dl dd {
+            margin-left: 2rem;
+        }
+
+/* Actions */
+
+    ul.actions {
+        display: -moz-flex;
+        display: -webkit-flex;
+        display: -ms-flex;
+        display: flex;
+        cursor: default;
+        list-style: none;
+        margin-left: -1rem;
+        padding-left: 0;
+    }
+
+        ul.actions li {
+            padding: 0 0 0 1rem;
+            vertical-align: middle;
+        }
+
+        ul.actions.special {
+            -moz-justify-content: center;
+            -webkit-justify-content: center;
+            -ms-justify-content: center;
+            justify-content: center;
+            width: 100%;
+            margin-left: 0;
+        }
+
+            ul.actions.special li:first-child {
+                padding-left: 0;
+            }
+
+        ul.actions.stacked {
+            -moz-flex-direction: column;
+            -webkit-flex-direction: column;
+            -ms-flex-direction: column;
+            flex-direction: column;
+            margin-left: 0;
+        }
+
+            ul.actions.stacked li {
+                padding: 1.3rem 0 0 0;
+            }
+
+                ul.actions.stacked li:first-child {
+                    padding-top: 0;
+                }
+
+        ul.actions.fit {
+            width: calc(100% + 1rem);
+        }
+
+            ul.actions.fit li {
+                -moz-flex-grow: 1;
+                -webkit-flex-grow: 1;
+                -ms-flex-grow: 1;
+                flex-grow: 1;
+                -moz-flex-shrink: 1;
+                -webkit-flex-shrink: 1;
+                -ms-flex-shrink: 1;
+                flex-shrink: 1;
+                width: 100%;
+            }
+
+                ul.actions.fit li > * {
+                    width: 100%;
+                }
+
+            ul.actions.fit.stacked {
+                width: 100%;
+            }
+
+        @media screen and (max-width: 480px) {
+
+            ul.actions:not(.fixed) {
+                -moz-flex-direction: column;
+                -webkit-flex-direction: column;
+                -ms-flex-direction: column;
+                flex-direction: column;
+                margin-left: 0;
+                width: 100% !important;
+            }
+
+                ul.actions:not(.fixed) li {
+                    -moz-flex-grow: 1;
+                    -webkit-flex-grow: 1;
+                    -ms-flex-grow: 1;
+                    flex-grow: 1;
+                    -moz-flex-shrink: 1;
+                    -webkit-flex-shrink: 1;
+                    -ms-flex-shrink: 1;
+                    flex-shrink: 1;
+                    padding: 1rem 0 0 0;
+                    text-align: center;
+                    width: 100%;
+                }
+
+                    ul.actions:not(.fixed) li > * {
+                        width: 100%;
+                    }
+
+                    ul.actions:not(.fixed) li:first-child {
+                        padding-top: 0;
+                    }
+
+                    ul.actions:not(.fixed) li input[type="submit"],
+                    ul.actions:not(.fixed) li input[type="reset"],
+                    ul.actions:not(.fixed) li input[type="button"],
+                    ul.actions:not(.fixed) li button,
+                    ul.actions:not(.fixed) li .button {
+                        width: 100%;
+                    }
+
+                        ul.actions:not(.fixed) li input[type="submit"].icon:before,
+                        ul.actions:not(.fixed) li input[type="reset"].icon:before,
+                        ul.actions:not(.fixed) li input[type="button"].icon:before,
+                        ul.actions:not(.fixed) li button.icon:before,
+                        ul.actions:not(.fixed) li .button.icon:before {
+                            margin-left: -0.5em;
                         }
 
-                    // Lock.
-                        locked = true;
-
-                // Article already visible? Just swap articles.
-                    if ($body.hasClass('is-article-visible')) {
-
-                        // Deactivate current article.
-                            var $currentArticle = $main_articles.filter('.active');
-
-                            $currentArticle.removeClass('active');
-
-                        // Show article.
-                            setTimeout(function() {
-
-                                // Hide current article.
-                                    $currentArticle.hide();
-
-                                // Show article.
-                                    $article.show();
-
-                                // Activate article.
-                                    setTimeout(function() {
-
-                                        $article.addClass('active');
-
-                                        // Window stuff.
-                                            $window
-                                                .scrollTop(0)
-                                                .triggerHandler('resize.flexbox-fix');
-
-                                        // Unlock.
-                                            setTimeout(function() {
-                                                locked = false;
-                                            }, delay);
-
-                                    }, 25);
-
-                            }, delay);
-
-                    }
-
-                // Otherwise, handle as normal.
-                    else {
-
-                        // Mark as visible.
-                            $body
-                                .addClass('is-article-visible');
-
-                        // Show article.
-                            setTimeout(function() {
-
-                                // Hide header, footer.
-                                    $header.hide();
-                                    $footer.hide();
-
-                                // Show main, article.
-                                    $main.show();
-                                    $article.show();
-
-                                // Activate article.
-                                    setTimeout(function() {
-
-                                        $article.addClass('active');
-
-                                        // Window stuff.
-                                            $window
-                                                .scrollTop(0)
-                                                .triggerHandler('resize.flexbox-fix');
-
-                                        // Unlock.
-                                            setTimeout(function() {
-                                                locked = false;
-                                            }, delay);
-
-                                    }, 25);
-
-                            }, delay);
-
-                    }
-
-            };
-
-            $main._hide = function(addState) {
-
-                var $article = $main_articles.filter('.active');
-
-                // Article not visible? Bail.
-                    if (!$body.hasClass('is-article-visible'))
-                        return;
-
-                // Add state?
-                    if (typeof addState != 'undefined'
-                    &&    addState === true)
-                        history.pushState(null, null, '#');
-
-                // Handle lock.
-
-                    // Already locked? Speed through "hide" steps w/o delays.
-                        if (locked) {
-
-                            // Mark as switching.
-                                $body.addClass('is-switching');
-
-                            // Deactivate article.
-                                $article.removeClass('active');
-
-                            // Hide article, main.
-                                $article.hide();
-                                $main.hide();
-
-                            // Show footer, header.
-                                $footer.show();
-                                $header.show();
-
-                            // Unmark as visible.
-                                $body.removeClass('is-article-visible');
-
-                            // Unlock.
-                                locked = false;
-
-                            // Unmark as switching.
-                                $body.removeClass('is-switching');
-
-                            // Window stuff.
-                                $window
-                                    .scrollTop(0)
-                                    .triggerHandler('resize.flexbox-fix');
-
-                            return;
-
-                        }
-
-                    // Lock.
-                        locked = true;
-
-                // Deactivate article.
-                    $article.removeClass('active');
-
-                // Hide article.
-                    setTimeout(function() {
-
-                        // Hide article, main.
-                            $article.hide();
-                            $main.hide();
-
-                        // Show footer, header.
-                            $footer.show();
-                            $header.show();
-
-                        // Unmark as visible.
-                            setTimeout(function() {
-
-                                $body.removeClass('is-article-visible');
-
-                                // Window stuff.
-                                    $window
-                                        .scrollTop(0)
-                                        .triggerHandler('resize.flexbox-fix');
-
-                                // Unlock.
-                                    setTimeout(function() {
-                                        locked = false;
-                                    }, delay);
-
-                            }, 25);
-
-                    }, delay);
-
-
-            };
-
-        // Articles.
-            $main_articles.each(function() {
-
-                var $this = $(this);
-
-                // Close.
-                    $('<div class="close">Close</div>')
-                        .appendTo($this)
-                        .on('click', function() {
-                            location.hash = '';
-                        });
-
-                // Prevent clicks from inside article from bubbling.
-                    $this.on('click', function(event) {
-                        event.stopPropagation();
-                    });
-
-            });
-
-        // Events.
-            $body.on('click', function(event) {
-
-                // Article visible? Hide.
-                    if ($body.hasClass('is-article-visible'))
-                        $main._hide(true);
-
-            });
-
-            $window.on('keyup', function(event) {
-
-                switch (event.keyCode) {
-
-                    case 27:
-
-                        // Article visible? Hide.
-                            if ($body.hasClass('is-article-visible'))
-                                $main._hide(true);
-
-                        break;
-
-                    default:
-                        break;
-
+        }
+
+/* Icons */
+
+    ul.icons {
+        cursor: default;
+        list-style: none;
+        padding-left: 0;
+    }
+
+        ul.icons li {
+            display: inline-block;
+            padding: 0 0.75em 0 0;
+        }
+
+            ul.icons li:last-child {
+                padding-right: 0;
+            }
+
+            ul.icons li a {
+                border-radius: 100%;
+                box-shadow: inset 0 0 0 1px #ffffff;
+                display: inline-block;
+                height: 2.25rem;
+                line-height: 2.25rem;
+                text-align: center;
+                width: 2.25rem;
+            }
+
+                ul.icons li a:hover {
+                    background-color: rgba(255, 255, 255, 0.075);
                 }
 
-            });
-
-            $window.on('hashchange', function(event) {
-
-                // Empty hash?
-                    if (location.hash == ''
-                    ||    location.hash == '#') {
-
-                        // Prevent default.
-                            event.preventDefault();
-                            event.stopPropagation();
-
-                        // Hide.
-                            $main._hide();
-
-                    }
-
-                // Otherwise, check for a matching article.
-                    else if ($main_articles.filter(location.hash).length > 0) {
-
-                        // Prevent default.
-                            event.preventDefault();
-                            event.stopPropagation();
-
-                        // Show article.
-                            $main._show(location.hash.substr(1));
-
-                    }
-
-            });
-
-        // Scroll restoration.
-        // This prevents the page from scrolling back to the top on a hashchange.
-            if ('scrollRestoration' in history)
-                history.scrollRestoration = 'manual';
-            else {
-
-                var    oldScrollPos = 0,
-                    scrollPos = 0,
-                    $htmlbody = $('html,body');
-
-                $window
-                    .on('scroll', function() {
-
-                        oldScrollPos = scrollPos;
-                        scrollPos = $htmlbody.scrollTop();
-
-                    })
-                    .on('hashchange', function() {
-                        $window.scrollTop(oldScrollPos);
-                    });
-
-            }
-
-        // Initialize.
-
-            // Hide main, articles.
-                $main.hide();
-                $main_articles.hide();
-
-            // Initial article.
-                if (location.hash != ''
-                &&    location.hash != '#')
-                    $window.on('load', function() {
-                        $main._show(location.hash.substr(1), true);
-                    });
-
-})(jQuery);
-
-
-document.addEventListener('DOMContentLoaded', () => {
-    const wrapper = document.getElementById('wrapper');
-    const header = document.getElementById('header');
-    const footer = document.getElementById('footer');
-    const gallery = document.getElementById('photo-gallery');
-    const searchInput = document.getElementById('search-input'); 
-
-    if (!gallery || !wrapper) return;
-
-    const marquee = document.getElementById('marquee');
-    const items = gallery.getElementsByTagName('figure');
-
-    let selectedItems = new Set();
-    let isMarquee = false;
-    let startPos = { x: 0, y: 0 };
-    let preMarqueeSelectedItems = new Set();
-
-    let hasDragged = false;
-    let mouseDownItem = null;
-
-    /*
-    ==================================================================
-    // START: SEARCH LOGIC (MOVED FROM INDEX.HTML)
-    ==================================================================
-    */
-    const clearSearchBtn = document.getElementById('clear-search');
-
-    function simplifySearchText(text) {
-        if (!text) return "";
-        return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    }
-
-    searchInput.addEventListener('keyup', function(event) {
-        if (searchInput.value.length > 0) {
-            clearSearchBtn.style.display = 'block';
-            searchInput.style.paddingRight = '30px';
-        } else {
-            clearSearchBtn.style.display = 'none';
-            searchInput.style.paddingRight = '';
-        }
-
-        const originalQuery = simplifySearchText(event.target.value.toLowerCase());
-        const galleryItems = gallery.querySelectorAll('figure');
-
-        // This regex looks for patterns like "season 1", "s1", "e2", "s1e2", etc.
-        const phraseRegex = /\b(s\d+e\d+|season\s*\d+|episode\s*\d+|s\d+|e\d+)\b/g;
-
-        // Pull out all the special phrases (e.g., ["season 1", "episode 2"])
-        const phraseTerms = originalQuery.match(phraseRegex) || [];
-
-        // Get the rest of the query by removing the phrases we just found
-        const remainingText = originalQuery.replace(phraseRegex, '').trim();
-
-        // Split the rest of the query into individual words
-        const wordTerms = remainingText.split(' ').filter(term => term.length > 0);
-
-        // Combine them into the final list of terms to search for
-        const searchTerms = [...phraseTerms, ...wordTerms];
-
-        galleryItems.forEach(function(item) {
-            const img = item.querySelector('img');
-            if (!img || !img.dataset.search) {
-                item.style.display = 'none';
-                return;
-            }
-
-            const searchData = img.dataset.search.toLowerCase();
-            
-            // Check if ALL terms (both phrases and individual words) are present
-            const isMatch = searchTerms.every(term => searchData.includes(term));
-
-            if (isMatch) {
-                item.style.display = 'flex';
-            } else {
-                item.style.display = 'none';
-            }
-        });
-
-        window.scrollTo(0, 0);
-        window.dispatchEvent(new CustomEvent('galleryFiltered'));
-    });
-
-    clearSearchBtn.addEventListener('click', function() {
-        searchInput.value = '';
-        const keyupEvent = new Event('keyup', { bubbles: true });
-        searchInput.dispatchEvent(keyupEvent);
-        searchInput.focus();
-    });
-
-    /*
-    ==================================================================
-    // START: FINDER-STYLE ARROW KEY NAVIGATION LOGIC
-    ==================================================================
-    */
-
-    // --- State Variables for Navigation ---
-    let selectionAnchor = null; // For range selections (Shift key)
-    let lastSelectedItem = null; // The currently "focused" item for keyboard navigation
-    let gridMetrics = { cols: 0 }; // To store the calculated number of columns
-
-    /**
-     * Calculates the number of columns in the responsive grid.
-     * This is crucial for Up/Down arrow navigation.
-     */
-    function calculateGridMetrics() {
-        const visibleItems = Array.from(items).filter(item => item.style.display !== 'none');
-        if (visibleItems.length === 0) {
-            gridMetrics.cols = 0;
-            return;
-        }
-
-        const firstItemTop = visibleItems[0].offsetTop;
-        let cols = 0;
-        for (const item of visibleItems) {
-            if (item.offsetTop === firstItemTop) {
-                cols++;
-            } else {
-                break;
-            }
-        }
-        gridMetrics.cols = cols > 0 ? cols : 1;
-    }
-
-    /**
-     * Applies a selection to all items between the anchor and the focus item.
-     * Mimics Finder's shift-click and shift-arrow behavior.
-     */
-    function applyRangeSelection() {
-        if (!selectionAnchor) return;
-
-        const visibleItems = Array.from(items).filter(item => item.style.display !== 'none');
-        const anchorIndex = visibleItems.indexOf(selectionAnchor);
-        const focusIndex = visibleItems.indexOf(lastSelectedItem);
-
-        if (anchorIndex === -1 || focusIndex === -1) return;
-
-        const start = Math.min(anchorIndex, focusIndex);
-        const end = Math.max(anchorIndex, focusIndex);
-
-        // First, determine the final set of selected items
-        const itemsToSelect = new Set();
-        for (let i = start; i <= end; i++) {
-            itemsToSelect.add(visibleItems[i]);
-        }
-        
-        // Now, update the DOM and the main selectedItems set in one pass
-        for(const item of visibleItems) {
-            if(itemsToSelect.has(item)) {
-                if (!selectedItems.has(item)) {
-                     item.classList.add('selected');
-                     selectedItems.add(item);
+                ul.icons li a:active {
+                    background-color: rgba(255, 255, 255, 0.175);
                 }
-            } else {
-                if (selectedItems.has(item)) {
-                    item.classList.remove('selected');
-                    selectedItems.delete(item);
+
+/* Table */
+
+    .table-wrapper {
+        -webkit-overflow-scrolling: touch;
+        overflow-x: auto;
+    }
+
+    table {
+        margin: 0 0 2rem 0;
+        width: 100%;
+    }
+
+        table tbody tr {
+            border: solid 1px #ffffff;
+            border-left: 0;
+            border-right: 0;
+        }
+
+            table tbody tr:nth-child(2n + 1) {
+                background-color: rgba(255, 255, 255, 0.075);
+            }
+
+        table td {
+            padding: 0.75em 0.75em;
+        }
+
+        table th {
+            color: #ffffff;
+            font-size: 0.9em;
+            font-weight: 600;
+            padding: 0 0.75em 0.75em 0.75em;
+            text-align: left;
+        }
+
+        table thead {
+            border-bottom: solid 2px #ffffff;
+        }
+
+        table tfoot {
+            border-top: solid 2px #ffffff;
+        }
+
+        table.alt {
+            border-collapse: separate;
+        }
+
+            table.alt tbody tr td {
+                border: solid 1px #ffffff;
+                border-left-width: 0;
+                border-top-width: 0;
+            }
+
+                table.alt tbody tr td:first-child {
+                    border-left-width: 1px;
                 }
+
+            table.alt tbody tr:first-child td {
+                border-top-width: 1px;
             }
-        }
+
+            table.alt thead {
+                border-bottom: 0;
+            }
+
+            table.alt tfoot {
+                border-top: 0;
+            }
+
+/* Button */
+
+    input[type="submit"],
+    input[type="reset"],
+    input[type="button"],
+    button,
+    .button {
+        -moz-appearance: none;
+        -webkit-appearance: none;
+        -ms-appearance: none;
+        appearance: none;
+        -moz-transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+        -webkit-transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+        -ms-transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+        transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+        background-color: transparent;
+        border-radius: 4px;
+        border: 0;
+        box-shadow: inset 0 0 0 1px #ffffff;
+        color: #ffffff !important;
+        cursor: pointer;
+        display: inline-block;
+        font-size: 0.8rem;
+        font-weight: 300;
+        height: 2.75rem;
+        letter-spacing: 0.2rem;
+        line-height: 2.75rem;
+        outline: 0;
+        padding: 0 1.25rem 0 1.35rem;
+        text-align: center;
+        text-decoration: none;
+        text-transform: uppercase;
+        white-space: nowrap;
     }
 
-    // --- Event Listener for Keyboard Navigation ---
-    document.addEventListener('keydown', (e) => {
-        // Ignore key events if the user is typing in the search bar
-        const activeEl = document.activeElement;
-        if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
-            return;
+        input[type="submit"]:hover,
+        input[type="reset"]:hover,
+        input[type="button"]:hover,
+        button:hover,
+        .button:hover {
+            background-color: rgba(255, 255, 255, 0.075);
         }
 
-        // We only care about arrow keys
-        if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-            return;
+        input[type="submit"]:active,
+        input[type="reset"]:active,
+        input[type="button"]:active,
+        button:active,
+        .button:active {
+            background-color: rgba(255, 255, 255, 0.175);
         }
 
-        e.preventDefault(); // Prevent page scrolling
-
-        const visibleItems = Array.from(items).filter(item => item.style.display !== 'none');
-        if (visibleItems.length === 0) return;
-
-        let currentIndex = lastSelectedItem ? visibleItems.indexOf(lastSelectedItem) : -1;
-        let newIndex = -1;
-
-        // If nothing is selected, start from the first or last item.
-        if (currentIndex === -1) {
-             if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-                newIndex = 0;
-            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-                newIndex = visibleItems.length -1;
-            }
-        } else {
-            // If an item IS selected, navigate from it.
-            switch (e.key) {
-                case 'ArrowLeft':
-                    newIndex = currentIndex - 1;
-                    break;
-                case 'ArrowRight':
-                    newIndex = currentIndex + 1;
-                    break;
-                case 'ArrowUp':
-                    newIndex = currentIndex - gridMetrics.cols;
-                    break;
-                case 'ArrowDown':
-                    newIndex = currentIndex + gridMetrics.cols;
-                    break;
-            }
+        input[type="submit"].icon:before,
+        input[type="reset"].icon:before,
+        input[type="button"].icon:before,
+        button.icon:before,
+        .button.icon:before {
+            margin-right: 0.5em;
         }
 
-        // Check if the new index is valid
-        if (newIndex >= 0 && newIndex < visibleItems.length) {
-            const newItem = visibleItems[newIndex];
-            
-            if (e.shiftKey) {
-                // If Shift is pressed, extend the selection
-                lastSelectedItem = newItem; // Update the focus
-                applyRangeSelection();
-            } else {
-                // This block handles arrow key presses WITHOUT the Shift key.
-                clearSelection();
-                toggleSelection(newItem);
-                selectionAnchor = newItem; // The new item is now the anchor
-                lastSelectedItem = newItem;
-            }
-            
-            // Ensure the newly selected item is visible
-            newItem.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        input[type="submit"].fit,
+        input[type="reset"].fit,
+        input[type="button"].fit,
+        button.fit,
+        .button.fit {
+            width: 100%;
         }
-    });
 
-    // --- Initial Setup and Observers ---
+        input[type="submit"].small,
+        input[type="reset"].small,
+        input[type="button"].small,
+        button.small,
+        .button.small {
+            font-size: 0.6rem;
+            height: 2.0625rem;
+            line-height: 2.0625rem;
+        }
 
-    calculateGridMetrics();
+        input[type="submit"].primary,
+        input[type="reset"].primary,
+        input[type="button"].primary,
+        button.primary,
+        .button.primary {
+            background-color: #ffffff;
+            color: #1b1f22 !important;
+            font-weight: 600;
+        }
 
-    const galleryObserver = new ResizeObserver(() => {
-        calculateGridMetrics();
-    });
-    galleryObserver.observe(gallery);
+        input[type="submit"].disabled, input[type="submit"]:disabled,
+        input[type="reset"].disabled,
+        input[type="reset"]:disabled,
+        input[type="button"].disabled,
+        input[type="button"]:disabled,
+        button.disabled,
+        button:disabled,
+        .button.disabled,
+        .button:disabled {
+            pointer-events: none;
+            cursor: default;
+            opacity: 0.25;
+        }
 
-    if (searchInput) {
-        searchInput.addEventListener('keyup', () => {
-            setTimeout(calculateGridMetrics, 50);
-        });
+    input[type="submit"],
+    input[type="reset"],
+    input[type="button"],
+    button {
+        line-height: calc(2.75rem - 2px);
     }
-    /*
-    ==================================================================
-    // END: FINDER-STYLE ARROW KEY NAVIGATION LOGIC
-    ==================================================================
-    */
-    
-    // Helper functions
-    const isSelected = (el) => selectedItems.has(el);
-    const toggleSelection = (el) => {
-        if (isSelected(el)) {
-            selectedItems.delete(el);
-            el.classList.remove('selected');
-        } else {
-            selectedItems.add(el);
-            el.classList.add('selected');
-        }
-    };
-    const clearSelection = () => {
-        Array.from(selectedItems).forEach(item => {
-            item.classList.remove('selected');
-        });
-        selectedItems.clear();
-    };
-    const setSelection = (el, shouldBeSelected) => {
-        if (shouldBeSelected) {
-            if (!isSelected(el)) {
-                selectedItems.add(el);
-                el.classList.add('selected');
-            }
-        } else {
-            if (isSelected(el)) {
-                selectedItems.delete(el);
-                el.classList.remove('selected');
-            }
-        }
-    };
-    
-    // --- MouseDown Listener ---
-    wrapper.addEventListener('mousedown', (e) => {
-        // MODIFIED: If click starts in search bar, exit to allow native text selection.
-        if (e.target === searchInput) {
-            return;
+
+/* BG */
+
+    #bg {
+        -moz-transform: scale(1.0);
+        -webkit-transform: scale(1.0);
+        -ms-transform: scale(1.0);
+        transform: scale(1.0);
+        -webkit-backface-visibility: hidden;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100vh;
+        z-index: 1;
+    }
+
+        #bg:before, #bg:after {
+            content: '';
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
         }
 
-        // MODIFIED: Check if the event target is within the header or footer
-        if (e.button !== 0 || header.contains(e.target) || footer.contains(e.target)) {
-            isMarquee = false; // Ensure marquee selection is not initiated if starting in header/footer
-            return; 
+        #bg:before {
+            -moz-transition: background-color 2.5s ease-in-out;
+            -webkit-transition: background-color 2.5s ease-in-out;
+            -ms-transition: background-color 2.5s ease-in-out;
+            transition: background-color 2.5s ease-in-out;
+            -moz-transition-delay: 0.75s;
+            -webkit-transition-delay: 0.75s;
+            -ms-transition-delay: 0.75s;
+            transition-delay: 0.75s;
+            background-image: linear-gradient(to top, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url("../../images/overlay.png"); /* MODIFIED */
+            background-size: auto,
+ 256px 256px;
+            background-position: center,
+ center;
+            background-repeat: no-repeat,
+ repeat;
+            z-index: 2;
         }
-        
-        if(gallery.contains(e.target) || e.target === gallery) {
-            e.preventDefault();
-            if (searchInput) searchInput.blur(); // MODIFIED: Use variable and check for existence
+
+        #bg:after {
+            -moz-transform: scale(1.125);
+            -webkit-transform: scale(1.125);
+            -ms-transform: scale(1.125);
+            transform: scale(1.125);
+            -moz-transition: -moz-transform 0.325s ease-in-out, -moz-filter 0.325s ease-in-out;
+            -webkit-transition: -webkit-transform 0.325s ease-in-out, -webkit-filter 0.325s ease-in-out;
+            -ms-transition: -ms-transform 0.325s ease-in-out, -ms-filter 0.325s ease-in-out;
+            transition: transform 0.325s ease-in-out, filter 0.325s ease-in-out;
+            background-color: #1f1b18; /* MODIFIED */
+            z-index: 1;
+            }
+
+        body.is-article-visible #bg:after {
+            -moz-transform: scale(1.0825);
+            -webkit-transform: scale(1.0825);
+            -ms-transform: scale(1.0825);
+            transform: scale(1.0825);
+            -moz-filter: blur(0.2rem);
+            -webkit-filter: blur(0.2rem);
+            -ms-filter: blur(0.2rem);
+            filter: blur(0.2rem);
         }
-        
-        hasDragged = false;
-        isMarquee = true;
-        mouseDownItem = e.target.closest('figure');
-        
-        const galleryRect = gallery.getBoundingClientRect();
-        startPos = {
-            x: e.clientX - galleryRect.left,
-            y: e.clientY - galleryRect.top,
-        };
-        
-        preMarqueeSelectedItems = new Set(selectedItems);
-    });
-    
-    // --- MouseMove Listener ---
-    document.addEventListener('mousemove', (e) => {
-        if (!isMarquee) return;
-        
-        e.preventDefault();
-        hasDragged = true;
-        document.body.classList.add('is-marquee-dragging');
-        
-        marquee.style.visibility = 'visible';
-        
-        const galleryRect = gallery.getBoundingClientRect();
-        let rawX = e.clientX - galleryRect.left;
-        let rawY = e.clientY - galleryRect.top;
-        let currentX = Math.max(0, Math.min(rawX, galleryRect.width));
-        let currentY = rawY;
-        
-        const marqueeRect = {
-            x: Math.min(startPos.x, currentX),
-            y: Math.min(startPos.y, currentY),
-            w: Math.abs(startPos.x - currentX),
-            h: Math.abs(startPos.y - currentY)
-        };
-        
-        marquee.style.left = `${marqueeRect.x}px`;
-        marquee.style.top = `${marqueeRect.y}px`;
-        marquee.style.width = `${marqueeRect.w}px`;
-        marquee.style.height = `${marqueeRect.h}px`;
-        
-        const isModifier = e.metaKey || e.ctrlKey || e.shiftKey;
-        
-        for (const item of items) {
-            if (item.style.display === 'none') continue;
-            
-            const itemRect = item.getBoundingClientRect();
-            const relativeItemRect = {
-                left: itemRect.left - galleryRect.left,
-                top: itemRect.top - galleryRect.top,
-                right: itemRect.right - galleryRect.left,
-                bottom: itemRect.bottom - galleryRect.top
-            };
-            
-            const intersects =
-            marqueeRect.x < relativeItemRect.right &&
-            marqueeRect.x + marqueeRect.w > relativeItemRect.left &&
-            marqueeRect.y < relativeItemRect.bottom &&
-            marqueeRect.y + marqueeRect.h > relativeItemRect.top;
-            
-            if (isModifier) {
-                if (intersects) {
-                    setSelection(item, !preMarqueeSelectedItems.has(item));
-                } else {
-                    setSelection(item, preMarqueeSelectedItems.has(item));
+
+/* Wrapper */
+#wrapper {
+    display: -moz-flex;
+    display: -webkit-flex;
+    display: -ms-flex;
+    display: flex;
+    -moz-flex-direction: column;
+    -webkit-flex-direction: column;
+    -ms-flex-direction: column;
+    flex-direction: column;
+    -moz-align-items: center;
+    -webkit-align-items: center;
+    -ms-align-items: center;
+    align-items: center;
+    -moz-justify-content: space-between;
+    -webkit-justify-content: space-between;
+    -ms-justify-content: space-between;
+    justify-content: space-between;
+    position: relative;
+    min-height: 100vh;
+    width: 100%;
+    padding: 0;
+    z-index: 3;
+    overflow: visible;
+    padding-top: 80px;
+}
+
+    #wrapper:before {
+        content: '';
+        display: block;
+    }
+
+    @media screen and (max-width: 736px) {
+
+        #wrapper {
+            padding: 3rem 2rem 1rem 2rem ;
+        }
+
+    }
+
+    @media screen and (max-width: 480px) {
+
+        #wrapper {
+            padding: 2rem 1rem 0.5rem 1rem ;
+        }
+
+    }
+
+#header {
+    width: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 10;
+    transition: transform 0.325s ease-in-out, filter 0.325s ease-in-out, opacity 0.325s ease-in-out;
+    height: 2.5rem;
+
+    /* === NEW: Background for visibility when scrolling === */
+    background-color: rgba(25, 25, 25, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    cursor: default;
+
+    /* Add these lines to disable selection on the header itself */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+
+    /* These lines center the content inside the header */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+    /* Medallion */
+    #header .logo {
+        padding: 0;
+        margin: 0;
+        /* Prevent text selection on the logo area */
+        -webkit-user-select: none; /* Safari */
+        -ms-user-select: none; /* IE 10+ and Edge */
+        user-select: none; /* Standard syntax */
+    }
+
+    #header .logo img {
+        display: block;
+        width: 40px;
+        height: auto;
+        object-fit: cover;
+    }
+
+    /* General visibility and transition styles for the header */
+    body.is-article-visible #header {
+        -moz-transform: scale(0.95);
+        -webkit-transform: scale(0.95);
+        -ms-transform: scale(0.95);
+        transform: scale(0.95);
+        -moz-filter: blur(0.1rem);
+        -webkit-filter: blur(0.1rem);
+        -ms-filter: blur(0.1rem);
+        filter: blur(0.1rem);
+        opacity: 0;
+    }
+
+/*
+    MODIFIED: The search container is now also positioned absolutely.
+*/
+#search-container {
+    padding: 0;
+    margin: 0;
+}
+
+
+/* Style for the Search Input */
+#search-input {
+    height: 1.5rem; /* Adjust this value to your desired height */
+    line-height: 1.5rem; /* Match this to the height for vertical centering */
+    font-size: 0.65rem;
+    text-align: left;
+    border-radius: 20px;
+    width: 26.5em;  /* Adjust this value to change the overall width */
+    padding-left: 30px; /* MODIFIED: Increased padding for the icon */
+    padding-right: 0.93em; /* Adds space on the right */
+    background-color: rgba(255, 255, 255, 0.05); /* Example: light white with 20% opacity */
+    /* Explicitly prevent user text selection */
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10+ and Edge */
+    user-select: none; /* Standard syntax */
+}
+
+
+/* Main */
+
+    #main {
+        -moz-flex-grow: 1;
+        -webkit-flex-grow: 1;
+        -ms-flex-grow: 1;
+        flex-grow: 1;
+        -moz-flex-shrink: 1;
+        -webkit-flex-shrink: 1;
+        -ms-flex-shrink: 1;
+        flex-shrink: 1;
+        display: -moz-flex;
+        display: -webkit-flex;
+        display: -ms-flex;
+        display: flex;
+        -moz-align-items: center;
+        -webkit-align-items: center;
+        -ms-align-items: center;
+        align-items: center;
+        -moz-justify-content: center;
+        -webkit-justify-content: center;
+        -ms-justify-content: center;
+        justify-content: center;
+        -moz-flex-direction: column;
+        -webkit-flex-direction: column;
+        -ms-flex-direction: column;
+        flex-direction: column;
+        position: relative;
+        max-width: 100%;
+        z-index: 3;
+        padding: 0 1rem;
+    }
+
+        #main article {
+            -moz-transform: translateY(0.25rem);
+            -webkit-transform: translateY(0.25rem);
+            -ms-transform: translateY(0.25rem);
+            transform: translateY(0.25rem);
+            -moz-transition: opacity 0.325s ease-in-out, -moz-transform 0.325s ease-in-out;
+            -webkit-transition: opacity 0.325s ease-in-out, -webkit-transform 0.325s ease-in-out;
+            -ms-transition: opacity 0.325s ease-in-out, -ms-transform 0.325s ease-in-out;
+            transition: opacity 0.325s ease-in-out, transform 0.325s ease-in-out;
+            padding: 4.5rem 2.5rem 1.5rem 2.5rem ;
+            position: relative;
+            width: 40rem;
+            max-width: 100%;
+            background-color: rgba(27, 31, 34, 0.85);
+            border-radius: 4px;
+            opacity: 0;
+        }
+
+            #main article.active {
+                -moz-transform: translateY(0);
+                -webkit-transform: translateY(0);
+                -ms-transform: translateY(0);
+                transform: translateY(0);
+                opacity: 1;
+            }
+
+            #main article .close {
+                display: block;
+                position: absolute;
+                top: 0;
+                right: 0;
+                width: 4rem;
+                height: 4rem;
+                cursor: pointer;
+                text-indent: 4rem;
+                overflow: hidden;
+                white-space: nowrap;
+            }
+
+                #main article .close:before {
+                    -moz-transition: background-color 0.2s ease-in-out;
+                    -webkit-transition: background-color 0.2s ease-in-out;
+                    -ms-transition: background-color 0.2s ease-in-out;
+                    transition: background-color 0.2s ease-in-out;
+                    content: '';
+                    display: block;
+                    position: absolute;
+                    top: 0.75rem;
+                    left: 0.75rem;
+                    width: 2.5rem;
+                    height: 2.5rem;
+                    border-radius: 100%;
+                    background-position: center;
+                    background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' width='20px' height='20px' viewBox='0 0 20 20' zoomAndPan='disable'%3E%3Cstyle%3Eline %7B stroke: %23ffffff%3B stroke-width: 1%3B %7D%3C/style%3E%3Cline x1='2' y1='2' x2='18' y2='18' /%3E%3Cline x1='18' y1='2' x2='2' y2='18' /%3E%3C/svg%3E");
+                    background-size: 20px 20px;
+                    background-repeat: no-repeat;
                 }
-            } else {
-                setSelection(item, intersects);
-            }
-        }
-    });
-    
-    /**
-     * UPDATED endDragAction function
-     */
-    const endDragAction = (e) => {
-        document.body.classList.remove('is-marquee-dragging');
-        if (!isMarquee) return;
-    
-        if (!hasDragged) {
-            // Logic for a simple click (no drag)
-            const isShift = e.shiftKey;
-            const isModifier = e.metaKey || e.ctrlKey;
-            const clickedOnItem = mouseDownItem;
-    
-            if (clickedOnItem) {
-                // MODIFIED: Shift+Click now acts like Ctrl+Click
-                if (isShift || isModifier) {
-                    toggleSelection(clickedOnItem);
-                    if (isSelected(clickedOnItem)) {
-                        selectionAnchor = clickedOnItem;
-                        lastSelectedItem = clickedOnItem;
-                    }
-                } else {
-                    // MODIFIED: A single click on a lone selected item now deselects it
-                    if (!isSelected(clickedOnItem) || selectedItems.size > 1) {
-                        clearSelection();
-                        toggleSelection(clickedOnItem);
-                        selectionAnchor = clickedOnItem;
-                        lastSelectedItem = clickedOnItem;
-                    } else {
-                        clearSelection();
-                        selectionAnchor = null;
-                        lastSelectedItem = null;
-                    }
+
+                #main article .close:hover:before {
+                    background-color: rgba(255, 255, 255, 0.075);
                 }
-            } else {
-                // Click was on the gallery background
-                if (!isModifier && !isShift) {
-                    clearSelection();
-                    selectionAnchor = null;
-                    lastSelectedItem = null;
+
+                #main article .close:active:before {
+                    background-color: rgba(255, 255, 255, 0.175);
                 }
-            }
-        } else {
-            // Logic after a marquee drag
-            const itemUnderMouse = e.target.closest('figure');
-            
-            if (mouseDownItem) {
-                selectionAnchor = mouseDownItem;
+
+        @media screen and (max-width: 736px) {
+
+            #main article {
+                padding: 3.5rem 2rem 0.5rem 2rem ;
             }
 
-            if (itemUnderMouse && selectedItems.has(itemUnderMouse)) {
-                lastSelectedItem = itemUnderMouse;
-            } else {
-                const visibleSelectedItems = Array.from(items)
-                    .filter(item => item.style.display !== 'none' && selectedItems.has(item));
-
-                if (visibleSelectedItems.length > 0) {
-                    lastSelectedItem = visibleSelectedItems[visibleSelectedItems.length - 1];
+                #main article .close:before {
+                    top: 0.875rem;
+                    left: 0.875rem;
+                    width: 2.25rem;
+                    height: 2.25rem;
+                    background-size: 14px 14px;
                 }
-            }
-        }
-    
-        // Cleanup marquee state
-        isMarquee = false;
-        hasDragged = false;
-        mouseDownItem = null;
-        marquee.style.visibility = 'hidden';
-        marquee.style.width = '0px';
-        marquee.style.height = '0px';
-        preMarqueeSelectedItems.clear();
-    };
-    
-    document.addEventListener('mouseup', endDragAction);
-    
-    // --- Mousedown listener for the whole document ---
-    document.addEventListener('mousedown', (e) => {
-        const itemMenu = document.getElementById('custom-context-menu');
-        const galleryMenu = document.getElementById('gallery-context-menu');
 
-        if (e.button === 0 && !itemMenu.contains(e.target) && !galleryMenu.contains(e.target)) {
-            itemMenu.style.display = 'none';
-            galleryMenu.style.display = 'none';
         }
 
-        if (!wrapper.contains(e.target) && !itemMenu.contains(e.target) && !galleryMenu.contains(e.target)) {
-            if (!e.metaKey && !e.ctrlKey && !e.shiftKey) {
-                clearSelection();
-            }
-        }
-    });
-    
-    /**
-     * SELECT ALL FUNCTIONALITY
-     */
-    document.addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
-            const activeEl = document.activeElement;
-            if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
-                return; 
-            }
-            e.preventDefault();
-            const visibleItems = Array.from(items).filter(item => item.style.display !== 'none');
-            visibleItems.forEach(item => {
-                setSelection(item, true);
-            });
-        }
-    });
-    
-    /**
-     * ----------------------------------------------------------------
-     * Custom Right-Click Context Menu Logic
-     * ----------------------------------------------------------------
-     */
+        @media screen and (max-width: 480px) {
 
-    const itemContextMenu = document.getElementById('custom-context-menu');
-    const galleryContextMenu = document.getElementById('gallery-context-menu');
-    let rightClickedItem = null;
-
-    gallery.addEventListener('contextmenu', (e) => {
-        e.preventDefault(); 
-
-        const figure = e.target.closest('figure');
-
-        itemContextMenu.style.display = 'none';
-        galleryContextMenu.style.display = 'none';
-        
-        if (figure) {
-            rightClickedItem = figure; 
-
-            if (!selectedItems.has(figure)) {
-                clearSelection();
-                toggleSelection(figure);
-                selectionAnchor = figure;
-                lastSelectedItem = figure;
+            #main article {
+                padding: 3rem 1.5rem 0.5rem 1.5rem ;
             }
 
-            const saveMenuItem = document.getElementById('context-menu-save');
-            if (selectedItems.size > 1) {
-                saveMenuItem.textContent = `Save ${selectedItems.size} Images as .zip`;
-            } else {
-                saveMenuItem.textContent = 'Save Image to "Downloads"';
-            }
-            
-            itemContextMenu.style.display = 'block';
-            itemContextMenu.style.left = `${e.clientX}px`;
-            itemContextMenu.style.top = `${e.clientY}px`;
+        }
 
-        } else if (e.target === gallery) {
-            rightClickedItem = null;
-            galleryContextMenu.style.display = 'block';
-            galleryContextMenu.style.left = `${e.clientX}px`;
-            galleryContextMenu.style.top = `${e.clientY}px`;
-        }
-    });
-    
-    // =================================================================
-    // START: UNIFIED DOWNLOAD LOGIC
-    // =================================================================
-    
-    /**
-     * Asynchronously fetches an image from a URL and returns its blob data.
-     * @param {string} url - The URL of the image to fetch.
-     * @returns {Promise<Blob>} A promise that resolves with the image blob.
-     */
-    async function fetchImageBlob(url) {
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status} for URL: ${url}`);
-        }
-        return response.blob();
+/* Footer */
+
+    #footer {
+        -moz-transition: -moz-transform 0.325s ease-in-out, -moz-filter 0.325s ease-in-out, opacity 0.325s ease-in-out;
+        -webkit-transition: -webkit-transform 0.325s ease-in-out, -webkit-filter 0.325s ease-in-out, opacity 0.325s ease-in-out;
+        -ms-transition: -ms-transform 0.325s ease-in-out, -ms-filter 0.325s ease-in-out, opacity 0.325s ease-in-out;
+        transition: transform 0.325s ease-in-out, filter 0.325s ease-in-out, opacity 0.325s ease-in-out;
+        width: 100%;
+        max-width: 100%;
+        text-align: center;
+        -webkit-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        cursor: default;
+        margin-top: auto; /* Push the footer to the bottom */
+        opacity: 0; /* Hide the footer initially */
+        pointer-events: none; /* Prevent interactions while invisible */
     }
 
-    /**
-     * Triggers a browser download for a given blob and filename.
-     * @param {Blob} blob - The data blob to be downloaded.
-     * @param {string} filename - The desired filename for the download.
-     */
-    function triggerDownload(blob, filename) {
-        // This function uses FileSaver.js (saveAs)
-        saveAs(blob, filename);
-    }
-
-    itemContextMenu.addEventListener('click', async (e) => {
-        const targetId = e.target.id;
-        if (!targetId) return;
-
-        itemContextMenu.style.display = 'none';
-
-        const primaryTarget = rightClickedItem || Array.from(selectedItems)[0];
-        if (!primaryTarget) return;
-
-        switch (targetId) {
-            case 'context-menu-open': {
-                const dblClickEvent = new MouseEvent('dblclick', {
-                    bubbles: true, cancelable: true, view: window
-                });
-                primaryTarget.dispatchEvent(dblClickEvent);
-                break;
-            }
-            case 'context-menu-open-tab': {
-                const img = primaryTarget.querySelector('img');
-                const fullSrc = img.dataset.fullsrc;
-                if (fullSrc) window.open(fullSrc, '_blank');
-                break;
-            }
-            case 'context-menu-save': {
-                try {
-                    if (selectedItems.size > 1) {
-                        // MULTIPLE IMAGES (ZIP)
-                        const zip = new JSZip();
-                        const promises = [];
-
-                        for (const item of selectedItems) {
-                            const img = item.querySelector('img');
-                            const url = img.dataset.fullsrc;
-                            let filename = img.dataset.filename || url.split('/').pop();
-
-                            const promise = fetchImageBlob(url).then(blob => {
-                                zip.file(filename, blob);
-                            }).catch(err => {
-                                console.error(`Failed to fetch ${filename}:`, err);
-                            });
-                            promises.push(promise);
-                        }
-
-                        await Promise.all(promises);
-                        const zipBlob = await zip.generateAsync({ type: "blob" });
-                        
-                        // Create dynamic filename
-                        const date = new Date().toISOString().split('T')[0];
-                        const imageCount = selectedItems.size;
-                        const dynamicFilename = `HOTD-Selection_${imageCount}-images_${date}.zip`;
-
-                        triggerDownload(zipBlob, dynamicFilename);
-
-                    } else {
-                        // SINGLE IMAGE
-                        const item = Array.from(selectedItems)[0];
-                        const img = item.querySelector('img');
-                        const url = img.dataset.fullsrc;
-                        let filename = img.dataset.filename || url.split('/').pop();
-                        
-                        const blob = await fetchImageBlob(url);
-                        triggerDownload(blob, filename);
-                    }
-                } catch (error) {
-                    console.error("Download failed:", error);
-                    alert("An error occurred while trying to download the file(s). Please check the console for details.");
-                }
-                break;
-            }
-        }
-        rightClickedItem = null;
-    });
-
-    galleryContextMenu.addEventListener('click', (e) => {
-        galleryContextMenu.style.display = 'none';
-        const targetId = e.target.id;
-
-        switch (targetId) {
-            case 'gallery-context-add':
-                alert('Functionality for "Add Image" is not yet implemented.');
-                break;
-            case 'gallery-context-sort':
-                alert('Functionality for "Sort By" is not yet implemented.');
-                break;
-            case 'gallery-context-view':
-                alert('Functionality for "Show View Options" is not yet implemented.');
-                break;
-        }
-    });
-
-    /*
-    ==================================================================
-    // START: MODAL LOGIC (SECTION WITH CHANGES)
-    ==================================================================
-    */
-    const modal = document.getElementById('image-modal');
-    const modalContent = document.querySelector('.modal-content');
-    const modalImg = document.getElementById('modal-img');
-    const modalFilename = document.getElementById('modal-filename');
-    const modalMetadata = document.getElementById('modal-metadata');
-    const downloadBtn = document.getElementById('modal-download-btn');
-    const closeModal = document.querySelector('.modal-close');
-    const prevButton = document.querySelector('.modal-prev');
-    const nextButton = document.querySelector('.modal-next');
-    const imageContainer = document.querySelector('.modal-image-container');
-    const infoPanel = document.querySelector('.modal-info-panel');
-    let currentImageIndex = -1;
-    let scale = 1;
-    let pan = { x: 0, y: 0 };
-    let isPanning = false;
-    let panStart = { x: 0, y: 0 };
-
-    // A map to get the correct display label for each data key.
-    const KEY_TO_LABEL_MAP = {
-        season: 'Season',
-        episode: 'Episode',
-        cast: 'Cast',
-        crew: 'Crew',
-        castAndCrew: 'Cast & Crew',
-        characters: 'Characters'
-    };
-
-    // The order in which to display the primary data fields.
-    const primaryKeys = ['season', 'episode', 'cast', 'crew', 'castAndCrew', 'characters'];
-
-
-    modalContent.addEventListener('mouseenter', () => {
-        if (modal.classList.contains('is-visible')) {
-            document.body.style.overflow = 'hidden';
-        }
-    });
-
-    modalContent.addEventListener('mouseleave', () => {
-        if (modal.classList.contains('is-visible')) {
-            document.body.style.overflow = '';
-        }
-    });
-    
-    function resetImageTransform() {
-        scale = 1;
-        pan = { x: 0, y: 0 };
-        isPanning = false;
-        modalImg.style.transform = 'scale(1) translate(0px, 0px)';
-        imageContainer.classList.remove('pannable', 'panning');
-    }
-
-    function showImage(index) {
-        resetImageTransform();
-        const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
-        if (index < 0 || index >= visibleFigures.length) {
-            return;
-        }
-        currentImageIndex = index;
-        const figure = visibleFigures[currentImageIndex];
-        const img = figure.querySelector('img');
-
-        downloadBtn.dataset.fullsrc = img.dataset.fullsrc; // Always store the high-res URL
-
-        // Immediately display the low-resolution thumbnail.
-        modalImg.src = img.src;
-
-        // Load the high-res version in the background.
-        const highResImage = new Image();
-        highResImage.src = img.dataset.fullsrc;
-        highResImage.onload = function() {
-            modalImg.src = highResImage.src;
-        };
-        modalImg.alt = img.alt;
-        
-        modalFilename.textContent = img.dataset.filename;
-
-        let primaryHTML = '<dl class="info-grid">';
-        let detailsHTML = '<dl class="info-grid">';
-        const dataset = img.dataset;
-        
-        primaryKeys.forEach(key => {
-            if (dataset[key] && dataset[key].trim() !== '' && dataset[key].trim() !== '-' && dataset[key].trim() !== '- (-)') {
-                const label = KEY_TO_LABEL_MAP[key] || key;
-                primaryHTML += `<div class="info-item"><dt>${label}</dt><dd>${dataset[key]}</dd></div>`;
-            }
-        });
-
-        let hasDetails = false;
-        const handledKeys = ['search', 'fullsrc', 'filename', ...primaryKeys];
-        
-        for (const key in dataset) {
-            if (!handledKeys.includes(key) && dataset[key] && dataset[key].trim() !== '' && dataset[key].trim() !== '-') {
-                hasDetails = true;
-                let label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-                let value = dataset[key];
-                if (label === 'Dimensions' && value.includes('×')) {
-                    const parts = value.split('×');
-                    value = `${parts[0]}<span class="dimensions-x">×</span>${parts[1]}`;
-                }
-                detailsHTML += `<div class="info-item"><dt>${label}</dt><dd>${value}</dd></div>`;
-            }
-        }
-        
-        primaryHTML += '</dl>';
-        detailsHTML += '</dl>';
-
-        let finalHTML = primaryHTML;
-        if (hasDetails) {
-            finalHTML += '<h4 class="metadata-header">Metadata</h4>' + detailsHTML;
+        #footer .copyright {
+            letter-spacing: 0.2rem;
+            font-size: 0.6rem;
+            opacity: 0.75;
+            margin-bottom: 0.5rem;
+            margin-top: 3rem;
+            text-transform: uppercase;
         }
 
-        modalMetadata.innerHTML = finalHTML;
-
-        document.body.classList.add('is-article-visible');
-        modal.classList.add('is-visible');
-    }
-
-    downloadBtn.addEventListener('click', async (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-    
-        const url = event.currentTarget.dataset.fullsrc; // Use the stored high-res URL
-        // Get filename, with a fallback for missing names
-        const filename = modalFilename.textContent || url.split('/').pop();
-    
-        if (!url || !filename) {
-            console.error("Modal download failed: URL or filename not found.");
-            alert("Could not download the image because its data is missing.");
-            return;
-        }
-    
-        const buttonText = downloadBtn.textContent;
-        try {
-            // Provide visual feedback to the user
-            downloadBtn.textContent = 'Downloading...';
-            downloadBtn.disabled = true;
-    
-            // Fetch the image blob and trigger the download
-            const blob = await fetchImageBlob(url);
-            triggerDownload(blob, filename);
-    
-        } catch (error) {
-            console.error("Modal download failed:", error);
-            alert("An error occurred while trying to download the image.");
-        } finally {
-            // Restore the button to its original state after a moment
-            setTimeout(() => {
-                downloadBtn.textContent = buttonText;
-                downloadBtn.disabled = false;
-            }, 1000);
-        }
-    });
-    
-    downloadBtn.addEventListener('dragstart', function(event) {
-        event.preventDefault();
-    });
-    
-    function updateTransform(applyTransition = false) {
-        // Clamp panning to keep the image within the container view
-        const rect = modalImg.getBoundingClientRect();
-        const containerRect = imageContainer.getBoundingClientRect();
-
-        const maxPanX = Math.max(0, (rect.width - containerRect.width) / 2 / scale);
-        const maxPanY = Math.max(0, (rect.height - containerRect.height) / 2 / scale);
-
-        pan.x = Math.max(-maxPanX, Math.min(maxPanX, pan.x));
-        pan.y = Math.max(-maxPanY, Math.min(maxPanY, pan.y));
-
-        // Apply transform
-        modalImg.style.transition = applyTransition ? 'transform 0.2s ease-out' : 'none';
-        modalImg.style.transform = `scale(${scale}) translate(${pan.x}px, ${pan.y}px)`;
-
-        // Add or remove the 'pannable' class for the cursor
-        if (scale > 1) {
-            imageContainer.classList.add('pannable');
-        } else {
-            imageContainer.classList.remove('pannable');
-        }
-    }
-
-    imageContainer.addEventListener('wheel', (e) => {
-        // --- ZOOM with Ctrl/Cmd + Scroll ---
-        if (e.ctrlKey || e.metaKey) {
-            e.preventDefault();
-            e.stopPropagation();
-
-            const rect = imageContainer.getBoundingClientRect();
-            // Calculate mouse position relative to the container's center
-            const mouseX = e.clientX - rect.left - (rect.width / 2);
-            const mouseY = e.clientY - rect.top - (rect.height / 2);
-
-            const oldScale = scale;
-            
-            // **FIX 1: Reduced zoom sensitivity**
-            const delta = -e.deltaY * 0.002;
-            scale = Math.max(1, Math.min(scale + delta, 15)); // Clamp scale 1x-15x
-
-            // **FIX 2: Correctly adjust pan to keep the point under the cursor stationary**
-            pan.x = mouseX * (1 - (scale / oldScale)) + pan.x;
-            pan.y = mouseY * (1 - (scale / oldScale)) + pan.y;
-            
-            updateTransform();
-        }
-        // --- PAN with Scroll or Shift+Scroll ---
-        else if (scale > 1) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const scrollAmount = 1; // Adjust sensitivity
-            if (e.shiftKey) {
-                pan.x -= (e.deltaY > 0 ? scrollAmount : -scrollAmount) * 20; // Horizontal
-            } else {
-                pan.y -= (e.deltaY > 0 ? scrollAmount : -scrollAmount) * 20; // Vertical
-            }
-            updateTransform();
-        }
-    }, { passive: false });
-
-    imageContainer.addEventListener('mousedown', (e) => {
-        if (e.button === 0 && scale > 1) { // Primary mouse button
-            e.preventDefault();
-            isPanning = true;
-            panStart.x = e.clientX - pan.x * scale;
-            panStart.y = e.clientY - pan.y * scale;
-            imageContainer.classList.add('panning');
-        }
-    });
-
-    document.addEventListener('mousemove', (e) => {
-        if (isPanning) {
-            e.preventDefault();
-            pan.x = (e.clientX - panStart.x) / scale;
-            pan.y = (e.clientY - panStart.y) / scale;
-            updateTransform();
-        }
-    });
-
-    document.addEventListener('mouseup', () => {
-        if (isPanning) {
-            isPanning = false;
-            imageContainer.classList.remove('panning');
-        }
-    });
-
-    imageContainer.addEventListener('mouseleave', () => {
-         if (isPanning) {
-            isPanning = false;
-            imageContainer.classList.remove('panning');
-        }
-    });
-
-    function showNextImage() {
-        const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
-        let nextIndex = (currentImageIndex + 1) % visibleFigures.length;
-        showImage(nextIndex);
-    }
-
-    function showPrevImage() {
-        const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
-        let prevIndex = (currentImageIndex - 1 + visibleFigures.length) % visibleFigures.length;
-        showImage(prevIndex);
-    }
-
-    gallery.addEventListener('dblclick', function(event) {
-        const figure = event.target.closest('figure');
-        if (!figure) return;
-        const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
-        const index = visibleFigures.indexOf(figure);
-        if (index > -1) {
-            showImage(index);
-        }
-    });
-
-    function hideModal() {
-        resetImageTransform();
-        document.body.classList.remove('is-article-visible');
-        modal.classList.remove('is-visible');
-        currentImageIndex = -1;
-
-        document.body.style.overflow = '';
-
-        setTimeout(() => {
-            modalImg.src = "";
-            modalFilename.textContent = "";
-            modalMetadata.innerHTML = "";
-        }, 250);
-    }
-    
-    modalContent.addEventListener('click', function(event) {
-        event.stopPropagation();
-    });
-
-    closeModal.addEventListener('click', hideModal);
-    prevButton.addEventListener('click', showPrevImage);
-    nextButton.addEventListener('click', showNextImage);
-
-    let mouseDownOnOverlay = false;
-
-    modal.addEventListener('mousedown', function(event) {
-        if (event.target === modal) {
-            mouseDownOnOverlay = true;
-        }
-    });
-
-    modal.addEventListener('mouseup', function(event) {
-        if (event.target === modal && mouseDownOnOverlay) {
-            hideModal();
-        }
-        mouseDownOnOverlay = false;
-    });
-
-    document.addEventListener('keydown', function(event) {
-        if (modal.classList.contains('is-visible')) {
-            if (event.key === 'Escape') {
-                hideModal();
-            } else if (event.key === 'ArrowRight') {
-                showNextImage();
-            } else if (event.key === 'ArrowLeft') {
-                showPrevImage();
-            }
-        }
-    });
-    
-    imageContainer.addEventListener('mousedown', (e) => {
-        if (e.button === 0) {
-            document.body.classList.add('is-selecting-text');
-        }
-    });
-
-    infoPanel.addEventListener('mousedown', (e) => {
-        const validTargets = '.info-grid dt, .info-grid dd, #modal-filename, .metadata-header';
-        if (e.button === 0) {
-            document.body.classList.add('is-selecting-text');
-            if (e.target.matches(validTargets)) {
-                e.target.classList.add('selection-active');
-            }
-        }
-        else if (e.button === 2) {
-            if (e.target.matches(validTargets)) {
-                const targetElement = e.target;
-                const selection = window.getSelection();
-                const range = document.createRange();
-                range.selectNodeContents(targetElement);
-                selection.removeAllRanges();
-                selection.addRange(range);
-            }
-        }
-    });
-
-    document.addEventListener('mouseup', () => {
-        if (document.body.classList.contains('is-selecting-text')) {
-            document.body.classList.remove('is-selecting-text');
-            const activeElement = document.querySelector('.selection-active');
-            if (activeElement) {
-                activeElement.classList.remove('selection-active');
-            }
-        }
-    });
-});
-
-/*Custom Scrollbar Advanced*/
-document.addEventListener('DOMContentLoaded', () => {
-    const track = document.getElementById('custom-scrollbar-track');
-    const thumb = document.getElementById('custom-scrollbar-thumb');
-    const header = document.getElementById('header');
-
-    if (!track || !thumb || !header) return;
-
-    let ticking = false;
-
-    // This function now only updates the thumb's position.
-    // We use transform for smoother, GPU-accelerated animation.
-    function updateThumbPosition() {
-        const scrollableHeight = document.documentElement.scrollHeight;
-        const viewportHeight = window.innerHeight;
-        const trackHeight = track.offsetHeight;
-        const thumbHeight = thumb.offsetHeight;
-        
-        // Prevent division by zero if content is smaller than viewport
-        if (scrollableHeight <= viewportHeight) return;
-
-        const scrollPercentage = window.scrollY / (scrollableHeight - viewportHeight);
-        const thumbPosition = scrollPercentage * (trackHeight - thumbHeight);
-        
-        thumb.style.transform = `translateY(${thumbPosition}px)`;
-    }
-
-    // This function sets up the scrollbar dimensions and is called less frequently.
-    function setupScrollbar() {
-        const headerHeight = header.offsetHeight;
-        const scrollableHeight = document.documentElement.scrollHeight;
-        const viewportHeight = window.innerHeight;
-
-        // Hide or show track based on whether scrolling is needed
-        if (scrollableHeight <= viewportHeight) {
-            track.style.display = 'none';
-            return;
-        }
-        track.style.display = 'block';
-        thumb.classList.remove('is-near');
-        track.style.top = `${headerHeight}px`;
-        track.style.height = `calc(100% - ${headerHeight}px)`;
-
-        const trackHeight = track.offsetHeight;
-        const thumbHeight = Math.max((viewportHeight / scrollableHeight) * trackHeight, 20); // 20px min height
-        thumb.style.height = `${thumbHeight}px`;
-
-        // Run a position update immediately
-        updateThumbPosition();
-    }
-    
-    // On scroll, request an animation frame to update the thumb.
-    // The 'ticking' flag ensures we don't have multiple animation frames queued.
-    document.addEventListener('scroll', () => {
-        if (!ticking) {
-            window.requestAnimationFrame(() => {
-                updateThumbPosition();
-                ticking = false;
-            });
-            ticking = true;
-        }
-    });
-
-    // The logic for dragging the thumb doesn't need to change.
-    // Calling window.scrollTo() will trigger our optimized scroll listener above.
-    thumb.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        const startY = e.clientY;
-        const startScrollTop = document.documentElement.scrollTop;
-
-        function onMouseMove(e) {
-            const deltaY = e.clientY - startY;
-            const scrollableHeight = document.documentElement.scrollHeight;
-            const viewportHeight = window.innerHeight;
-            const trackHeight = track.offsetHeight;
-            const thumbHeight = thumb.offsetHeight;
-
-            // Prevent division by zero
-            if (trackHeight - thumbHeight === 0) return;
-
-            const deltaScroll = (deltaY / (trackHeight - thumbHeight)) * (scrollableHeight - viewportHeight);
-            window.scrollTo(0, startScrollTop + deltaScroll);
+        body.is-article-visible #footer {
+            -moz-transform: scale(0.95);
+            -webkit-transform: scale(0.95);
+            -ms-transform: scale(0.95);
+            transform: scale(0.95);
+            -moz-filter: blur(0.1rem);
+            -webkit-filter: blur(0.1rem);
+            -ms-filter: blur(0.1rem);
+            filter: blur(0.1rem);
+            opacity: 0;
         }
 
-        function onMouseUp() {
-            document.removeEventListener('mousemove', onMouseMove);
-            document.removeEventListener('mouseup', onMouseUp);
-        }
+/*
+============================================
+Styling for the Finder-Style Photo Gallery
+============================================
+*/
 
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp);
-    });
+/* 1. The Main Gallery Container */
+/* NEW: The photo gallery's position is now controlled by its own margin and padding.
+   'margin-top' controls the space between the gallery and the header.
+   'padding' controls the space between the gallery's edge and the photos inside it.
+*/
+#photo-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 3rem;
+    width: 100%;
+    position: relative; /* Needed for the marquee positioning */
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10+ and Edge */
+    user-select: none; /* Standard syntax */
 
-    // Recalculate everything on resize, load, or orientation change
-    window.addEventListener('resize', setupScrollbar);
-    window.addEventListener('load', setupScrollbar);
-    window.addEventListener('orientationchange', setupScrollbar);
-    window.addEventListener('galleryFiltered', setupScrollbar);
+    /* === ADJUSTABLE SPACING === */
+    margin-top: 1rem; /* Controls the space between the header and the photo gallery */
+    padding: 0 2rem;  /* Controls the left/right space for the entire gallery */
+}
 
-    // Initial setup
-    setupScrollbar();
-    // A small timeout helps ensure all content (like images) has loaded and affected the page height
-    setTimeout(setupScrollbar, 500); 
-});
+
+/* 2. Each Individual Grid Item (Figure) */
+#photo-gallery figure {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    height: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: default;
+}
+
+/* 3. The Container for the Image */
+#photo-gallery figure .image-container {
+    height: 225px;
+    width: 100%;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 4. The Image Itself */
+#photo-gallery figure img {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border: solid 1px #474442;
+    pointer-events: none; /* Makes sure clicks go to the parent figure */
+    box-shadow: 0 0 18px rgba(71, 68, 66, 0.3); /* A warm grey glow */
+}
+
+/* 5. The Filename Caption */
+#photo-gallery figure figcaption {
+    font-family: "Source Sans Pro", sans-serif;
+    font-weight: 300;
+    font-size: 0.65rem;
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.4;
+    word-break: break-all;
+    padding: 0 0.25rem;
+    pointer-events: none; /* Makes sure clicks go to the parent figure */
+}
+
+#photo-gallery figure figcaption .dimensions {
+    display: block;
+    font-size: 0.55rem;
+    opacity: 0.7;
+    margin-top: 0.2em;
+}
+
+.dimensions-x {
+    display: inline-block;
+    transform: translateY(0.55px);
+}
+
+.modal-info-panel .dimensions-x {
+    transform: translateY(1px);
+}
+
+
+
+/* 6. Marquee Selection Box */
+#marquee {
+    position: absolute;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    background-color: rgba(255, 255, 255, 0.2);
+    pointer-events: none;
+    visibility: hidden;
+    z-index: 9; /* Changed from 10 to 9 */
+}
+
+/* FINAL FIX: Prevents object-highlighting on the search input during a drag */
+body.is-marquee-dragging #search-input {
+    pointer-events: none;
+    outline: none;
+    -webkit-user-drag: none;
+}
+
+/* FINAL FIX: Globally disables default browser selection during a marquee drag */
+body.is-marquee-dragging,
+body.is-marquee-dragging * {
+    cursor: default !important;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/*
+============================================
+Modal / Lightbox Styles
+============================================
+*/
+
+/* The main overlay container */
+.modal-overlay {
+    display: flex; /* MODIFIED: Set to flex to enable centering */
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.9);
+    align-items: center;
+    justify-content: center;
+
+    /* NEW: Default hidden state and transition for smooth animation */
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(0.98);
+    transition: opacity 0.25s ease, visibility 0.25s ease, transform 0.25s ease;
+}
+
+/* NEW: The visible state for the modal overlay */
+.modal-overlay.is-visible {
+    opacity: 1;
+    visibility: visible;
+    transform: scale(1);
+}
+
+/* The content box of the modal */
+.modal-content {
+    display: flex;
+    flex-direction: row;
+    background-color: rgba(10, 10, 10, 0.65);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px); /* Safari compatibility */
+    margin: auto;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    width: 90%;
+    max-width: 1400px;
+    height: auto;
+    max-height: 90vh; /* Set a max-height relative to viewport for very large images */
+    align-items: stretch;
+    position: relative;
+    box-shadow: 0 8px 16px 0 rgba(0,0,0,0.4),0 12px 40px 0 rgba(0,0,0,0.3); /* Enhanced shadow */
+    overflow: hidden; /* ADDED to apply border-radius to children */
+}
+
+/* The Close Button */
+.modal-close {
+    color: #aaa;
+    position: absolute;
+    top: 15px;
+    right: 25px;
+    font-size: 35px;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+.modal-close:hover,
+.modal-close:focus {
+    color: #fff;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* Navigation arrows */
+.modal-prev, .modal-next {
+    cursor: pointer;
+    position: absolute;
+    top: 50%;
+    width: auto;
+    padding: 16px;
+    margin-top: -50px;
+    color: white;
+    font-weight: bold;
+    font-size: 20px;
+    transition: 0.6s ease;
+    border-radius: 0 3px 3px 0;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.modal-next {
+    right: 0;
+    border-radius: 3px 0 0 3px;
+}
+
+.modal-prev {
+    left: 0;
+    border-radius: 0 3px 3px 0;
+}
+
+/* On hover, add a black background color with a little transparency */
+.modal-prev:hover, .modal-next:hover {
+    background-color: rgba(0,0,0,0.8);
+}
+
+/* Left side of the modal (the image) */
+.modal-image-container {
+    flex: 2;
+    padding: 0; /* MODIFIED */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative; /* Added for absolute positioning of img */
+}
+
+.modal-image-container img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    /* ADDED LINES */
+    transition: transform 0.2s ease-out;
+    transform-origin: center; /* Set the default origin */
+    will-change: transform;   /* Performance optimization */
+}
+
+/* ADD THIS NEW CODE */
+.modal-image-container.pannable img {
+    cursor: grab;
+}
+
+.modal-image-container.panning img {
+    cursor: grabbing;
+}
+
+/* Right side of the modal (the info panel) */
+.modal-info-panel {
+    flex: 1;
+    min-width: 350px; /* Ensure info panel has enough space */
+    padding: 2.5rem;
+    background-color: rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.modal-info-panel .info-content {
+    flex-grow: 1;
+}
+
+.modal-info-panel h3 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    word-break: break-all;
+    font-size: 0.85rem;
+}
+
+#modal-filename {
+    text-transform: none;
+}
+
+/* Download button */
+#modal-download-btn {
+    width: 100%;
+    margin-top: 1.5rem;
+    padding: 0;
+}
+
+/*
+================================================
+New Styles for Finder-Style Info Panel
+================================================
+*/
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.25rem 1.5rem; /* Vertical and horizontal spacing */
+}
+
+.info-item {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.info-grid dt {
+    font-size: 0.55rem;
+    font-weight: 300;
+    color: #999;
+    text-transform: uppercase;
+    margin: 0;
+}
+
+.info-grid dd {
+    font-size: 0.65rem;
+    color: #fff;
+    margin: 0;
+    word-wrap: break-word;
+}
+
+.metadata-header {
+    text-align: left;
+    padding-top: 1.5rem;
+    padding-bottom: 0.5rem;
+    margin: 0;
+    font-size: 0.7rem;
+    letter-spacing: 0.1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* ================================================
+Custom Download Button Style
+================================================
+*/
+/* Using the 'Subtle & Integrated' style */
+#modal-download-btn.download-btn {
+    background-color: rgba(255, 255, 255, 0.075);
+    color: #ffffff !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+    font-weight: 300;
+}
+
+#modal-download-btn.download-btn:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+    box-shadow: inset 0 0 0 1px #ffffff;
+}
+
+#modal-download-btn.download-btn .fas {
+    margin-right: 0.75em;
+}
+
+/*
+============================================
+Custom Context Menu
+============================================
+*/
+
+.context-menu {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stays in place on the screen */
+    z-index: 2000; /* Ensures it's on top of other elements */
+    background-color: rgba(25, 25, 25, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px); /* Safari compatibility */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 5px 0;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+    font-family: "Source Sans Pro", sans-serif;
+    font-weight: 300;
+    font-size: 0.65rem; /* Matched to filename size */
+    color: #ffffff;
+    -webkit-user-select: none; /* Prevent text selection */
+    -ms-user-select: none;
+    user-select: none;
+}
+
+.context-menu ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.context-menu ul li {
+    padding: 8px 15px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+/* MODIFIED: This rule now excludes .separator from the hover effect */
+.context-menu ul li:not(.separator):hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* NEW: This rule styles the separator as a centered, inset line */
+.context-menu ul li.separator {
+    height: 1px;
+    padding: 0;
+    margin: 6px 15px;
+    background-color: rgba(255, 255, 255, 0.15);
+    cursor: default; /* Use the default cursor, not the pointer */
+}
 
 /*
 ==================================================================
-// Scrollbar Proximity Effect
+// Search Icon & Clear Button
 ==================================================================
 */
-document.addEventListener('DOMContentLoaded', () => {
-    const thumb = document.getElementById('custom-scrollbar-thumb');
-    if (!thumb) return;
+#search-container form {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    position: relative; /* This is the positioning context for the icon and button */
+}
 
-    const proximity = 30; // How close in pixels the mouse needs to be to trigger the effect
-    let ticking = false; // A flag to optimize performance
+.search-icon {
+    position: absolute;
+    left: 10px; /* Slightly adjusted for visual centering */
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;  /* Icon width */
+    height: 16px; /* Icon height */
+    z-index: 1;
+    pointer-events: none;
+    background-repeat: no-repeat;
+    background-size: contain;
+    /* The SVG icon is embedded here. You can change stroke-width from '1.5' to '1' for ultra-thin or '2' for thicker. */
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' /%3e%3c/svg%3e");
+}
 
-    document.addEventListener('mousemove', (e) => {
-        // Use requestAnimationFrame to avoid running this code too often
-        if (!ticking) {
-            window.requestAnimationFrame(() => {
-                const thumbRect = thumb.getBoundingClientRect();
+.clear-search-button {
+    position: absolute;
+    right: 12px; /* Position from the right edge of the form */
+    top: 50%; /* Center vertically */
+    transform: translateY(-50%);
+    cursor: default;
+    display: none; /* Hidden by default */
+    color: #999;
+    font-size: 1.2rem;
+    font-weight: bold;
+    line-height: 1; /* Ensure the 'x' is centered in its own box */
+    -webkit-user-select: none; /* Prevent text selection */
+    -ms-user-select: none;
+    user-select: none;
+    transition: color 0.2s ease-in-out;
+}
 
-                // Check if the mouse is horizontally within range (from the left of the thumb)
-                const isHorizontallyNear = e.clientX >= thumbRect.left - proximity;
+.clear-search-button:hover {
+    color: #fff;
+}
 
-                // Check if the mouse is vertically within range (above or below the thumb)
-                const isVerticallyNear = (e.clientY >= thumbRect.top - proximity) && (e.clientY <= thumbRect.bottom + proximity);
-
-                // If the mouse is near and not at the very edge of the window, add the class
-                if (isHorizontallyNear && isVerticallyNear && e.clientX < window.innerWidth - 2) {
-                    thumb.classList.add('is-near');
-                } else {
-                    thumb.classList.remove('is-near');
-                }
-
-                ticking = false; // Reset the flag
-            });
-            ticking = true; // Set the flag
-        }
-    });
-});
 
 /*
 ==================================================================
-// Autocomplete Search Suggestions Logic
+// Custom Scrollbar
 ==================================================================
 */
-document.addEventListener('galleryLoaded', () => {
-    const searchInput = document.getElementById('search-input');
-    const suggestionsContainer = document.getElementById('suggestions-container');
-    const galleryItems = document.querySelectorAll('#photo-gallery figure img');
-    
-    if (!searchInput || !suggestionsContainer || galleryItems.length === 0) {
-        return;
-    }
-    
-    // Build a unique, sorted list of searchable terms from the JSON data.
-    const searchTerms = new Set();
-    galleryItems.forEach(img => {
-        // MODIFICATION: Check for the new data attributes: cast, crew, and castAndCrew.
-        const peopleSources = [img.dataset.cast, img.dataset.crew, img.dataset.castAndCrew];
 
-        peopleSources.forEach(source => {
-            if (source) { // Check if the source (e.g., img.dataset.cast) exists
-                source.split(',').forEach(term => {
-                    const cleaned = term.trim();
-                    if (cleaned && cleaned.toLowerCase() !== 'red') searchTerms.add(cleaned);
-                });
-            }
-        });
+/* 1. Hide the native browser scrollbar */
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+    display: none;
+}
 
-        if (img.dataset.characters) {
-            img.dataset.characters.split(',').forEach(term => {
-                const cleaned = term.trim();
-                if (cleaned) searchTerms.add(cleaned);
-            });
-        }
-    });
-    const sortedSearchTerms = Array.from(searchTerms).sort((a, b) => a.localeCompare(b));
-    
-    let activeSuggestionIndex = -1;
+html, body {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
 
-    // Updates and displays the suggestion list based on user input.
-    function updateSuggestions() {
-        const query = searchInput.value.toLowerCase();
-        suggestionsContainer.innerHTML = '';
-        activeSuggestionIndex = -1;
+/* 2. Style the custom scrollbar track */
+#custom-scrollbar-track {
+    position: fixed;
+    top: 80px;
+    right: 0;
+    width: 12px; /* Set the track width to contain the expanded thumb */
+    height: calc(100% - 80px);
+    z-index: 1500;
+    pointer-events: none; /* ADDED: Allows clicks to pass through the track */
+}
 
-        if (query.length === 0) {
-            suggestionsContainer.style.display = 'none';
-            return;
-        }
+/* 3. Style the custom scrollbar thumb */
+#custom-scrollbar-thumb {
+    position: absolute;
+    top: 0;
+    right: 1px;
+    width: 3px;
+    background-color: rgba(255, 250, 240, 0.35);
+    border-radius: 2px;
+    cursor: default;
+    /* Animate all property changes smoothly */
+    transition: all 0.2s ease-in-out;
+    pointer-events: auto; /* ADDED: Re-enables clicks specifically for the thumb */
+}
 
-        const matches = sortedSearchTerms.filter(term => term.toLowerCase().startsWith(query)).slice(0, 7);
+/* NEW: The thumb's "hover" state is now controlled by a class */
+#custom-scrollbar-thumb.is-near {
+    right: 2px;  /* Re-center the wider thumb */
+    width: 15px;  /* The new, wider width */
+    background-color: rgba(255, 250, 240, 0.55);
+}
 
-        if (matches.length > 0) {
-            matches.forEach(term => {
-                const item = document.createElement('div');
-                item.className = 'suggestion-item';
-                item.textContent = term;
-                // Use 'mousedown' to prevent the input's 'blur' event from hiding the suggestions before the click registers.
-                item.addEventListener('mousedown', (e) => {
-                    e.preventDefault();
-                    selectSuggestion(term);
-                });
-                suggestionsContainer.appendChild(item);
-            });
-            suggestionsContainer.style.display = 'block';
-        } else {
-            suggestionsContainer.style.display = 'none';
-        }
-    }
+/* Invisible, larger grab area around the 'is-near' thumb */
+#custom-scrollbar-thumb.is-near::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    right: -10px;
+    bottom: -10px;
+    background: transparent;
+}
 
-    // Handles the selection of a suggestion from the list.
-    function selectSuggestion(value) {
-        searchInput.value = value;
-        suggestionsContainer.style.display = 'none';
-        // Manually trigger the original 'keyup' event to perform the search.
-        searchInput.dispatchEvent(new Event('keyup', { bubbles: true }));
-    }
-    
-    // Manages the 'active' class for keyboard navigation.
-    function updateActiveSuggestion(items) {
-        items.forEach((item, index) => {
-            if (index === activeSuggestionIndex) {
-                item.classList.add('active');
-                item.scrollIntoView({ block: 'nearest' });
-            } else {
-                item.classList.remove('active');
-            }
-        });
-    }
+/* ===== Enhanced Selection Style ===== */
 
-    // --- Event Listeners ---
-    
-    // Update suggestions on every input change.
-    searchInput.addEventListener('input', updateSuggestions);
+/* Adds a smooth transition to the elements that change during selection */
+#photo-gallery figure img,
+#photo-gallery figure figcaption .filename {
+    transition: background-color 0.2s ease-out, border-color 0.2s ease-out, box-shadow 0.2s ease-out, color 0.2s ease-out, text-shadow 0.2s ease-out;
+}
 
-    // Handle keyboard navigation (arrows, Enter, Escape).
-    searchInput.addEventListener('keydown', (e) => {
-        const items = suggestionsContainer.querySelectorAll('.suggestion-item');
-        if (items.length === 0) return;
+/* Changes the image border to gold and adds a soft glow effect */
+#photo-gallery figure.selected img {
+    border-color: #dbb7a7; /* Gold */
+    box-shadow: 0 0 18px rgba(255, 184, 130, 0.5); /* Gold with 50% opacity */
+}
 
-        switch (e.key) {
-            case 'ArrowDown':
-                e.preventDefault();
-                if (activeSuggestionIndex < items.length - 1) {
-                    activeSuggestionIndex++;
-                    updateActiveSuggestion(items);
-                }
-                break;
-            case 'ArrowUp':
-                e.preventDefault();
-                if (activeSuggestionIndex > 0) {
-                    activeSuggestionIndex--;
-                    updateActiveSuggestion(items);
-                }
-                break;
-            case 'Enter':
-                if (activeSuggestionIndex > -1) {
-                    e.preventDefault();
-                    selectSuggestion(items[activeSuggestionIndex].textContent);
-                }
-                break;
-            case 'Escape':
-                suggestionsContainer.style.display = 'none';
-                break;
-        }
-    });
+/* Makes the filename text color and glow match the selected image's border. */
+#photo-gallery figure.selected figcaption .filename {
+    color: #dbb7a7; /* Same color as the selected image border */
+    /* A single shadow with a large blur-radius for a very soft effect. */
+    text-shadow: 0 0 22px rgba(255, 184, 130, 0.6);
+}
+/*
+==================================================================
+// Lazy Load Image Fade-in
+==================================================================
+*/
 
-    // Hide the suggestions when clicking anywhere else on the page.
-    document.addEventListener('click', (e) => {
-        if (!searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
-            suggestionsContainer.style.display = 'none';
-        }
-    });
-});
+#photo-gallery figure .image-container,
+#photo-gallery figure figcaption {
+    opacity: 0;
+    transition: opacity 0.4s ease-in-out;
+}
 
-document.addEventListener('keydown', (e) => {
-    // Check for Ctrl+C or Command+C
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
-        const gallery = document.getElementById('photo-gallery');
-        const searchInput = document.getElementById('search-input');
-        const modal = document.getElementById('image-modal');
+#photo-gallery figure.is-visible .image-container,
+#photo-gallery figure.is-visible figcaption {
+    opacity: 1;
+}
 
-        // Ignore if the user is focused on the search input or if the modal is visible
-        if (document.activeElement === searchInput || (modal && modal.classList.contains('is-visible'))) {
-            return;
-        }
+/*
+==================================================================
+// Constrained Text Selection in Modal
+==================================================================
+*/
 
-        const selectedFigures = gallery.querySelectorAll('figure.selected');
+/* When dragging, default to NO selection and the standard arrow cursor.
+  The !important flag ensures this overrides browser defaults during the drag.
+*/
+.is-selecting-text * {
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    cursor: default !important;
+}
 
-        if (selectedFigures.length > 0) {
-            // Prevent the browser's default copy behavior
-            e.preventDefault();
+/* For the specific element where the drag started, re-enable
+  both text selection and the text "I-beam" cursor.
+*/
+.is-selecting-text .selection-active,
+.is-selecting-text .selection-active * {
+    -webkit-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+    cursor: text !important;
+}
 
-            // Create an array of filenames from the selected figures
-            const filenames = Array.from(selectedFigures).map(figure => {
-                const img = figure.querySelector('img');
-                return img ? img.dataset.filename : '';
-            }).filter(name => name); // Filter out any empty or undefined names
+/*
+==================================================================
+// Disable Text Selection on Download Button
+==================================================================
+*/
 
-            if (filenames.length > 0) {
-                // Join the filenames with a single space for pasting into the search bar
-                const textToCopy = filenames.join(' ');
+/* This rule makes the download button and its contents (the icon and text)
+   immune to text selection, even on right-click. */
+#modal-download-btn, #modal-download-btn * {
+    -webkit-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+}
 
-                // Use the modern Clipboard API to write the text
-                navigator.clipboard.writeText(textToCopy).then(() => {
-                    console.log(`${filenames.length} filenames copied to clipboard.`);
-                }).catch(err => {
-                    console.error('Could not copy filenames to clipboard: ', err);
-                });
-            }
-        }
-    }
-});
+/*
+==================================================================
+// Custom Text Selection Style
+==================================================================
+*/
+
+::selection {
+  background-color: rgba(255, 222, 150, 0.3); /* An muted, semi-transparent, gold */
+}
+
+::-moz-selection { /* Firefox compatibility */
+  background-color: rgba(255, 222, 150, 0.3);
+}
+
+/*
+==================================================================
+// Search Suggestions / Autocomplete
+==================================================================
+*/
+#search-container form {
+    position: relative;
+}
+
+#suggestions-container {
+    display: none;
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    width: 100%;
+    background-color: rgba(31, 27, 24, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    z-index: 1001;
+    max-height: 280px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.suggestion-item {
+    padding: 8px 30px;
+    cursor: default;
+    font-size: 0.65rem;
+    color: #ccc;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.suggestion-item:hover,
+.suggestion-item.active {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+#suggestions-container::-webkit-scrollbar {
+    width: 8px;
+}
+#suggestions-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+#suggestions-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+}
+#suggestions-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
