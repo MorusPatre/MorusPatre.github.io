@@ -1192,12 +1192,30 @@
      });
      
      function updateTransform(applyTransition = false) {
-         // Clamp panning to keep the image within the container view
-         const rect = modalImg.getBoundingClientRect();
+         // **START: MODIFIED CODE**
          const containerRect = imageContainer.getBoundingClientRect();
+         const imgAspectRatio = modalImg.naturalWidth / modalImg.naturalHeight;
+         const containerAspectRatio = containerRect.width / containerRect.height;
 
-         const maxPanX = Math.max(0, (rect.width - containerRect.width) / 2 / scale);
-         const maxPanY = Math.max(0, (rect.height - containerRect.height) / 2 / scale);
+         let baseWidth, baseHeight;
+
+         // Determine the initial 'contained' size of the image
+         if (imgAspectRatio > containerAspectRatio) {
+             baseWidth = containerRect.width;
+             baseHeight = baseWidth / imgAspectRatio;
+         } else {
+             baseHeight = containerRect.height;
+             baseWidth = baseHeight * imgAspectRatio;
+         }
+
+         // Calculate the new dimensions based on the current scale
+         const newWidth = baseWidth * scale;
+         const newHeight = baseHeight * scale;
+
+         // Calculate the maximum allowed pan based on the new dimensions
+         const maxPanX = Math.max(0, (newWidth - containerRect.width) / 2 / scale);
+         const maxPanY = Math.max(0, (newHeight - containerRect.height) / 2 / scale);
+         // **END: MODIFIED CODE**
 
          pan.x = Math.max(-maxPanX, Math.min(maxPanX, pan.x));
          pan.y = Math.max(-maxPanY, Math.min(maxPanY, pan.y));
