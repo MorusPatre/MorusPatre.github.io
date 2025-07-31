@@ -1029,231 +1029,366 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-/*
-==================================================================
-// MODAL LOGIC (WITH CURSOR-RELATIVE ZOOM)
-==================================================================
-*/
-const modal = document.getElementById('image-modal');
-const modalContent = document.querySelector('.modal-content');
-const modalImg = document.getElementById('modal-img');
-const modalFilename = document.getElementById('modal-filename');
-const modalMetadata = document.getElementById('modal-metadata');
-const downloadBtn = document.getElementById('modal-download-btn');
-const closeModal = document.querySelector('.modal-close');
-const prevButton = document.querySelector('.modal-prev');
-const nextButton = document.querySelector('.modal-next');
-const imageContainer = document.querySelector('.modal-image-container');
-const infoPanel = document.querySelector('.modal-info-panel');
-let currentImageIndex = -1;
+    /*
+    ==================================================================
+    // START: MODAL LOGIC (SECTION WITH CHANGES)
+    ==================================================================
+    */
+    const modal = document.getElementById('image-modal');
+    const modalContent = document.querySelector('.modal-content');
+    const modalImg = document.getElementById('modal-img');
+    const modalFilename = document.getElementById('modal-filename');
+    const modalMetadata = document.getElementById('modal-metadata');
+    const downloadBtn = document.getElementById('modal-download-btn');
+    const closeModal = document.querySelector('.modal-close');
+    const prevButton = document.querySelector('.modal-prev');
+    const nextButton = document.querySelector('.modal-next');
+    const imageContainer = document.querySelector('.modal-image-container');
+    const infoPanel = document.querySelector('.modal-info-panel');
+    let currentImageIndex = -1;
 
-/* ---------- Zoom State ---------- */
-const zoomState = { scale: 1, x: 0, y: 0 };
-const MIN_SCALE = 1;
-const MAX_SCALE = 6;
-const SCALE_STEP = 0.15;
+    // A map to get the correct display label for each data key.
+    const KEY_TO_LABEL_MAP = {
+        season: 'Season',
+        episode: 'Episode',
+        cast: 'Cast',
+        crew: 'Crew',
+        castAndCrew: 'Cast & Crew',
+        characters: 'Characters'
+    };
 
-function updateTransform(img, scale, offsetX, offsetY) {
-    img.style.transformOrigin = `${offsetX}px ${offsetY}px`;
-    img.style.transform = `scale(${scale})`;
-}
-function resetZoom() {
-    zoomState.scale = 1;
-    zoomState.x = 0;
-    zoomState.y = 0;
-    modalImg.style.transform = 'scale(1)';
-    modalImg.style.transformOrigin = 'center center';
-}
+    // The order in which to display the primary data fields.
+    const primaryKeys = ['season', 'episode', 'cast', 'crew', 'castAndCrew', 'characters'];
 
-/* ---------- Mapping & Helpers ---------- */
-const KEY_TO_LABEL_MAP = {
-    season: 'Season',
-    episode: 'Episode',
-    cast: 'Cast',
-    crew: 'Crew',
-    castAndCrew: 'Cast & Crew',
-    characters: 'Characters'
-};
-const primaryKeys = ['season', 'episode', 'cast', 'crew', 'castAndCrew', 'characters'];
 
-/* ---------- Show / Hide ---------- */
-function showImage(index) {
-    const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
-    if (index < 0 || index >= visibleFigures.length) return;
-
-    resetZoom();                       // reset zoom on new image
-    currentImageIndex = index;
-    const figure = visibleFigures[index];
-    const img = figure.querySelector('img');
-
-    downloadBtn.dataset.fullsrc = img.dataset.fullsrc;
-
-    // fast thumbnail first
-    modalImg.src = img.src;
-    // high-res in background
-    const hires = new Image();
-    hires.src = img.dataset.fullsrc;
-    hires.onload = () => { modalImg.src = hires.src; };
-
-    modalImg.alt = img.alt;
-    modalFilename.textContent = img.dataset.filename;
-
-    /* Build info panels */
-    let primaryHTML = '<dl class="info-grid">';
-    let detailsHTML = '<dl class="info-grid">';
-    const ds = img.dataset;
-
-    primaryKeys.forEach(k => {
-        if (ds[k] && ds[k].trim() && ds[k].trim() !== '-' && ds[k].trim() !== '- (-)') {
-            const label = KEY_TO_LABEL_MAP[k] || k;
-            primaryHTML += `<div class="info-item"><dt>${label}</dt><dd>${ds[k]}</dd></div>`;
+    modalContent.addEventListener('mouseenter', () => {
+        if (modal.classList.contains('is-visible')) {
+            document.body.style.overflow = 'hidden';
         }
     });
 
-    let hasDetails = false;
-    const handled = ['search', 'fullsrc', 'filename', ...primaryKeys];
-    for (const k in ds) {
-        if (!handled.includes(k) && ds[k] && ds[k].trim() && ds[k].trim() !== '-') {
-            hasDetails = true;
-            let label = k.replace(/([A-Z])/g, ' $1').replace(/^./, m => m.toUpperCase());
-            let val = ds[k];
-            if (label === 'Dimensions' && val.includes('×')) {
-                const [w, h] = val.split('×');
-                val = `${w}<span class="dimensions-x">×</span>${h}`;
+    modalContent.addEventListener('mouseleave', () => {
+        if (modal.classList.contains('is-visible')) {
+            document.body.style.overflow = '';
+        }
+    });
+
+    function showImage(index) {
+        const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
+        if (index < 0 || index >= visibleFigures.length) {
+            return;
+        }
+        currentImageIndex = index;
+        const figure = visibleFigures[currentImageIndex];
+        const img = figure.querySelector('img');
+
+        downloadBtn.dataset.fullsrc = img.dataset.fullsrc; // Always store the high-res URL
+
+        // Immediately display the low-resolution thumbnail.
+        modalImg.src = img.src;
+
+        // Load the high-res version in the background.
+        const highResImage = new Image();
+        highResImage.src = img.dataset.fullsrc;
+        highResImage.onload = function() {
+            modalImg.src = highResImage.src;
+        };
+        modalImg.alt = img.alt;
+        
+        modalFilename.textContent = img.dataset.filename;
+
+        let primaryHTML = '<dl class="info-grid">';
+        let detailsHTML = '<dl class="info-grid">';
+        const dataset = img.dataset;
+        
+        primaryKeys.forEach(key => {
+            if (dataset[key] && dataset[key].trim() !== '' && dataset[key].trim() !== '-' && dataset[key].trim() !== '- (-)') {
+                const label = KEY_TO_LABEL_MAP[key] || key;
+                primaryHTML += `<div class="info-item"><dt>${label}</dt><dd>${dataset[key]}</dd></div>`;
             }
-            detailsHTML += `<div class="info-item"><dt>${label}</dt><dd>${val}</dd></div>`;
+        });
+
+        let hasDetails = false;
+        const handledKeys = ['search', 'fullsrc', 'filename', ...primaryKeys];
+        
+        for (const key in dataset) {
+            if (!handledKeys.includes(key) && dataset[key] && dataset[key].trim() !== '' && dataset[key].trim() !== '-') {
+                hasDetails = true;
+                let label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                let value = dataset[key];
+                if (label === 'Dimensions' && value.includes('×')) {
+                    const parts = value.split('×');
+                    value = `${parts[0]}<span class="dimensions-x">×</span>${parts[1]}`;
+                }
+                detailsHTML += `<div class="info-item"><dt>${label}</dt><dd>${value}</dd></div>`;
+            }
         }
-    }
-    primaryHTML += '</dl>';
-    detailsHTML += '</dl>';
+        
+        primaryHTML += '</dl>';
+        detailsHTML += '</dl>';
 
-    let finalHTML = primaryHTML;
-    if (hasDetails) finalHTML += '<h4 class="metadata-header">Metadata</h4>' + detailsHTML;
-    modalMetadata.innerHTML = finalHTML;
-
-    document.body.classList.add('is-article-visible');
-    modal.classList.add('is-visible');
-}
-
-function hideModal() {
-    document.body.classList.remove('is-article-visible');
-    modal.classList.remove('is-visible');
-    currentImageIndex = -1;
-    document.body.style.overflow = '';
-
-    setTimeout(() => {
-        modalImg.src = '';
-        modalFilename.textContent = '';
-        modalMetadata.innerHTML = '';
-    }, 250);
-}
-
-/* ---------- Navigation ---------- */
-function showNextImage() {
-    const visible = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
-    let next = (currentImageIndex + 1) % visible.length;
-    showImage(next);
-}
-function showPrevImage() {
-    const visible = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
-    let prev = (currentImageIndex - 1 + visible.length) % visible.length;
-    showImage(prev);
-}
-
-/* ---------- Events ---------- */
-gallery.addEventListener('dblclick', e => {
-    const fig = e.target.closest('figure');
-    if (!fig) return;
-    const visible = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
-    const idx = visible.indexOf(fig);
-    if (idx > -1) showImage(idx);
-});
-
-downloadBtn.addEventListener('click', async e => {
-    e.preventDefault(); e.stopPropagation();
-    const url = downloadBtn.dataset.fullsrc;
-    const filename = modalFilename.textContent || url.split('/').pop();
-    if (!url || !filename) return;
-    const btnText = downloadBtn.textContent;
-    try {
-        downloadBtn.textContent = 'Downloading...'; downloadBtn.disabled = true;
-        const blob = await fetchImageBlob(url);
-        triggerDownload(blob, filename);
-    } catch (err) {
-        console.error(err); alert('Download failed.');
-    } finally {
-        setTimeout(() => { downloadBtn.textContent = btnText; downloadBtn.disabled = false; }, 1000);
-    }
-});
-downloadBtn.addEventListener('dragstart', e => e.preventDefault());
-
-closeModal.addEventListener('click', hideModal);
-prevButton.addEventListener('click', showPrevImage);
-nextButton.addEventListener('click', showNextImage);
-
-let mouseDownOnOverlay = false;
-modal.addEventListener('mousedown', e => { if (e.target === modal) mouseDownOnOverlay = true; });
-modal.addEventListener('mouseup', e => {
-    if (e.target === modal && mouseDownOnOverlay) hideModal();
-    mouseDownOnOverlay = false;
-});
-
-document.addEventListener('keydown', e => {
-    if (!modal.classList.contains('is-visible')) return;
-    if (e.key === 'Escape') hideModal();
-    else if (e.key === 'ArrowRight') showNextImage();
-    else if (e.key === 'ArrowLeft') showPrevImage();
-});
-
-/* ---------- Zoom Wheel Handler ---------- */
-imageContainer.addEventListener('wheel', e => {
-    if (!(e.metaKey || e.ctrlKey)) return;   // Cmd / Ctrl required
-    e.preventDefault();
-
-    const rect = imageContainer.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
-    // pixel on the *image* under the cursor
-    const imgX = (mouseX - zoomState.x) / zoomState.scale;
-    const imgY = (mouseY - zoomState.y) / zoomState.scale;
-
-    const delta = e.deltaY < 0 ? (1 + SCALE_STEP) : (1 - SCALE_STEP);
-    const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, zoomState.scale * delta));
-
-    const newX = mouseX - imgX * newScale;
-    const newY = mouseY - imgY * newScale;
-
-    zoomState.scale = newScale;
-    zoomState.x = newX;
-    zoomState.y = newY;
-
-    updateTransform(modalImg, newScale, mouseX, mouseY);
-});
-
-/* ---------- Enable text selection inside modal ---------- */
-imageContainer.addEventListener('mousedown', e => {
-    if (e.button === 0) document.body.classList.add('is-selecting-text');
-});
-infoPanel.addEventListener('mousedown', e => {
-    const valid = '.info-grid dt, .info-grid dd, #modal-filename, .metadata-header';
-    if (e.button === 0) {
-        document.body.classList.add('is-selecting-text');
-        if (e.target.matches(valid)) e.target.classList.add('selection-active');
-    } else if (e.button === 2) {
-        if (e.target.matches(valid)) {
-            const sel = window.getSelection();
-            const rng = document.createRange();
-            rng.selectNodeContents(e.target);
-            sel.removeAllRanges(); sel.addRange(rng);
+        let finalHTML = primaryHTML;
+        if (hasDetails) {
+            finalHTML += '<h4 class="metadata-header">Metadata</h4>' + detailsHTML;
         }
+
+        modalMetadata.innerHTML = finalHTML;
+
+        document.body.classList.add('is-article-visible');
+        modal.classList.add('is-visible');
     }
+
+    downloadBtn.addEventListener('click', async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+    
+        const url = event.currentTarget.dataset.fullsrc; // Use the stored high-res URL
+        // Get filename, with a fallback for missing names
+        const filename = modalFilename.textContent || url.split('/').pop();
+    
+        if (!url || !filename) {
+            console.error("Modal download failed: URL or filename not found.");
+            alert("Could not download the image because its data is missing.");
+            return;
+        }
+    
+        const buttonText = downloadBtn.textContent;
+        try {
+            // Provide visual feedback to the user
+            downloadBtn.textContent = 'Downloading...';
+            downloadBtn.disabled = true;
+    
+            // Fetch the image blob and trigger the download
+            const blob = await fetchImageBlob(url);
+            triggerDownload(blob, filename);
+    
+        } catch (error) {
+            console.error("Modal download failed:", error);
+            alert("An error occurred while trying to download the image.");
+        } finally {
+            // Restore the button to its original state after a moment
+            setTimeout(() => {
+                downloadBtn.textContent = buttonText;
+                downloadBtn.disabled = false;
+            }, 1000);
+        }
+    });
+    
+    downloadBtn.addEventListener('dragstart', function(event) {
+        event.preventDefault();
+    });
+
+    function showNextImage() {
+        const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
+        let nextIndex = (currentImageIndex + 1) % visibleFigures.length;
+        showImage(nextIndex);
+    }
+
+    function showPrevImage() {
+        const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
+        let prevIndex = (currentImageIndex - 1 + visibleFigures.length) % visibleFigures.length;
+        showImage(prevIndex);
+    }
+
+    gallery.addEventListener('dblclick', function(event) {
+        const figure = event.target.closest('figure');
+        if (!figure) return;
+        const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
+        const index = visibleFigures.indexOf(figure);
+        if (index > -1) {
+            showImage(index);
+        }
+    });
+
+    function hideModal() {
+        document.body.classList.remove('is-article-visible');
+        modal.classList.remove('is-visible');
+        currentImageIndex = -1;
+
+        document.body.style.overflow = '';
+
+        setTimeout(() => {
+            modalImg.src = "";
+            modalFilename.textContent = "";
+            modalMetadata.innerHTML = "";
+        }, 250);
+    }
+    
+    modalContent.addEventListener('click', function(event) {
+        event.stopPropagation();
+    });
+
+    closeModal.addEventListener('click', hideModal);
+    prevButton.addEventListener('click', showPrevImage);
+    nextButton.addEventListener('click', showNextImage);
+
+    let mouseDownOnOverlay = false;
+
+    modal.addEventListener('mousedown', function(event) {
+        if (event.target === modal) {
+            mouseDownOnOverlay = true;
+        }
+    });
+
+    modal.addEventListener('mouseup', function(event) {
+        if (event.target === modal && mouseDownOnOverlay) {
+            hideModal();
+        }
+        mouseDownOnOverlay = false;
+    });
+
+    document.addEventListener('keydown', function(event) {
+        if (modal.classList.contains('is-visible')) {
+            if (event.key === 'Escape') {
+                hideModal();
+            } else if (event.key === 'ArrowRight') {
+                showNextImage();
+            } else if (event.key === 'ArrowLeft') {
+                showPrevImage();
+            }
+        }
+    });
+    
+    imageContainer.addEventListener('mousedown', (e) => {
+        if (e.button === 0) {
+            document.body.classList.add('is-selecting-text');
+        }
+    });
+
+    infoPanel.addEventListener('mousedown', (e) => {
+        const validTargets = '.info-grid dt, .info-grid dd, #modal-filename, .metadata-header';
+        if (e.button === 0) {
+            document.body.classList.add('is-selecting-text');
+            if (e.target.matches(validTargets)) {
+                e.target.classList.add('selection-active');
+            }
+        }
+        else if (e.button === 2) {
+            if (e.target.matches(validTargets)) {
+                const targetElement = e.target;
+                const selection = window.getSelection();
+                const range = document.createRange();
+                range.selectNodeContents(targetElement);
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
+        }
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (document.body.classList.contains('is-selecting-text')) {
+            document.body.classList.remove('is-selecting-text');
+            const activeElement = document.querySelector('.selection-active');
+            if (activeElement) {
+                activeElement.classList.remove('selection-active');
+            }
+        }
+    });
 });
-document.addEventListener('mouseup', () => {
-    if (document.body.classList.contains('is-selecting-text')) {
-        document.body.classList.remove('is-selecting-text');
-        document.querySelectorAll('.selection-active').forEach(el => el.classList.remove('selection-active'));
+
+/*Custom Scrollbar Advanced*/
+document.addEventListener('DOMContentLoaded', () => {
+    const track = document.getElementById('custom-scrollbar-track');
+    const thumb = document.getElementById('custom-scrollbar-thumb');
+    const header = document.getElementById('header');
+
+    if (!track || !thumb || !header) return;
+
+    let ticking = false;
+
+    // This function now only updates the thumb's position.
+    // We use transform for smoother, GPU-accelerated animation.
+    function updateThumbPosition() {
+        const scrollableHeight = document.documentElement.scrollHeight;
+        const viewportHeight = window.innerHeight;
+        const trackHeight = track.offsetHeight;
+        const thumbHeight = thumb.offsetHeight;
+        
+        // Prevent division by zero if content is smaller than viewport
+        if (scrollableHeight <= viewportHeight) return;
+
+        const scrollPercentage = window.scrollY / (scrollableHeight - viewportHeight);
+        const thumbPosition = scrollPercentage * (trackHeight - thumbHeight);
+        
+        thumb.style.transform = `translateY(${thumbPosition}px)`;
     }
+
+    // This function sets up the scrollbar dimensions and is called less frequently.
+    function setupScrollbar() {
+        const headerHeight = header.offsetHeight;
+        const scrollableHeight = document.documentElement.scrollHeight;
+        const viewportHeight = window.innerHeight;
+
+        // Hide or show track based on whether scrolling is needed
+        if (scrollableHeight <= viewportHeight) {
+            track.style.display = 'none';
+            return;
+        }
+        track.style.display = 'block';
+        thumb.classList.remove('is-near');
+        track.style.top = `${headerHeight}px`;
+        track.style.height = `calc(100% - ${headerHeight}px)`;
+
+        const trackHeight = track.offsetHeight;
+        const thumbHeight = Math.max((viewportHeight / scrollableHeight) * trackHeight, 20); // 20px min height
+        thumb.style.height = `${thumbHeight}px`;
+
+        // Run a position update immediately
+        updateThumbPosition();
+    }
+    
+    // On scroll, request an animation frame to update the thumb.
+    // The 'ticking' flag ensures we don't have multiple animation frames queued.
+    document.addEventListener('scroll', () => {
+        if (!ticking) {
+            window.requestAnimationFrame(() => {
+                updateThumbPosition();
+                ticking = false;
+            });
+            ticking = true;
+        }
+    });
+
+    // The logic for dragging the thumb doesn't need to change.
+    // Calling window.scrollTo() will trigger our optimized scroll listener above.
+    thumb.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        const startY = e.clientY;
+        const startScrollTop = document.documentElement.scrollTop;
+
+        function onMouseMove(e) {
+            const deltaY = e.clientY - startY;
+            const scrollableHeight = document.documentElement.scrollHeight;
+            const viewportHeight = window.innerHeight;
+            const trackHeight = track.offsetHeight;
+            const thumbHeight = thumb.offsetHeight;
+
+            // Prevent division by zero
+            if (trackHeight - thumbHeight === 0) return;
+
+            const deltaScroll = (deltaY / (trackHeight - thumbHeight)) * (scrollableHeight - viewportHeight);
+            window.scrollTo(0, startScrollTop + deltaScroll);
+        }
+
+        function onMouseUp() {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        }
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    });
+
+    // Recalculate everything on resize, load, or orientation change
+    window.addEventListener('resize', setupScrollbar);
+    window.addEventListener('load', setupScrollbar);
+    window.addEventListener('orientationchange', setupScrollbar);
+    window.addEventListener('galleryFiltered', setupScrollbar);
+
+    // Initial setup
+    setupScrollbar();
+    // A small timeout helps ensure all content (like images) has loaded and affected the page height
+    setTimeout(setupScrollbar, 500); 
 });
 
 /*
