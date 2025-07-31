@@ -1034,6 +1034,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // START: MODAL LOGIC (SECTION WITH CHANGES)
     ==================================================================
     */
+    // Zoom state variables
+    let isZoomed = false;
+    let isPanning = false;
+    let startPan = { x: 0, y: 0 };
+    let startImg = { x: 0, y: 0 };
+    
     const modal = document.getElementById('image-modal');
     const modalContent = document.querySelector('.modal-content');
     const modalImg = document.getElementById('modal-img');
@@ -1133,6 +1139,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         modalMetadata.innerHTML = finalHTML;
+        
+        // Reset zoom state for new image
+        if (isZoomed) {
+            imageContainer.classList.remove('is-zoomed');
+            modalImg.style.transform = 'translate(0, 0)';
+            isZoomed = false;
+        }
 
         document.body.classList.add('is-article-visible');
         modal.classList.add('is-visible');
@@ -1201,6 +1214,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function hideModal() {
+        // NEW: Reset zoom state when closing modal
+        if (isZoomed) {
+            imageContainer.classList.remove('is-zoomed');
+            modalImg.style.transform = 'translate(0, 0)';
+            isZoomed = false;
+        }
+        
         document.body.classList.remove('is-article-visible');
         modal.classList.remove('is-visible');
         currentImageIndex = -1;
@@ -1246,6 +1266,53 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (event.key === 'ArrowLeft') {
                 showPrevImage();
             }
+        }
+    });
+    
+    // Listener for zoom shortcut (Cmd/Ctrl + Z)
+    document.addEventListener('keydown', function(event) {
+        if (modal.classList.contains('is-visible') && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+            event.preventDefault();
+            isZoomed = !isZoomed;
+            imageContainer.classList.toggle('is-zoomed', isZoomed);
+
+            // If we are zooming out, reset the pan
+            if (!isZoomed) {
+                modalImg.style.transform = 'translate(0, 0)';
+            }
+        }
+    });
+
+    // Listeners for panning the zoomed image
+    imageContainer.addEventListener('mousedown', (e) => {
+        if (e.button !== 0 || !isZoomed) return;
+        e.preventDefault();
+        isPanning = true;
+        imageContainer.classList.add('is-panning');
+        startPan = { x: e.clientX, y: e.clientY };
+
+        const transform = new DOMMatrix(getComputedStyle(modalImg).transform);
+        startImg = { x: transform.m41, y: transform.m42 };
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isPanning || !isZoomed) return;
+        e.preventDefault();
+        const dx = e.clientX - startPan.x;
+        const dy = e.clientY - startPan.y;
+        modalImg.style.transform = `translate(${startImg.x + dx}px, ${startImg.y + dy}px)`;
+    });
+
+    document.addEventListener('mouseup', (e) => {
+        if (e.button !== 0 || !isPanning) return;
+        isPanning = false;
+        imageContainer.classList.remove('is-panning');
+    });
+
+    // Prevent context menu while panning
+    imageContainer.addEventListener('contextmenu', (e) => {
+        if (isPanning) {
+            e.preventDefault();
         }
     });
     
