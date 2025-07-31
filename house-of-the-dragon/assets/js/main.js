@@ -1237,10 +1237,12 @@ document.addEventListener('DOMContentLoaded', () => {
             // **THE FINAL FIX for zoom centering**
             // This calculates the necessary pan adjustment to keep the point under the cursor stationary.
             const scaleRatio = scale / oldScale;
-            const originX = (mouseX - rect.width  / 2);
-            const originY = (mouseY - rect.height / 2);
-            pan.x = originX - (originX - pan.x) * scaleRatio;
-            pan.y = originY - (originY - pan.y) * scaleRatio;
+            // mouse position relative to the image’s *original* top-left
+            const dx = (mouseX - rect.width  * 0.5) / oldScale;
+            const dy = (mouseY - rect.height * 0.5) / oldScale;
+            // keep the pixel that was under the cursor fixed
+            pan.x = pan.x - dx * (scaleRatio - 1);
+            pan.y = pan.y - dy * (scaleRatio - 1);
             
             updateTransform();
         }
