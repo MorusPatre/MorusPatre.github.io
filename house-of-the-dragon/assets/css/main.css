@@ -1774,6 +1774,31 @@ Custom Download Button Style
 }
 
 /*
+==================================================================
+// Modal Image Zoom & Pan
+==================================================================
+*/
+
+/* The container when zooming is active */
+.modal-image-container.is-zoomed {
+    cursor: grab;
+}
+
+.modal-image-container.is-zoomed.is-panning {
+    cursor: grabbing;
+}
+
+/* The image when zooming is active */
+.modal-image-container.is-zoomed #modal-img {
+    object-fit: none;  /* This is the key to displaying the image at its actual size */
+    width: auto;
+    height: auto;
+    max-width: none;
+    max-height: none;
+    transition: transform 0.1s linear; /* Smooths out panning slightly */
+}
+
+/*
 ============================================
 Custom Context Menu
 ============================================
