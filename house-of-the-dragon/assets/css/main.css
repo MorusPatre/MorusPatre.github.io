@@ -1665,7 +1665,6 @@ Modal / Lightbox Styles
     justify-content: center;
     overflow: hidden;
     position: relative; /* Added for absolute positioning of img */
-    backface-visibility: hidden;
 }
 
 .modal-image-container img {
@@ -1675,9 +1674,10 @@ Modal / Lightbox Styles
     width: 100%;
     height: 100%;
     object-fit: contain;
+    /* ADDED LINES */
     transition: transform 0.2s ease-out;
-    transform-origin: center center;
-    will-change: transform;
+    transform-origin: center; /* Set the default origin */
+    will-change: transform;   /* Performance optimization */
 }
 
 /* ADD THIS NEW CODE */
