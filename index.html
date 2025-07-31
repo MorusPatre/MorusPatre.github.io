@@ -28,6 +28,7 @@
             text-decoration: none;
             color: inherit;
             transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            cursor: pointer; /* MODIFIED: Set pointer cursor only on links */
         }
 
         /* Background Styling */
@@ -87,13 +88,10 @@
             flex-wrap: wrap;
             gap: 2.5rem;
         }
-        
-        .project-link {
-            width: 450px;
-            cursor: default;
-        }
 
-        .project-link figure {
+        .project-item figure { /* MODIFIED: Class moved from link to figure */
+            width: 380px;
+            cursor: default;
             margin: 0;
             position: relative;
             display: flex;
@@ -101,16 +99,16 @@
             align-items: center;
         }
 
-        .project-link img {
+        .project-item img { /* MODIFIED: Targeting changed */
             display: block;
             max-width: 100%;
             height: auto;
-            max-height: 320px;
+            max-height: 270px;
             border: 1px solid rgba(255, 255, 255, 0.25);
             transition: all 0.3s ease;
         }
 
-        .project-link figcaption {
+        .project-item figcaption { /* MODIFIED: Targeting changed */
             margin-top: 1rem;
             font-size: 1rem;
             font-weight: 300;
@@ -125,23 +123,26 @@
             margin-top: 0.3em;
         }
         
-        .project-link:hover img {
+        /* MODIFIED: Hover effect now on the link around the image */
+        .project-item a:hover img {
             transform: scale(1.05);
             border-color: #ffffff;
             box-shadow: 0 0 25px rgba(255, 255, 255, 0.2);
         }
-
-        .project-link:hover figcaption {
+        
+        /* MODIFIED: This is a new rule for making the text glow on hover */
+        .project-item a:hover + figcaption {
             color: #dbb7a7;
         }
+
 
         @media screen and (max-width: 736px) {
             #project-links {
                 flex-direction: column;
                 gap: 3rem;
             }
-            .project-link { width: 350px; }
-            .project-link img { max-height: 250px; }
+            .project-item figure { width: 320px; }
+            .project-item img { max-height: 230px; }
         }
 
     </style>
@@ -149,25 +150,31 @@
 <body>
     <div id="wrapper">
         <div id="project-links">
-            <a href="/house-of-the-dragon" class="project-link">
+
+            <div class="project-item">
                 <figure>
-                    <img src="images/rhaenyra-promo.jpg" alt="House of the Dragon">
+                    <a href="/house-of-the-dragon">
+                        <img src="images/rhaenyra-promo.jpg" alt="House of the Dragon">
+                    </a>
                     <figcaption>
                         House of the Dragon
-                        <span class="image-count" id="hotd-count">-- items</span>
+                        <span class="image-count" id="hotd-count">-- Items</span>
                     </figcaption>
                 </figure>
-            </a>
+            </div>
 
-            <a href="/the-witcher" class="project-link">
+            <div class="project-item">
                 <figure>
-                    <img src="images/witcher-promo.png" alt="The Witcher">
+                    <a href="/the-witcher">
+                        <img src="images/witcher-promo.png" alt="The Witcher">
+                    </a>
                     <figcaption>
                         The Witcher
-                        <span class="image-count" id="witcher-count">-- items</span>
+                        <span class="image-count" id="witcher-count">-- Items</span>
                     </figcaption>
                 </figure>
-            </a>
+            </div>
+            
         </div>
     </div>
     
@@ -191,7 +198,7 @@
                     .then(data => {
                         const element = document.getElementById(project.id);
                         if (element) {
-                            element.textContent = `${data.length} items`;
+                            element.textContent = `${data.length} Items`;
                         }
                     })
                     .catch(error => {
