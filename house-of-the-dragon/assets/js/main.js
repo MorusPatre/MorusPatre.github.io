@@ -1257,17 +1257,33 @@ document.addEventListener('DOMContentLoaded', () => {
         mouseDownOnOverlay = false;
     });
 
-    document.addEventListener('keydown', function(event) {
-        if (modal.classList.contains('is-visible')) {
-            if (event.key === 'Escape') {
-                hideModal();
-            } else if (event.key === 'ArrowRight') {
-                showNextImage();
-            } else if (event.key === 'ArrowLeft') {
-                showPrevImage();
+    // Listener for zoom with Ctrl/Cmd + Scroll
+    imageContainer.addEventListener('wheel', (e) => {
+        // Only zoom if the modal is visible and the Ctrl or Cmd key is held down
+        if (!modal.classList.contains('is-visible') || !(e.ctrlKey || e.metaKey)) {
+            return;
+        }
+
+        // Prevent the page from scrolling or zooming
+        e.preventDefault();
+
+        // Scrolling up (e.deltaY < 0) zooms in
+        if (e.deltaY < 0) {
+            if (!isZoomed) {
+                isZoomed = true;
+                imageContainer.classList.add('is-zoomed');
             }
         }
-    });
+        // Scrolling down (e.deltaY > 0) zooms out
+        else {
+            if (isZoomed) {
+                isZoomed = false;
+                imageContainer.classList.remove('is-zoomed');
+                // Reset the pan when zooming out
+                modalImg.style.transform = 'translate(0, 0)';
+            }
+        }
+    }, { passive: false }); // This is required to ensure preventDefault() works
     
     // Listener for zoom shortcut (Cmd/Ctrl + Z)
     document.addEventListener('keydown', function(event) {
