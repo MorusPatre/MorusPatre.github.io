@@ -1079,12 +1079,22 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function resetImageTransform() {
         scale = 1;
-        pan = { x: 0, y: 0 };
         isPanning = false;
-        // ensure perfect center for the very first zoom
+
+        // 1. Let flexbox finish centering
+        imageContainer.offsetWidth;
+
+        // 2. Measure the *real* center offset
+        const imgRect = modalImg.getBoundingClientRect();
+        const containerRect = imageContainer.getBoundingClientRect();
+        pan.x = (imgRect.left - containerRect.left) / 1;
+        pan.y = (imgRect.top  - containerRect.top)  / 1;
+
+        // 3. Apply it instantly
         modalImg.style.transition = 'none';
         modalImg.style.transformOrigin = 'center center';
-        modalImg.style.transform = 'scale(1) translate(0px, 0px)';
+        modalImg.style.transform = `scale(1) translate(${pan.x}px, ${pan.y}px)`;
+
         imageContainer.classList.remove('pannable', 'panning');
     }
 
