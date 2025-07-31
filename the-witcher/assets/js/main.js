@@ -1,16 +1,3 @@
-async function downloadImage(url, filename) {
-    try {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
-        const blob = await response.blob();
-        saveAs(blob, filename || 'download');
-    } catch (error) {
-        console.error('Download failed:', error);
-        alert(`Could not download the image. It will open in a new tab for you to save manually.`);
-        window.open(url, '_blank');
-    }
-}
-
 (function($) {
 
     var    $window = $(window),
@@ -29,13 +16,6 @@ async function downloadImage(url, filename) {
             small:    [ '481px',   '736px'  ],
             xsmall:   [ '361px',   '480px'  ],
             xxsmall:  [ null,      '360px'  ]
-        });
-
-    // Play initial animations on page load.
-        $window.on('load', function() {
-            window.setTimeout(function() {
-                $body.removeClass('is-preload');
-            }, 100);
         });
 
     // Fix: Flexbox min-height bug on IE.
@@ -449,8 +429,23 @@ document.addEventListener('DOMContentLoaded', () => {
             searchInput.style.paddingRight = '';
         }
 
-        const searchTerm = simplifySearchText(event.target.value.toLowerCase());
+        const originalQuery = simplifySearchText(event.target.value.toLowerCase());
         const galleryItems = gallery.querySelectorAll('figure');
+
+        // This regex looks for patterns like "season 1", "s1", "e2", "s1e2", etc.
+        const phraseRegex = /\b(s\d+e\d+|season\s*\d+|episode\s*\d+|s\d+|e\d+)\b/g;
+
+        // Pull out all the special phrases (e.g., ["season 1", "episode 2"])
+        const phraseTerms = originalQuery.match(phraseRegex) || [];
+
+        // Get the rest of the query by removing the phrases we just found
+        const remainingText = originalQuery.replace(phraseRegex, '').trim();
+
+        // Split the rest of the query into individual words
+        const wordTerms = remainingText.split(' ').filter(term => term.length > 0);
+
+        // Combine them into the final list of terms to search for
+        const searchTerms = [...phraseTerms, ...wordTerms];
 
         galleryItems.forEach(function(item) {
             const img = item.querySelector('img');
@@ -460,7 +455,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const searchData = img.dataset.search.toLowerCase();
-            if (searchData.includes(searchTerm)) {
+            
+            // Check if ALL terms (both phrases and individual words) are present
+            const isMatch = searchTerms.every(term => searchData.includes(term));
+
+            if (isMatch) {
                 item.style.display = 'flex';
             } else {
                 item.style.display = 'none';
@@ -702,20 +701,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- MouseMove Listener ---
     document.addEventListener('mousemove', (e) => {
         if (!isMarquee) return;
-
-        // NEW: If the mouse moves over the footer, stop the marquee selection
-        if (footer.contains(e.target)) {
-            isMarquee = false;
-            hasDragged = false;
-            marquee.style.visibility = 'hidden';
-            marquee.style.width = '0px';
-            marquee.style.height = '0px';
-            preMarqueeSelectedItems.clear();
-            return;
-        }
         
         e.preventDefault();
         hasDragged = true;
+        document.body.classList.add('is-marquee-dragging');
         
         marquee.style.visibility = 'visible';
         
@@ -723,7 +712,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let rawX = e.clientX - galleryRect.left;
         let rawY = e.clientY - galleryRect.top;
         let currentX = Math.max(0, Math.min(rawX, galleryRect.width));
-        let currentY = Math.max(0, Math.min(rawY, galleryRect.height));
+        let currentY = rawY;
         
         const marqueeRect = {
             x: Math.min(startPos.x, currentX),
@@ -772,6 +761,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * UPDATED endDragAction function
      */
     const endDragAction = (e) => {
+        document.body.classList.remove('is-marquee-dragging');
         if (!isMarquee) return;
     
         if (!hasDragged) {
@@ -922,7 +912,34 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    itemContextMenu.addEventListener('click', (e) => {
+    // =================================================================
+    // START: UNIFIED DOWNLOAD LOGIC
+    // =================================================================
+    
+    /**
+     * Asynchronously fetches an image from a URL and returns its blob data.
+     * @param {string} url - The URL of the image to fetch.
+     * @returns {Promise<Blob>} A promise that resolves with the image blob.
+     */
+    async function fetchImageBlob(url) {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status} for URL: ${url}`);
+        }
+        return response.blob();
+    }
+
+    /**
+     * Triggers a browser download for a given blob and filename.
+     * @param {Blob} blob - The data blob to be downloaded.
+     * @param {string} filename - The desired filename for the download.
+     */
+    function triggerDownload(blob, filename) {
+        // This function uses FileSaver.js (saveAs)
+        saveAs(blob, filename);
+    }
+
+    itemContextMenu.addEventListener('click', async (e) => {
         const targetId = e.target.id;
         if (!targetId) return;
 
@@ -946,55 +963,48 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             }
             case 'context-menu-save': {
-                if (selectedItems.size > 1) {
-                    // ZIP DOWNLOAD LOGIC
-                    document.body.style.cursor = 'wait';
-                    const zip = new JSZip();
-                    const promises = [];
+                try {
+                    if (selectedItems.size > 1) {
+                        // MULTIPLE IMAGES (ZIP)
+                        const zip = new JSZip();
+                        const promises = [];
 
-                    for (const figure of selectedItems) {
-                        const itemImg = figure.querySelector('img');
-                        const itemSrc = itemImg.dataset.fullsrc;
-                        const itemFilename = figure.querySelector('figcaption').childNodes[0].nodeValue.trim();
-                        
-                        if (itemSrc) {
-                            const promise = fetch(itemSrc)
-                                .then(response => {
-                                    if (!response.ok) throw new Error(`Fetch failed for ${itemFilename}: ${response.statusText}`);
-                                    return response.blob();
-                                })
-                                .then(blob => {
-                                    if (blob) zip.file(itemFilename, blob);
-                                })
-                                .catch(error => {
-                                    console.error(error);
-                                    alert(`Could not download: ${itemFilename}\nReason: ${error.message}`);
-                                });
+                        for (const item of selectedItems) {
+                            const img = item.querySelector('img');
+                            const url = img.dataset.fullsrc;
+                            let filename = img.dataset.filename || url.split('/').pop();
+
+                            const promise = fetchImageBlob(url).then(blob => {
+                                zip.file(filename, blob);
+                            }).catch(err => {
+                                console.error(`Failed to fetch ${filename}:`, err);
+                            });
                             promises.push(promise);
                         }
-                    }
 
-                    Promise.all(promises).then(() => {
-                        zip.generateAsync({ type: "blob" }).then(content => {
-                            if (typeof saveAs !== 'undefined') {
-                                saveAs(content, "witcher_images.zip");
-                            } else {
-                                console.error("FileSaver.js (saveAs) is not loaded.");
-                            }
-                            document.body.style.cursor = 'default';
-                        }).catch(zipError => {
-                            console.error("Error generating zip file:", zipError);
-                            document.body.style.cursor = 'default';
-                        });
-                    });
-                } else {
-                    // SINGLE IMAGE DOWNLOAD LOGIC
-                    const img = primaryTarget.querySelector('img');
-                    const fullSrc = img.dataset.fullsrc;
-                    const filename = primaryTarget.querySelector('figcaption').childNodes[0].nodeValue.trim();
-                    if (fullSrc && filename) {
-                        downloadImage(fullSrc, filename);
+                        await Promise.all(promises);
+                        const zipBlob = await zip.generateAsync({ type: "blob" });
+                        
+                        // Create dynamic filename
+                        const date = new Date().toISOString().split('T')[0];
+                        const imageCount = selectedItems.size;
+                        const dynamicFilename = `HOTD-Selection_${imageCount}-images_${date}.zip`;
+
+                        triggerDownload(zipBlob, dynamicFilename);
+
+                    } else {
+                        // SINGLE IMAGE
+                        const item = Array.from(selectedItems)[0];
+                        const img = item.querySelector('img');
+                        const url = img.dataset.fullsrc;
+                        let filename = img.dataset.filename || url.split('/').pop();
+                        
+                        const blob = await fetchImageBlob(url);
+                        triggerDownload(blob, filename);
                     }
+                } catch (error) {
+                    console.error("Download failed:", error);
+                    alert("An error occurred while trying to download the file(s). Please check the console for details.");
                 }
                 break;
             }
@@ -1021,7 +1031,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /*
     ==================================================================
-    // START: MODAL LOGIC (MOVED FROM INDEX.HTML)
+    // START: MODAL LOGIC (SECTION WITH CHANGES)
     ==================================================================
     */
     const modal = document.getElementById('image-modal');
@@ -1035,7 +1045,48 @@ document.addEventListener('DOMContentLoaded', () => {
     const nextButton = document.querySelector('.modal-next');
     const imageContainer = document.querySelector('.modal-image-container');
     const infoPanel = document.querySelector('.modal-info-panel');
+    
     let currentImageIndex = -1;
+
+    // NEW: Zoom and Pan State
+    let currentScale = 1;
+    let isPanning = false;
+    let startPanPos = { x: 0, y: 0 };
+    let currentTranslate = { x: 0, y: 0 };
+    const MIN_SCALE = 1.0;
+    const MAX_SCALE = 8.0;
+
+    // A map to get the correct display label for each data key.
+    const KEY_TO_LABEL_MAP = {
+        season: 'Season',
+        episode: 'Episode',
+        cast: 'Cast',
+        crew: 'Crew',
+        castAndCrew: 'Cast & Crew',
+        characters: 'Characters'
+    };
+
+    // The order in which to display the primary data fields.
+    const primaryKeys = ['season', 'episode', 'cast', 'crew', 'castAndCrew', 'characters'];
+
+    // NEW: Helper function to apply CSS transform for zoom and pan
+    function applyTransform() {
+        if (currentScale <= MIN_SCALE) {
+            modalImg.style.transform = 'none';
+            modalImg.style.cursor = 'default';
+        } else {
+            modalImg.style.transform = `translate(${currentTranslate.x}px, ${currentTranslate.y}px) scale(${currentScale})`;
+            modalImg.style.cursor = isPanning ? 'grabbing' : 'grab';
+        }
+    }
+
+    // NEW: Helper function to reset the zoom and pan state
+    function resetZoomAndPan() {
+        currentScale = 1;
+        isPanning = false;
+        currentTranslate = { x: 0, y: 0 };
+        applyTransform();
+    }
 
     modalContent.addEventListener('mouseenter', () => {
         if (modal.classList.contains('is-visible')) {
@@ -1050,6 +1101,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function showImage(index) {
+        resetZoomAndPan(); // NEW: Reset on new image
         const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
         if (index < 0 || index >= visibleFigures.length) {
             return;
@@ -1058,49 +1110,37 @@ document.addEventListener('DOMContentLoaded', () => {
         const figure = visibleFigures[currentImageIndex];
         const img = figure.querySelector('img');
 
-        const dimensions = img.dataset.dimensions;
-        if (dimensions) {
-            const [width, height] = dimensions.split('x').map(Number);
-            if (width && height) {
-                imageContainer.style.paddingTop = `${(height / width) * 100}%`;
-                imageContainer.style.height = '0';
-            }
-        } else {
-            imageContainer.style.paddingTop = '';
-            imageContainer.style.height = '';
-        }
+        downloadBtn.dataset.fullsrc = img.dataset.fullsrc; // Always store the high-res URL
 
+        // Immediately display the low-resolution thumbnail.
         modalImg.src = img.src;
-        modalImg.alt = img.alt;
-        modalImg.classList.remove('is-loaded');
 
-        modalImg.onload = () => {
-            modalImg.src = img.dataset.fullsrc;
-            modalImg.onload = null;
+        // Load the high-res version in the background.
+        const highResImage = new Image();
+        highResImage.src = img.dataset.fullsrc;
+        highResImage.onload = function() {
+            modalImg.src = highResImage.src;
         };
-
-        modalImg.addEventListener('load', function handler() {
-            modalImg.classList.add('is-loaded');
-            modalImg.removeEventListener('load', handler);
-        });
+        modalImg.alt = img.alt;
+        
         modalFilename.textContent = img.dataset.filename;
 
         let primaryHTML = '<dl class="info-grid">';
         let detailsHTML = '<dl class="info-grid">';
         const dataset = img.dataset;
-        const primaryKeys = ['season', 'episode', 'actors', 'characters'];
-        const handledKeys = ['search', 'fullsrc', 'filename'];
-
+        
         primaryKeys.forEach(key => {
             if (dataset[key] && dataset[key].trim() !== '' && dataset[key].trim() !== '-' && dataset[key].trim() !== '- (-)') {
-                const label = key.charAt(0).toUpperCase() + key.slice(1);
+                const label = KEY_TO_LABEL_MAP[key] || key;
                 primaryHTML += `<div class="info-item"><dt>${label}</dt><dd>${dataset[key]}</dd></div>`;
             }
         });
 
         let hasDetails = false;
+        const handledKeys = ['search', 'fullsrc', 'filename', ...primaryKeys];
+        
         for (const key in dataset) {
-            if (!primaryKeys.includes(key) && !handledKeys.includes(key) && dataset[key] && dataset[key].trim() !== '' && dataset[key].trim() !== '-') {
+            if (!handledKeys.includes(key) && dataset[key] && dataset[key].trim() !== '' && dataset[key].trim() !== '-') {
                 hasDetails = true;
                 let label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
                 let value = dataset[key];
@@ -1121,18 +1161,45 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         modalMetadata.innerHTML = finalHTML;
-        
-        downloadBtn.href = img.dataset.fullsrc;
 
         document.body.classList.add('is-article-visible');
         modal.classList.add('is-visible');
     }
 
-    downloadBtn.addEventListener('click', function(event) {
+    downloadBtn.addEventListener('click', async (event) => {
         event.preventDefault();
-        const fullSrc = modalImg.src;
-        const filename = modalFilename.textContent;
-        downloadImage(fullSrc, filename);
+        event.stopPropagation();
+    
+        const url = event.currentTarget.dataset.fullsrc; // Use the stored high-res URL
+        // Get filename, with a fallback for missing names
+        const filename = modalFilename.textContent || url.split('/').pop();
+    
+        if (!url || !filename) {
+            console.error("Modal download failed: URL or filename not found.");
+            alert("Could not download the image because its data is missing.");
+            return;
+        }
+    
+        const buttonText = downloadBtn.textContent;
+        try {
+            // Provide visual feedback to the user
+            downloadBtn.textContent = 'Downloading...';
+            downloadBtn.disabled = true;
+    
+            // Fetch the image blob and trigger the download
+            const blob = await fetchImageBlob(url);
+            triggerDownload(blob, filename);
+    
+        } catch (error) {
+            console.error("Modal download failed:", error);
+            alert("An error occurred while trying to download the image.");
+        } finally {
+            // Restore the button to its original state after a moment
+            setTimeout(() => {
+                downloadBtn.textContent = buttonText;
+                downloadBtn.disabled = false;
+            }, 1000);
+        }
     });
     
     downloadBtn.addEventListener('dragstart', function(event) {
@@ -1162,6 +1229,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function hideModal() {
+        resetZoomAndPan(); // NEW: Reset on close
         document.body.classList.remove('is-article-visible');
         modal.classList.remove('is-visible');
         currentImageIndex = -1;
@@ -1182,6 +1250,124 @@ document.addEventListener('DOMContentLoaded', () => {
     closeModal.addEventListener('click', hideModal);
     prevButton.addEventListener('click', showPrevImage);
     nextButton.addEventListener('click', showNextImage);
+
+    // NEW: Zoom Event Listener
+    imageContainer.addEventListener('wheel', (e) => {
+        if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+
+            const containerRect = imageContainer.getBoundingClientRect();
+            const mouseX = e.clientX - containerRect.left;
+            const mouseY = e.clientY - containerRect.top;
+
+            const oldScale = currentScale;
+            const zoomFactor = 1.1;
+            let newScale;
+
+            if (e.deltaY < 0) { // Zoom in
+                newScale = oldScale * zoomFactor;
+            } else { // Zoom out
+                newScale = oldScale / zoomFactor;
+            }
+
+            currentScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
+
+            if (currentScale <= MIN_SCALE) {
+                resetZoomAndPan();
+                return;
+            }
+
+            const imgPointX = (mouseX - currentTranslate.x) / oldScale;
+            const imgPointY = (mouseY - currentTranslate.y) / oldScale;
+
+            currentTranslate.x = mouseX - imgPointX * currentScale;
+            currentTranslate.y = mouseY - imgPointY * currentScale;
+
+            // Constrain translation after zooming
+            const containerRatio = containerRect.width / containerRect.height;
+            const naturalRatio = modalImg.naturalWidth / modalImg.naturalHeight;
+            let baseWidth, baseHeight;
+
+            if (modalImg.naturalHeight > 0 && modalImg.naturalWidth > 0) {
+                if (containerRatio > naturalRatio) {
+                    baseHeight = containerRect.height;
+                    baseWidth = baseHeight * naturalRatio;
+                } else {
+                    baseWidth = containerRect.width;
+                    baseHeight = baseWidth / naturalRatio;
+                }
+            } else {
+                baseWidth = containerRect.width;
+                baseHeight = containerRect.height;
+            }
+
+            const imgDisplayWidth = baseWidth * currentScale;
+            const imgDisplayHeight = baseHeight * currentScale;
+            const overhangX = Math.max(0, (imgDisplayWidth - containerRect.width) / 2);
+            const overhangY = Math.max(0, (imgDisplayHeight - containerRect.height) / 2);
+
+            currentTranslate.x = Math.max(-overhangX, Math.min(overhangX, currentTranslate.x));
+            currentTranslate.y = Math.max(-overhangY, Math.min(overhangY, currentTranslate.y));
+
+            applyTransform();
+        }
+    });
+
+    // NEW: Pan Event Listeners
+    modalImg.addEventListener('mousedown', (e) => {
+        if (e.button === 0 && currentScale > MIN_SCALE) {
+            e.preventDefault();
+            isPanning = true;
+            startPanPos = {
+                x: e.clientX - currentTranslate.x,
+                y: e.clientY - currentTranslate.y
+            };
+            applyTransform(); // To set cursor to 'grabbing'
+        }
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (isPanning) {
+            e.preventDefault();
+            const rawX = e.clientX - startPanPos.x;
+            const rawY = e.clientY - startPanPos.y;
+
+            const containerRect = imageContainer.getBoundingClientRect();
+            const containerRatio = containerRect.width / containerRect.height;
+            const naturalRatio = modalImg.naturalWidth / modalImg.naturalHeight;
+            let baseWidth, baseHeight;
+
+            if (modalImg.naturalHeight > 0 && modalImg.naturalWidth > 0) {
+                 if (containerRatio > naturalRatio) {
+                    baseHeight = containerRect.height;
+                    baseWidth = baseHeight * naturalRatio;
+                } else {
+                    baseWidth = containerRect.width;
+                    baseHeight = baseWidth / naturalRatio;
+                }
+            } else {
+                baseWidth = containerRect.width;
+                baseHeight = containerRect.height;
+            }
+
+            const imgDisplayWidth = baseWidth * currentScale;
+            const imgDisplayHeight = baseHeight * currentScale;
+            const overhangX = Math.max(0, (imgDisplayWidth - containerRect.width) / 2);
+            const overhangY = Math.max(0, (imgDisplayHeight - containerRect.height) / 2);
+
+            currentTranslate.x = Math.max(-overhangX, Math.min(overhangX, rawX));
+            currentTranslate.y = Math.max(-overhangY, Math.min(overhangY, rawY));
+
+            applyTransform();
+        }
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isPanning) {
+            isPanning = false;
+            applyTransform(); // To set cursor back to 'grab'
+        }
+    });
 
     let mouseDownOnOverlay = false;
 
@@ -1388,4 +1574,179 @@ document.addEventListener('DOMContentLoaded', () => {
             ticking = true; // Set the flag
         }
     });
+});
+
+/*
+==================================================================
+// Autocomplete Search Suggestions Logic
+==================================================================
+*/
+document.addEventListener('galleryLoaded', () => {
+    const searchInput = document.getElementById('search-input');
+    const suggestionsContainer = document.getElementById('suggestions-container');
+    const galleryItems = document.querySelectorAll('#photo-gallery figure img');
+    
+    if (!searchInput || !suggestionsContainer || galleryItems.length === 0) {
+        return;
+    }
+    
+    // Build a unique, sorted list of searchable terms from the JSON data.
+    const searchTerms = new Set();
+    galleryItems.forEach(img => {
+        // MODIFICATION: Check for the new data attributes: cast, crew, and castAndCrew.
+        const peopleSources = [img.dataset.cast, img.dataset.crew, img.dataset.castAndCrew];
+
+        peopleSources.forEach(source => {
+            if (source) { // Check if the source (e.g., img.dataset.cast) exists
+                source.split(',').forEach(term => {
+                    const cleaned = term.trim();
+                    if (cleaned && cleaned.toLowerCase() !== 'red') searchTerms.add(cleaned);
+                });
+            }
+        });
+
+        if (img.dataset.characters) {
+            img.dataset.characters.split(',').forEach(term => {
+                const cleaned = term.trim();
+                if (cleaned) searchTerms.add(cleaned);
+            });
+        }
+    });
+    const sortedSearchTerms = Array.from(searchTerms).sort((a, b) => a.localeCompare(b));
+    
+    let activeSuggestionIndex = -1;
+
+    // Updates and displays the suggestion list based on user input.
+    function updateSuggestions() {
+        const query = searchInput.value.toLowerCase();
+        suggestionsContainer.innerHTML = '';
+        activeSuggestionIndex = -1;
+
+        if (query.length === 0) {
+            suggestionsContainer.style.display = 'none';
+            return;
+        }
+
+        const matches = sortedSearchTerms.filter(term => term.toLowerCase().startsWith(query)).slice(0, 7);
+
+        if (matches.length > 0) {
+            matches.forEach(term => {
+                const item = document.createElement('div');
+                item.className = 'suggestion-item';
+                item.textContent = term;
+                // Use 'mousedown' to prevent the input's 'blur' event from hiding the suggestions before the click registers.
+                item.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    selectSuggestion(term);
+                });
+                suggestionsContainer.appendChild(item);
+            });
+            suggestionsContainer.style.display = 'block';
+        } else {
+            suggestionsContainer.style.display = 'none';
+        }
+    }
+
+    // Handles the selection of a suggestion from the list.
+    function selectSuggestion(value) {
+        searchInput.value = value;
+        suggestionsContainer.style.display = 'none';
+        // Manually trigger the original 'keyup' event to perform the search.
+        searchInput.dispatchEvent(new Event('keyup', { bubbles: true }));
+    }
+    
+    // Manages the 'active' class for keyboard navigation.
+    function updateActiveSuggestion(items) {
+        items.forEach((item, index) => {
+            if (index === activeSuggestionIndex) {
+                item.classList.add('active');
+                item.scrollIntoView({ block: 'nearest' });
+            } else {
+                item.classList.remove('active');
+            }
+        });
+    }
+
+    // --- Event Listeners ---
+    
+    // Update suggestions on every input change.
+    searchInput.addEventListener('input', updateSuggestions);
+
+    // Handle keyboard navigation (arrows, Enter, Escape).
+    searchInput.addEventListener('keydown', (e) => {
+        const items = suggestionsContainer.querySelectorAll('.suggestion-item');
+        if (items.length === 0) return;
+
+        switch (e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                if (activeSuggestionIndex < items.length - 1) {
+                    activeSuggestionIndex++;
+                    updateActiveSuggestion(items);
+                }
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                if (activeSuggestionIndex > 0) {
+                    activeSuggestionIndex--;
+                    updateActiveSuggestion(items);
+                }
+                break;
+            case 'Enter':
+                if (activeSuggestionIndex > -1) {
+                    e.preventDefault();
+                    selectSuggestion(items[activeSuggestionIndex].textContent);
+                }
+                break;
+            case 'Escape':
+                suggestionsContainer.style.display = 'none';
+                break;
+        }
+    });
+
+    // Hide the suggestions when clicking anywhere else on the page.
+    document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+            suggestionsContainer.style.display = 'none';
+        }
+    });
+});
+
+document.addEventListener('keydown', (e) => {
+    // Check for Ctrl+C or Command+C
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+        const gallery = document.getElementById('photo-gallery');
+        const searchInput = document.getElementById('search-input');
+        const modal = document.getElementById('image-modal');
+
+        // Ignore if the user is focused on the search input or if the modal is visible
+        if (document.activeElement === searchInput || (modal && modal.classList.contains('is-visible'))) {
+            return;
+        }
+
+        const selectedFigures = gallery.querySelectorAll('figure.selected');
+
+        if (selectedFigures.length > 0) {
+            // Prevent the browser's default copy behavior
+            e.preventDefault();
+
+            // Create an array of filenames from the selected figures
+            const filenames = Array.from(selectedFigures).map(figure => {
+                const img = figure.querySelector('img');
+                return img ? img.dataset.filename : '';
+            }).filter(name => name); // Filter out any empty or undefined names
+
+            if (filenames.length > 0) {
+                // Join the filenames with a single space for pasting into the search bar
+                const textToCopy = filenames.join(' ');
+
+                // Use the modern Clipboard API to write the text
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    console.log(`${filenames.length} filenames copied to clipboard.`);
+                }).catch(err => {
+                    console.error('Could not copy filenames to clipboard: ', err);
+                });
+            }
+        }
+    }
 });
