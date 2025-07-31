@@ -1046,10 +1046,54 @@ document.addEventListener('DOMContentLoaded', () => {
     const imageContainer = document.querySelector('.modal-image-container');
     const infoPanel = document.querySelector('.modal-info-panel');
     let currentImageIndex = -1;
+    // --- Zoom and Pan State ---
     let scale = 1;
-    let pan = { x: 0, y: 0 };
+    let translateX = 0;
+    let translateY = 0;
     let isPanning = false;
     let panStart = { x: 0, y: 0 };
+    
+    /**
+     * Resets the zoom and pan state of the modal image.
+     */
+    function resetZoom() {
+        scale = 1;
+        translateX = 0;
+        translateY = 0;
+        isPanning = false;
+        modalImg.style.transform = 'scale(1) translate(0px, 0px)';
+        modalImg.style.cursor = 'default';
+    }
+
+    /**
+     * Clamps the translation values to keep the zoomed image within the container
+     * bounds and applies the final transform style.
+     */
+    function clampAndApplyTransform() {
+        const rect = imageContainer.getBoundingClientRect();
+        // Calculate the maximum distance we can pan in any direction
+        const maxTx = Math.max(0, (rect.width * scale - rect.width) / 2);
+        const maxTy = Math.max(0, (rect.height * scale - rect.height) / 2);
+
+        // Clamp translation values
+        translateX = Math.max(-maxTx, Math.min(maxTx, translateX));
+        translateY = Math.max(-maxTy, Math.min(maxTy, translateY));
+
+        // When scale is 1, force translation to 0
+        if (scale === 1) {
+            translateX = 0;
+            translateY = 0;
+        }
+
+        modalImg.style.transform = `scale(${scale}) translate(${translateX}px, ${translateY}px)`;
+        
+        // Update cursor based on the current state
+        if (scale > 1) {
+            modalImg.style.cursor = isPanning ? 'grabbing' : 'grab';
+        } else {
+            modalImg.style.cursor = 'default';
+        }
+    }
 
     // A map to get the correct display label for each data key.
     const KEY_TO_LABEL_MAP = {
@@ -1076,17 +1120,8 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.style.overflow = '';
         }
     });
-    
-    function resetImageTransform() {
-        scale = 1;
-        pan = { x: 0, y: 0 };
-        isPanning = false;
-        modalImg.style.transform = 'scale(1) translate(0px, 0px)';
-        imageContainer.classList.remove('pannable', 'panning');
-    }
 
     function showImage(index) {
-        resetImageTransform();
         const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
         if (index < 0 || index >= visibleFigures.length) {
             return;
@@ -1146,6 +1181,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         modalMetadata.innerHTML = finalHTML;
+        
+        resetZoom();
 
         document.body.classList.add('is-article-visible');
         modal.classList.add('is-visible');
@@ -1190,105 +1227,6 @@ document.addEventListener('DOMContentLoaded', () => {
     downloadBtn.addEventListener('dragstart', function(event) {
         event.preventDefault();
     });
-    
-    function updateTransform(applyTransition = false) {
-        // Clamp panning to keep the image within the container view
-        const rect = modalImg.getBoundingClientRect();
-        const containerRect = imageContainer.getBoundingClientRect();
-
-        const maxPanX = Math.max(0, (rect.width - containerRect.width) / 2 / scale);
-        const maxPanY = Math.max(0, (rect.height - containerRect.height) / 2 / scale);
-
-        pan.x = Math.max(-maxPanX, Math.min(maxPanX, pan.x));
-        pan.y = Math.max(-maxPanY, Math.min(maxPanY, pan.y));
-
-        // Apply transform
-        modalImg.style.transition = applyTransition ? 'transform 0.2s ease-out' : 'none';
-        modalImg.style.transform = `scale(${scale}) translate(${pan.x}px, ${pan.y}px)`;
-
-        // Add or remove the 'pannable' class for the cursor
-        if (scale > 1) {
-            imageContainer.classList.add('pannable');
-        } else {
-            imageContainer.classList.remove('pannable');
-        }
-    }
-    
-    imageContainer.addEventListener('wheel', (e) => {
-        // --- ZOOM with Ctrl/Cmd + Scroll ---
-        if (e.ctrlKey || e.metaKey) {
-            e.preventDefault();
-            e.stopPropagation();
-
-            const rect = imageContainer.getBoundingClientRect();
-            // Calculate mouse position relative to the container's center
-            const mouseX = e.clientX - rect.left - (rect.width / 2);
-            const mouseY = e.clientY - rect.top - (rect.height / 2);
-
-            const oldScale = scale;
-            
-            // Adjust zoom sensitivity
-            const delta = -e.deltaY * 0.002;
-            scale = Math.max(1, Math.min(scale + delta, 15));
-
-            // If scale is at its boundary and doesn't change, do nothing
-            if (scale === oldScale) return;
-
-            // **THE FINAL FIX for zoom centering**
-            // This calculates the necessary pan adjustment to keep the point under the cursor stationary.
-            const scaleRatio = 1 - (scale / oldScale);
-            pan.x += (mouseX - pan.x) * scaleRatio;
-            pan.y += (mouseY - pan.y) * scaleRatio;
-            
-            updateTransform();
-        }
-        // --- PAN with Scroll or Shift+Scroll ---
-        else if (scale > 1) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const scrollAmount = 1; // Adjust sensitivity
-            if (e.shiftKey) {
-                pan.x -= (e.deltaY > 0 ? scrollAmount : -scrollAmount) * 20; // Horizontal
-            } else {
-                pan.y -= (e.deltaY > 0 ? scrollAmount : -scrollAmount) * 20; // Vertical
-            }
-            updateTransform();
-        }
-    }, { passive: false });
-
-    imageContainer.addEventListener('mousedown', (e) => {
-        if (e.button === 0 && scale > 1) { // Primary mouse button
-            e.preventDefault();
-            isPanning = true;
-            panStart.x = e.clientX - pan.x * scale;
-            panStart.y = e.clientY - pan.y * scale;
-            imageContainer.classList.add('panning');
-        }
-    });
-
-    document.addEventListener('mousemove', (e) => {
-        if (isPanning) {
-            e.preventDefault();
-            pan.x = (e.clientX - panStart.x) / scale;
-            pan.y = (e.clientY - panStart.y) / scale;
-            updateTransform();
-        }
-    });
-
-    document.addEventListener('mouseup', () => {
-        if (isPanning) {
-            isPanning = false;
-            imageContainer.classList.remove('panning');
-        }
-    });
-
-    imageContainer.addEventListener('mouseleave', () => {
-         if (isPanning) {
-            isPanning = false;
-            imageContainer.classList.remove('panning');
-        }
-    });
 
     function showNextImage() {
         const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
@@ -1313,7 +1251,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function hideModal() {
-        resetImageTransform();
+        resetZoom();
         document.body.classList.remove('is-article-visible');
         modal.classList.remove('is-visible');
         currentImageIndex = -1;
@@ -1359,6 +1297,76 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (event.key === 'ArrowLeft') {
                 showPrevImage();
             }
+        }
+    });
+    
+    // --- Zoom (Scroll) and Pan (Drag) Logic for Modal Image ---
+
+    imageContainer.addEventListener('wheel', (e) => {
+        // We only zoom if Ctrl (Windows/Linux) or Cmd (Mac) is pressed.
+        if (!e.ctrlKey && !e.metaKey) {
+            return;
+        }
+
+        // Prevent the page from zooming.
+        e.preventDefault();
+
+        const rect = imageContainer.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        const oldScale = scale;
+        const zoomSpeed = 0.1;
+        const delta = e.deltaY > 0 ? -zoomSpeed : zoomSpeed;
+
+        // Update scale, clamped between 1x and 10x.
+        scale = Math.max(1, Math.min(10, scale + delta));
+
+        // If scale is 1, reset completely to fix any floating point errors
+        if (scale === 1) {
+            resetZoom();
+            return;
+        }
+        
+        // If scale hasn't changed (because it was clamped), do nothing.
+        if (scale === oldScale) {
+            return;
+        }
+        
+        // Calculate new translation to keep the point under the cursor stationary.
+        translateX = mouseX - ((mouseX - translateX) / oldScale) * scale;
+        translateY = mouseY - ((mouseY - translateY) / oldScale) * scale;
+        
+        clampAndApplyTransform();
+    });
+
+    modalImg.addEventListener('mousedown', (e) => {
+        // Allow panning only when zoomed in (scale > 1) and with the primary mouse button.
+        if (scale > 1 && e.button === 0) {
+            e.preventDefault();
+            isPanning = true;
+            panStart.x = e.clientX - translateX;
+            panStart.y = e.clientY - translateY;
+            modalImg.style.cursor = 'grabbing'; // Change cursor immediately on hold
+        }
+    });
+
+    // Listen for mouse movement on the whole document for smoother panning.
+    document.addEventListener('mousemove', (e) => {
+        if (isPanning) {
+            e.preventDefault();
+            translateX = e.clientX - panStart.x;
+            translateY = e.clientY - panStart.y;
+            clampAndApplyTransform();
+        }
+    });
+
+    // Listen for mouse up anywhere on the document to end panning.
+    document.addEventListener('mouseup', (e) => {
+        if (isPanning) {
+            isPanning = false;
+            // Update the cursor state via the helper function
+            clampAndApplyTransform();
         }
     });
     
