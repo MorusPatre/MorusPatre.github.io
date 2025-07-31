@@ -1213,7 +1213,7 @@ document.addEventListener('DOMContentLoaded', () => {
             imageContainer.classList.remove('pannable');
         }
     }
-    
+
     imageContainer.addEventListener('wheel', (e) => {
         // --- ZOOM with Ctrl/Cmd + Scroll ---
         if (e.ctrlKey || e.metaKey) {
@@ -1221,17 +1221,20 @@ document.addEventListener('DOMContentLoaded', () => {
             e.stopPropagation();
 
             const rect = imageContainer.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
+            // Calculate mouse position relative to the container's center
+            const mouseX = e.clientX - rect.left - (rect.width / 2);
+            const mouseY = e.clientY - rect.top - (rect.height / 2);
 
             const oldScale = scale;
-            const delta = -e.deltaY * 0.005;
-            scale = Math.max(1, Math.min(scale + delta, 15)); // Clamp scale between 1x and 15x
+            
+            // **FIX 1: Reduced zoom sensitivity**
+            const delta = -e.deltaY * 0.002;
+            scale = Math.max(1, Math.min(scale + delta, 15)); // Clamp scale 1x-15x
 
-            // Adjust pan to keep the point under the cursor stationary
-            pan.x = (pan.x * oldScale - mouseX) * (scale / oldScale) / oldScale + mouseX / scale;
-            pan.y = (pan.y * oldScale - mouseY) * (scale / oldScale) / oldScale + mouseY / scale;
-
+            // **FIX 2: Correctly adjust pan to keep the point under the cursor stationary**
+            pan.x = mouseX * (1 - (scale / oldScale)) + pan.x;
+            pan.y = mouseY * (1 - (scale / oldScale)) + pan.y;
+            
             updateTransform();
         }
         // --- PAN with Scroll or Shift+Scroll ---
