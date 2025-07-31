@@ -1665,6 +1665,7 @@ Modal / Lightbox Styles
     justify-content: center;
     overflow: hidden;
     position: relative; /* Added for absolute positioning of img */
+    backface-visibility: hidden;
 }
 
 .modal-image-container img {
