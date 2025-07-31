@@ -1081,6 +1081,8 @@ document.addEventListener('DOMContentLoaded', () => {
         scale = 1;
         pan = { x: 0, y: 0 };
         isPanning = false;
+        // ensure perfect center for the very first zoom
+        modalImg.style.transformOrigin = 'center center';
         modalImg.style.transform = 'scale(1) translate(0px, 0px)';
         imageContainer.classList.remove('pannable', 'panning');
     }
