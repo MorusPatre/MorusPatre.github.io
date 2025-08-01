@@ -405,6 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let startPos = { x: 0, y: 0 };
     let preMarqueeSelectedItems = new Set();
 
+    let isNativeDragging = false;
     let hasDragged = false;
     let mouseDownItem = null;
 
@@ -669,33 +670,45 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- MouseDown Listener ---
     wrapper.addEventListener('mousedown', (e) => {
-        // MODIFIED: If click starts in search bar, exit to allow native text selection.
+        // If click starts in search bar, exit to allow native text selection.
         if (e.target === searchInput) {
             return;
         }
 
-        // MODIFIED: Check if the event target is within the header or footer
+        // Check if the event target is within the header or footer
         if (e.button !== 0 || header.contains(e.target) || footer.contains(e.target)) {
             isMarquee = false; // Ensure marquee selection is not initiated if starting in header/footer
-            return; 
+            return;
         }
-        
-        if(gallery.contains(e.target) || e.target === gallery) {
+
+        const clickedOnFigure = e.target.closest('figure');
+
+        // If the click starts on a figure, we disable marquee selection for this interaction.
+        if (clickedOnFigure) {
+            isMarquee = false;
+            // We DO NOT call preventDefault to allow dragging.
+        }
+        // Otherwise, if the click is on the gallery background, enable marquee selection.
+        else if (gallery.contains(e.target) || e.target === gallery) {
+            isMarquee = true;
             e.preventDefault();
-            if (searchInput) searchInput.blur(); // MODIFIED: Use variable and check for existence
+            if (searchInput) searchInput.blur();
+        } else {
+            isMarquee = false;
         }
-        
+
         hasDragged = false;
-        isMarquee = true;
-        mouseDownItem = e.target.closest('figure');
-        
-        const galleryRect = gallery.getBoundingClientRect();
-        startPos = {
-            x: e.clientX - galleryRect.left,
-            y: e.clientY - galleryRect.top,
-        };
-        
-        preMarqueeSelectedItems = new Set(selectedItems);
+        mouseDownItem = clickedOnFigure;
+
+        // This part of the logic is only for marquee selection.
+        if (isMarquee) {
+            const galleryRect = gallery.getBoundingClientRect();
+            startPos = {
+                x: e.clientX - galleryRect.left,
+                y: e.clientY - galleryRect.top,
+            };
+            preMarqueeSelectedItems = new Set(selectedItems);
+        }
     });
     
     // --- MouseMove Listener ---
@@ -761,6 +774,12 @@ document.addEventListener('DOMContentLoaded', () => {
      * UPDATED endDragAction function
      */
     const endDragAction = (e) => {
+        // If a native drag operation just ended, do nothing further.
+        // This prevents the browser from interpreting the end of a drag as a click.
+        if (isNativeDragging) {
+            return;
+        }
+
         document.body.classList.remove('is-marquee-dragging');
         if (!isMarquee) return;
     
@@ -848,6 +867,43 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
+    // --- DRAG AND DROP LOGIC ---
+
+    gallery.addEventListener('dragstart', (e) => {
+        const figure = e.target.closest('figure');
+        if (!figure) return;
+
+        // If the user starts dragging an item that isn't selected,
+        // clear the previous selection and select only the dragged item.
+        if (!figure.classList.contains('selected')) {
+            clearSelection();
+            toggleSelection(figure);
+        }
+
+        isNativeDragging = true;
+
+        const img = figure.querySelector('img');
+        if (!img) return;
+
+        const fullSrc = img.dataset.fullsrc;
+        const filename = img.dataset.filename || 'image.jpg';
+        const mimeType = 'image/jpeg';
+
+        // The 'DownloadURL' format allows dragging directly to the desktop/filesystem.
+        const downloadUrl = `${mimeType}:${filename}:${fullSrc}`;
+        e.dataTransfer.setData('DownloadURL', downloadUrl);
+
+        // 'text/uri-list' allows dropping into other browser windows or compatible apps.
+        e.dataTransfer.setData('text/uri-list', fullSrc);
+        e.dataTransfer.setData('text/plain', fullSrc);
+
+        e.dataTransfer.effectAllowed = 'copy';
+    });
+
+    gallery.addEventListener('dragend', (e) => {
+        isNativeDragging = false;
+    });
+
     /**
      * SELECT ALL FUNCTIONALITY
      */
