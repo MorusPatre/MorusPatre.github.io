@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(galleryData => {
             
+            // If there are no images, show the footer immediately.
             if (galleryData.length === 0 && footer) {
                 footer.style.opacity = '1';
                 footer.style.pointerEvents = 'auto';
@@ -35,16 +36,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 img.src = item.thumbnail;
                 img.alt = item.alt;
                 img.draggable = true;
-                // This attribute is essential for the browser to access the cross-domain image data for dragging.
-                img.crossOrigin = "anonymous";
-                
                 img.addEventListener('load', () => {
                     figure.classList.add('is-visible');
                     
+                    // When the first image loads, make the footer visible.
                     if (!firstImageLoaded && footer) {
                         footer.style.opacity = '1';
                         footer.style.pointerEvents = 'auto';
-                        firstImageLoaded = true;
+                        firstImageLoaded = true; // Ensure this only runs once
                     }
                 });
 
@@ -67,34 +66,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
 
-                // --- START: MODIFIED DRAG AND DROP LOGIC ---
-                let originalSrc = '';
-
-                // When the drag starts, swap the thumbnail SRC with the high-resolution SRC.
-                img.addEventListener('dragstart', (event) => {
-                    originalSrc = event.target.src;
-                    event.target.src = event.target.dataset.fullsrc;
-                });
-
-                // When the drag ends (no matter how), change the SRC back to the thumbnail.
-                img.addEventListener('dragend', (event) => {
-                    if (originalSrc) {
-                        event.target.src = originalSrc;
-                        originalSrc = ''; // Clear the stored src
-                    }
-                });
-                // --- END: MODIFIED DRAG AND DROP LOGIC ---
-
-
                 const figcaption = document.createElement('figcaption');
                 const filenameSpan = document.createElement('span');
                 filenameSpan.className = 'filename';
-
-                let displayFilename = item.filename;
-                if (!displayFilename || displayFilename.trim() === '') {
-                    displayFilename = item.src.split('/').pop();
-                }
-                filenameSpan.textContent = truncateFilename(displayFilename);
+                filenameSpan.textContent = truncateFilename(item.filename);
                 figcaption.appendChild(filenameSpan);
 
                 const dimensionsSpan = document.createElement('span');
@@ -124,6 +99,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error loading gallery data:', error);
             galleryContainer.innerHTML = 'Error loading gallery. Please check the console.';
             
+            // If the gallery fails to load, still show the footer.
             if (footer) {
                 footer.style.opacity = '1';
                 footer.style.pointerEvents = 'auto';
