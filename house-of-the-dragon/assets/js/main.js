@@ -407,6 +407,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let hasDragged = false;
     let mouseDownItem = null;
+    const DRAG_THRESHOLD = 5;
+    let initialMousePos = { x: 0, y: 0 };
 
     /*
     ==================================================================
@@ -667,43 +669,49 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    // --- MouseDown Listener ---
     wrapper.addEventListener('mousedown', (e) => {
-        // MODIFIED: If click starts in search bar, exit to allow native text selection.
-        if (e.target === searchInput) {
+        if (e.button !== 0 || e.target === searchInput || header.contains(e.target) || footer.contains(e.target)) {
             return;
         }
 
-        // MODIFIED: Check if the event target is within the header or footer
-        if (e.button !== 0 || header.contains(e.target) || footer.contains(e.target)) {
-            isMarquee = false; // Ensure marquee selection is not initiated if starting in header/footer
-            return; 
-        }
-        
-        if(gallery.contains(e.target) || e.target === gallery) {
-            e.preventDefault();
-            if (searchInput) searchInput.blur(); // MODIFIED: Use variable and check for existence
-        }
-        
+        const clickedItem = e.target.closest('figure');
+        initialMousePos = { x: e.clientX, y: e.clientY };
         hasDragged = false;
-        isMarquee = true;
-        mouseDownItem = e.target.closest('figure');
-        
-        const galleryRect = gallery.getBoundingClientRect();
-        startPos = {
-            x: e.clientX - galleryRect.left,
-            y: e.clientY - galleryRect.top,
-        };
-        
-        preMarqueeSelectedItems = new Set(selectedItems);
+
+        if (clickedItem) {
+            isMarquee = false;
+            mouseDownItem = clickedItem;
+        } else if (gallery.contains(e.target)) {
+            e.preventDefault();
+            if (searchInput) searchInput.blur();
+
+            isMarquee = true;
+            mouseDownItem = null;
+
+            const galleryRect = gallery.getBoundingClientRect();
+            startPos = {
+                x: e.clientX - galleryRect.left,
+                y: e.clientY - galleryRect.top,
+            };
+            
+            preMarqueeSelectedItems = new Set(selectedItems);
+        }
     });
     
-    // --- MouseMove Listener ---
     document.addEventListener('mousemove', (e) => {
+        if (!isMarquee && !mouseDownItem) return;
+
+        if (!hasDragged) {
+            const dx = Math.abs(e.clientX - initialMousePos.x);
+            const dy = Math.abs(e.clientY - initialMousePos.y);
+            if (dx > DRAG_THRESHOLD || dy > DRAG_THRESHOLD) {
+                hasDragged = true;
+            }
+        }
+        
         if (!isMarquee) return;
         
         e.preventDefault();
-        hasDragged = true;
         document.body.classList.add('is-marquee-dragging');
         
         marquee.style.visibility = 'visible';
@@ -757,21 +765,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    /**
-     * UPDATED endDragAction function
-     */
     const endDragAction = (e) => {
         document.body.classList.remove('is-marquee-dragging');
-        if (!isMarquee) return;
     
-        if (!hasDragged) {
-            // Logic for a simple click (no drag)
+        if (isMarquee && hasDragged) {
+            // This was a marquee drag. Finalize selection based on what's in selectedItems.
+            const itemUnderMouse = e.target.closest('figure');
+            if (mouseDownItem) selectionAnchor = mouseDownItem;
+            if (itemUnderMouse && selectedItems.has(itemUnderMouse)) {
+                lastSelectedItem = itemUnderMouse;
+            } else {
+                const visibleSelectedItems = Array.from(items).filter(item => item.style.display !== 'none' && selectedItems.has(item));
+                if (visibleSelectedItems.length > 0) lastSelectedItem = visibleSelectedItems[visibleSelectedItems.length - 1];
+            }
+        } else if (!hasDragged) {
+            // This was a simple click (no drag occurred).
             const isShift = e.shiftKey;
             const isModifier = e.metaKey || e.ctrlKey;
             const clickedOnItem = mouseDownItem;
     
             if (clickedOnItem) {
-                // MODIFIED: Shift+Click now acts like Ctrl+Click
                 if (isShift || isModifier) {
                     toggleSelection(clickedOnItem);
                     if (isSelected(clickedOnItem)) {
@@ -779,7 +792,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         lastSelectedItem = clickedOnItem;
                     }
                 } else {
-                    // MODIFIED: A single click on a lone selected item now deselects it
                     if (!isSelected(clickedOnItem) || selectedItems.size > 1) {
                         clearSelection();
                         toggleSelection(clickedOnItem);
@@ -792,34 +804,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             } else {
-                // Click was on the gallery background
                 if (!isModifier && !isShift) {
                     clearSelection();
                     selectionAnchor = null;
                     lastSelectedItem = null;
                 }
             }
-        } else {
-            // Logic after a marquee drag
-            const itemUnderMouse = e.target.closest('figure');
-            
-            if (mouseDownItem) {
-                selectionAnchor = mouseDownItem;
-            }
-
-            if (itemUnderMouse && selectedItems.has(itemUnderMouse)) {
-                lastSelectedItem = itemUnderMouse;
-            } else {
-                const visibleSelectedItems = Array.from(items)
-                    .filter(item => item.style.display !== 'none' && selectedItems.has(item));
-
-                if (visibleSelectedItems.length > 0) {
-                    lastSelectedItem = visibleSelectedItems[visibleSelectedItems.length - 1];
-                }
-            }
         }
     
-        // Cleanup marquee state
+        // Cleanup state for all scenarios (click, item drag, marquee drag).
         isMarquee = false;
         hasDragged = false;
         mouseDownItem = null;
@@ -830,6 +823,34 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     document.addEventListener('mouseup', endDragAction);
+
+    gallery.addEventListener('dragstart', (e) => {
+        const figure = e.target.closest('figure');
+        
+        if (!figure || !selectedItems.has(figure)) {
+            e.preventDefault();
+            return;
+        }
+
+        const img = figure.querySelector('img');
+        if (!img) {
+            e.preventDefault();
+            return;
+        }
+        
+        const fullSrc = img.dataset.fullsrc;
+        let filename = img.dataset.filename || fullSrc.split('/').pop();
+        const extension = filename.split('.').pop().toLowerCase();
+        let mimeType = 'application/octet-stream';
+        if (extension === 'jpg' || extension === 'jpeg') mimeType = 'image/jpeg';
+        if (extension === 'png') mimeType = 'image/png';
+        if (extension === 'webp') mimeType = 'image/webp';
+        
+        const downloadUrl = `${mimeType}:${filename}:${fullSrc}`;
+        e.dataTransfer.setData('DownloadURL', downloadUrl);
+        e.dataTransfer.setData('text/uri-list', fullSrc);
+        e.dataTransfer.setData('text/plain', fullSrc);
+    });
     
     // --- Mousedown listener for the whole document ---
     document.addEventListener('mousedown', (e) => {
