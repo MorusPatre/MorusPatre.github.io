@@ -35,7 +35,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 img.loading = 'lazy';
                 img.src = item.thumbnail;
                 img.alt = item.alt;
-                img.draggable = true;
+                img.draggable = true; // Make the image draggable
+                
                 img.addEventListener('load', () => {
                     figure.classList.add('is-visible');
                     
@@ -65,13 +66,29 @@ document.addEventListener('DOMContentLoaded', function() {
                         img.dataset[key] = item[key];
                     }
                 }
-                
+
+                // This event listener ensures the high-resolution image is used for drag-and-drop.
                 img.addEventListener('dragstart', (event) => {
                     const highResUrl = event.target.dataset.fullsrc;
-                    if (highResUrl) {
-                        // This tells the browser and other applications to use the high-res URL for the drop.
+                    const filename = event.target.dataset.filename;
+                
+                    if (highResUrl && filename) {
+                        // For compatibility (e.g., dropping into a text editor)
                         event.dataTransfer.setData('text/uri-list', highResUrl);
                         event.dataTransfer.setData('text/plain', highResUrl);
+                
+                        // The special format to trigger a file download on drop
+                        let mimeType = 'image/jpeg'; // Default MIME type
+                        if (filename.endsWith('.png')) {
+                            mimeType = 'image/png';
+                        } else if (filename.endsWith('.webp')) {
+                            mimeType = 'image/webp';
+                        } else if (filename.endsWith('.avif')) {
+                            mimeType = 'image/avif';
+                        }
+                
+                        const downloadData = `${mimeType}:${filename}:${highResUrl}`;
+                        event.dataTransfer.setData('DownloadURL', downloadData);
                     }
                 });
 
