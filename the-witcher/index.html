@@ -1,100 +1,96 @@
-<!DOCTYPE HTML>
+w<!DOCTYPE HTML>
 <html>
     <head>
         <title>The Witcher</title>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-        
+
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
 
         <link rel="stylesheet" href="assets/css/main.css" />
         <noscript><link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
     </head>
-    <body class="is-preload">
-    <div id="loader-wrapper">
+    <body>
+        <div id="loader-wrapper">
             <div class="loader"></div>
         </div>
 
-    
         <div id="wrapper">
-
-                <header id="header">
-                        <div class="logo">
-                            <img src="images/witcher_wolf.png" alt="Witcher Wolf Medallion" draggable="false" />
-                        </div>
-                        <div id="search-container">
-                            <form onsubmit="return false;">
-                                <span class="search-icon"></span>
-                                <input type="text" id="search-input" placeholder="Search by filename, character, actor, episode, season etc...">
-                                <span id="clear-search" class="clear-search-button">&times;</span>
-                            </form>
-                        </div>
-                    </header>
-
-                <div id="photo-gallery">
-                    <div id="marquee"></div>
+            <header id="header">
+                <div class="logo">
+                    <img src="images/witcher_wolf.png" alt="Witcher Wolf Medallion" draggable="false" />
                 </div>
+                <div id="search-container">
+                    <form onsubmit="return false;">
+                        <span class="search-icon"></span>
+                        <input type="text" id="search-input" placeholder="Search by filename, character, actor, episode, season etc..." autocomplete="off">
+                        <span id="clear-search" class="clear-search-button">&times;</span>
+                        <div id="suggestions-container"></div>
+                    </form>
+                </div>
+            </header>
 
-                <footer id="footer">
-                        <p class="copyright">&copy; The Witcher, 2019 Netflix. All Rights Reserved.</p>
-                    </footer>
-
+            <div id="photo-gallery">
+                <div id="marquee"></div>
             </div>
 
-    <div id="bg"></div>
+            <footer id="footer">
+                <p class="copyright">&copy; The Witcher, 2019 Netflix. All Rights Reserved.</p>
+            </footer>
+        </div>
 
-    <script src="assets/js/jquery.min.js"></script>
+        <div id="bg"></div>
+
+        <script src="assets/js/jquery.min.js"></script>
         <script src="assets/js/browser.min.js"></script>
         <script src="assets/js/breakpoints.min.js"></script>
         <script src="assets/js/util.js"></script>
 
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
         <script src="assets/js/main.js"></script>
-
         <script src="assets/js/gallery-loader.js"></script>
 
-    <div id="image-modal" class="modal-overlay">
-                <span class="modal-close">&times;</span>
-                <span class="modal-prev">&#10094;</span>
-                <span class="modal-next">&#10095;</span>
-                <div class="modal-content">
-                    <div class="modal-image-container">
-                        <img id="modal-img" src="" alt="Enlarged image">
-                    </div>
-                    <div class="modal-info-panel">
-                        <div class="info-content">
-                            <h3 id="modal-filename"></h3>
-                            <div id="modal-metadata">
-                            </div>
-                        </div>
-                        <a id="modal-download-btn" class="button download-btn" download><i class="fas fa-download"></i> Download</a>
-                    </div>
+        <div id="image-modal" class="modal-overlay">
+            <span class="modal-close">&times;</span>
+            <span class="modal-prev">&#10094;</span>
+            <span class="modal-next">&#10095;</span>
+            <div class="modal-content">
+                <div class="modal-image-container">
+                    <img id="modal-img" src="" alt="Enlarged image">
                 </div>
+                <div class="modal-info-panel">
+                    <div class="info-content">
+                        <h3 id="modal-filename"></h3>
+                        <div id="modal-metadata">
+                        </div>
+                    </div>
+                    <a id="modal-download-btn" class="button download-btn" download><i class="fas fa-download"></i> Download</a>
+                </div>
+            </div>
         </div>
 
-    <div id="custom-context-menu" class="context-menu">
-                <ul>
-                    <li id="context-menu-open">Open</li>
-                    <li id="context-menu-open-tab">Open Image in New Tab</li>
-                    <li class="separator"></li>
-                    <li id="context-menu-save">Save Image to "Downloads"</li>
-                </ul>
+        <div id="custom-context-menu" class="context-menu">
+            <ul>
+                <li id="context-menu-open">Open</li>
+                <li id="context-menu-open-tab">Open Image in New Tab</li>
+                <li class="separator"></li>
+                <li id="context-menu-save">Save Image to "Downloads"</li>
+            </ul>
         </div>
 
-    <div id="gallery-context-menu" class="context-menu">
-                <ul>
-                    <li id="gallery-context-add">Add Image</li>
-                    <li class="separator"></li>
-                    <li id="gallery-context-sort">Sort By</li>
-                    <li id="gallery-context-view">Show View Options</li>
-                </ul>
+        <div id="gallery-context-menu" class="context-menu">
+            <ul>
+                <li id="gallery-context-add">Add Image</li>
+                <li class="separator"></li>
+                <li id="gallery-context-sort">Sort By</li>
+                <li id="gallery-context-view">Show View Options</li>
+            </ul>
         </div>
 
-    <div id="custom-scrollbar-track">
+        <div id="custom-scrollbar-track">
             <div id="custom-scrollbar-thumb"></div>
         </div>
-
     </body>
 </html>
