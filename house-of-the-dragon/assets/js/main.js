@@ -698,7 +698,7 @@ document.addEventListener('DOMContentLoaded', () => {
         preMarqueeSelectedItems = new Set(selectedItems);
     });
     
-    // --- MouseMove Listener ---
+/*  // --- MouseMove Listener ---
     document.addEventListener('mousemove', (e) => {
         if (!isMarquee) return;
         
