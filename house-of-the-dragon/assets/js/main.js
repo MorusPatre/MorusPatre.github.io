@@ -866,6 +866,30 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+
+    /**
+     * NEW: Helper function to get MIME type from filename.
+     * @param {string} filename - The filename (e.g., 'image.jpg').
+     * @returns {string} The corresponding MIME type.
+     */
+    function getMimeType(filename) {
+        const extension = filename.split('.').pop().toLowerCase();
+        switch (extension) {
+            case 'jpg':
+            case 'jpeg':
+                return 'image/jpeg';
+            case 'png':
+                return 'image/png';
+            case 'gif':
+                return 'image/gif';
+            case 'webp':
+                return 'image/webp';
+            case 'svg':
+                return 'image/svg+xml';
+            default:
+                return 'application/octet-stream'; // A generic fallback.
+        }
+    }
     
     // --- DRAG AND DROP LOGIC ---
 
@@ -887,7 +911,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const fullSrc = img.dataset.fullsrc;
         const filename = img.dataset.filename || 'image.jpg';
-        const mimeType = 'image/jpeg';
+        
+        // MODIFIED: Dynamically determine the MIME type.
+        const mimeType = getMimeType(filename);
 
         // The 'DownloadURL' format allows dragging directly to the desktop/filesystem.
         const downloadUrl = `${mimeType}:${filename}:${fullSrc}`;
