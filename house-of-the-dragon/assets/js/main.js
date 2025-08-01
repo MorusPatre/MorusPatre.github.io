@@ -669,6 +669,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- MouseDown Listener ---
     wrapper.addEventListener('mousedown', (e) => {
+        if (e.target.tagName.toLowerCase() === 'img') return;
         // MODIFIED: If click starts in search bar, exit to allow native text selection.
         if (e.target === searchInput) {
             return;
@@ -700,7 +701,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- MouseMove Listener ---
     document.addEventListener('mousemove', (e) => {
-        if (!isMarquee) return;
+        if (!isMarquee || document.body.classList.contains('is-dragging-image')) return;
         
         e.preventDefault();
         hasDragged = true;
