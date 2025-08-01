@@ -670,23 +670,28 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     wrapper.addEventListener('mousedown', (e) => {
+        // Ignore right-clicks, and clicks starting in search bar, header, or footer
         if (e.button !== 0 || e.target === searchInput || header.contains(e.target) || footer.contains(e.target)) {
             return;
         }
 
         const clickedItem = e.target.closest('figure');
         initialMousePos = { x: e.clientX, y: e.clientY };
-        hasDragged = false;
+        hasDragged = false; // Reset on every mousedown
 
         if (clickedItem) {
+            // This is a click on a potential draggable item.
+            // We set flags for click-vs-drag detection in mouseup, but disable marquee.
             isMarquee = false;
             mouseDownItem = clickedItem;
+            // We do NOT preventDefault() here, to allow the native dragstart event to fire.
         } else if (gallery.contains(e.target)) {
-            e.preventDefault();
+            // This is a click on the gallery background, so we initiate marquee selection.
+            e.preventDefault(); // Prevent default browser drag/text-selection behavior
             if (searchInput) searchInput.blur();
 
             isMarquee = true;
-            mouseDownItem = null;
+            mouseDownItem = null; // Ensure no item is associated with this action
 
             const galleryRect = gallery.getBoundingClientRect();
             startPos = {
@@ -699,8 +704,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     document.addEventListener('mousemove', (e) => {
-        if (!isMarquee && !mouseDownItem) return;
+        if (!isMarquee && !mouseDownItem) {
+            return; // Not dragging anything relevant to our script
+        }
 
+        // Check if a drag has initiated (moved beyond the threshold)
         if (!hasDragged) {
             const dx = Math.abs(e.clientX - initialMousePos.x);
             const dy = Math.abs(e.clientY - initialMousePos.y);
@@ -709,6 +717,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
+        // If it's not a marquee drag, we're done here.
         if (!isMarquee) return;
         
         e.preventDefault();
@@ -827,9 +836,16 @@ document.addEventListener('DOMContentLoaded', () => {
     gallery.addEventListener('dragstart', (e) => {
         const figure = e.target.closest('figure');
         
-        if (!figure || !selectedItems.has(figure)) {
+        if (!figure) {
             e.preventDefault();
             return;
+        }
+
+        // If the item being dragged is not currently selected,
+        // clear the existing selection and select only this item.
+        if (!selectedItems.has(figure)) {
+            clearSelection();
+            toggleSelection(figure); // This adds the item to the selection
         }
 
         const img = figure.querySelector('img');
@@ -840,14 +856,19 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const fullSrc = img.dataset.fullsrc;
         let filename = img.dataset.filename || fullSrc.split('/').pop();
+        
+        // Guess the MIME type from the file extension for a better drag-out experience
         const extension = filename.split('.').pop().toLowerCase();
-        let mimeType = 'application/octet-stream';
+        let mimeType = 'application/octet-stream'; // A generic fallback
         if (extension === 'jpg' || extension === 'jpeg') mimeType = 'image/jpeg';
         if (extension === 'png') mimeType = 'image/png';
         if (extension === 'webp') mimeType = 'image/webp';
         
+        // This special format is for dragging files out of Chrome/Edge to the desktop
         const downloadUrl = `${mimeType}:${filename}:${fullSrc}`;
         e.dataTransfer.setData('DownloadURL', downloadUrl);
+        
+        // These are standard fallbacks for other browsers and applications
         e.dataTransfer.setData('text/uri-list', fullSrc);
         e.dataTransfer.setData('text/plain', fullSrc);
     });
@@ -1624,3 +1645,34 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
+
+ gallery.addEventListener('dragstart', (e) => {
+     const figure = e.target.closest('figure');
+     // Drag should only work if it starts on a selected item.
+     // This mimics native file system behavior.
+     if (!figure || !selectedItems.has(figure)) {
+         e.preventDefault();
+         return;
+     }
+
+     const img = figure.querySelector('img');
+     if (!img) {
+         e.preventDefault();
+         return;
+     }
+     
+     const fullSrc = img.dataset.fullsrc;
+     const filename = img.dataset.filename || fullSrc.split('/').pop();
+     
+     // The magic sauce for allowing file-like drags out of the browser.
+     // Format: MIME:filename:URL
+     // This is primarily for Chromium-based browsers.
+     const mimeType = 'image/jpeg'; // A sensible default. Could be improved by checking extension.
+     const downloadUrl = `${mimeType}:${filename}:${fullSrc}`;
+
+     e.dataTransfer.setData('DownloadURL', downloadUrl);
+     
+     // Fallback for Firefox and other browsers. This will just drag the link.
+     e.dataTransfer.setData('text/uri-list', fullSrc);
+     e.dataTransfer.setData('text/plain', fullSrc);
+ });
