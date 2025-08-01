@@ -1608,3 +1608,32 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
+
+/* ===== existing code in main copy.js ===== */
+
+document.addEventListener('DOMContentLoaded', () => {
+ …
+});
+
+/* ------------------------------------------------------------------
+AFTER galleryLoaded – override native drag payload
+------------------------------------------------------------------ */
+document.addEventListener('galleryLoaded', () => {
+ const gallery = document.getElementById('photo-gallery');
+ if (!gallery) return;
+
+ gallery.addEventListener('dragstart', e => {
+     const img = e.target;
+     if (img.tagName !== 'IMG') return;
+
+     const fullUrl = img.dataset.fullsrc;
+     if (!fullUrl) return;
+
+     e.dataTransfer.setData('text/uri-list', fullUrl);
+     e.dataTransfer.setData('text/plain', fullUrl);
+
+     const ghost = new Image();
+     ghost.src = fullUrl;
+     e.dataTransfer.setDragImage(ghost, ghost.width / 2, ghost.height / 2);
+ });
+});
