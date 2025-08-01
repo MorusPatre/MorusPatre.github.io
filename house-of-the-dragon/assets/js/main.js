@@ -667,39 +667,34 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    //--- MouseDown Listener ---
+    // --- MouseDown Listener ---
     wrapper.addEventListener('mousedown', (e) => {
-        // Ignore if not the main left mouse button or if the click is inside the header or footer.
-        if (e.button !== 0 || header.contains(e.target) || footer.contains(e.target) || searchInput.contains(e.target)) {
-            isMarquee = false;
+        // MODIFIED: If click starts in search bar, exit to allow native text selection.
+        if (e.target === searchInput) {
             return;
         }
 
-        // Check if the click's target is an image within a figure.
-        const targetImage = e.target.closest('figure') ? e.target.closest('figure').querySelector('img') : null;
-
-        // If the user clicks directly on an image, allow the native browser drag to start.
-        // We do this by returning early and NOT calling e.preventDefault() or setting isMarquee to true.
-        if (targetImage && e.target === targetImage) {
-            isMarquee = false;
-            return;
+        // MODIFIED: Check if the event target is within the header or footer
+        if (e.button !== 0 || header.contains(e.target) || footer.contains(e.target)) {
+            isMarquee = false; // Ensure marquee selection is not initiated if starting in header/footer
+            return; 
         }
-
-        // If the code reaches here, the click was on the gallery background or a figure's empty space.
-        // Now, we can safely start the marquee selection logic.
-        e.preventDefault();
-        if (searchInput) searchInput.blur();
-
+        
+        if(gallery.contains(e.target) || e.target === gallery) {
+            e.preventDefault();
+            if (searchInput) searchInput.blur(); // MODIFIED: Use variable and check for existence
+        }
+        
         hasDragged = false;
         isMarquee = true;
         mouseDownItem = e.target.closest('figure');
-
+        
         const galleryRect = gallery.getBoundingClientRect();
         startPos = {
             x: e.clientX - galleryRect.left,
             y: e.clientY - galleryRect.top,
         };
-
+        
         preMarqueeSelectedItems = new Set(selectedItems);
     });
     
@@ -1608,48 +1603,3 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
-
-/* ===== existing code in main copy.js ===== */
-
-document.addEventListener('DOMContentLoaded', () => {
- …
-});
-
- /* ------------------------------------------------------------------
-    Force drag of full-resolution image instead of thumbnail
- ------------------------------------------------------------------ */
- document.addEventListener('galleryLoaded', () => {
-     const gallery = document.getElementById('photo-gallery');
-     if (!gallery) return;
-
-     gallery.addEventListener('dragstart', e => {
-         const img = e.target;
-         if (img.tagName !== 'IMG') return;
-
-         const fullUrl = img.dataset.fullsrc;
-         if (!fullUrl) return;
-
-         /* 1. Prevent the default thumbnail drag */
-         e.preventDefault();
-
-         /* 2. Fetch the high-res blob asynchronously and push it into the drag */
-         fetch(fullUrl)
-             .then(r => r.blob())
-             .then(blob => {
-                 const file = new File([blob], img.dataset.filename || 'image', { type: blob.type });
-                 const dt = new DataTransfer();
-                 dt.items.add(file);
-
-                 /* 3. Replace the native dataTransfer object with ours */
-                 e.dataTransfer.items.clear();
-                 for (let i = 0; i < dt.items.length; i++) {
-                     e.dataTransfer.items.add(dt.items[i]);
-                 }
-             });
-
-         /* 4. Provide a nicer ghost image */
-         const ghost = new Image();
-         ghost.src = fullUrl;
-         e.dataTransfer.setDragImage(ghost, ghost.width / 2, ghost.height / 2);
-     });
- });
