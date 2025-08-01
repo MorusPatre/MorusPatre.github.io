@@ -393,9 +393,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const header = document.getElementById('header');
     const footer = document.getElementById('footer');
     const gallery = document.getElementById('photo-gallery');
-    const searchInput = document.getElementById('search-input');
-    // **FIX:** Define modal here so it can be used by the mousedown listener below
-    const modal = document.getElementById('image-modal');
+    const searchInput = document.getElementById('search-input'); 
 
     if (!gallery || !wrapper) return;
 
@@ -409,7 +407,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let hasDragged = false;
     let mouseDownItem = null;
-    let clickTimer = null; // Variable to manage the click vs. dblclick timer
 
     /*
     ==================================================================
@@ -768,49 +765,40 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isMarquee) return;
     
         if (!hasDragged) {
-            // This logic correctly distinguishes between a single click and a double click.
-            
-            // Capture the item that was clicked, because mouseDownItem will be cleared before the timeout runs.
-            const itemClickedOn = mouseDownItem;
-
-            // Clear any previously pending single-click action.
-            clearTimeout(clickTimer);
-
-            // Set a new timer. If a double-click event happens, this timer will be cleared.
-            // If it's not cleared, the logic for a single click will run.
-            clickTimer = setTimeout(() => {
-                const isShift = e.shiftKey;
-                const isModifier = e.metaKey || e.ctrlKey;
-        
-                if (itemClickedOn) {
-                    if (isShift || isModifier) {
-                        toggleSelection(itemClickedOn);
-                        if (isSelected(itemClickedOn)) {
-                            selectionAnchor = itemClickedOn;
-                            lastSelectedItem = itemClickedOn;
-                        }
-                    } else {
-                        if (!isSelected(itemClickedOn) || selectedItems.size > 1) {
-                            clearSelection();
-                            toggleSelection(itemClickedOn);
-                            selectionAnchor = itemClickedOn;
-                            lastSelectedItem = itemClickedOn;
-                        } else {
-                            clearSelection();
-                            selectionAnchor = null;
-                            lastSelectedItem = null;
-                        }
+            // Logic for a simple click (no drag)
+            const isShift = e.shiftKey;
+            const isModifier = e.metaKey || e.ctrlKey;
+            const clickedOnItem = mouseDownItem;
+    
+            if (clickedOnItem) {
+                // MODIFIED: Shift+Click now acts like Ctrl+Click
+                if (isShift || isModifier) {
+                    toggleSelection(clickedOnItem);
+                    if (isSelected(clickedOnItem)) {
+                        selectionAnchor = clickedOnItem;
+                        lastSelectedItem = clickedOnItem;
                     }
                 } else {
-                    // Click was on the gallery background
-                    if (!isModifier && !isShift) {
+                    // MODIFIED: A single click on a lone selected item now deselects it
+                    if (!isSelected(clickedOnItem) || selectedItems.size > 1) {
+                        clearSelection();
+                        toggleSelection(clickedOnItem);
+                        selectionAnchor = clickedOnItem;
+                        lastSelectedItem = clickedOnItem;
+                    } else {
                         clearSelection();
                         selectionAnchor = null;
                         lastSelectedItem = null;
                     }
                 }
-            }, 200);
-
+            } else {
+                // Click was on the gallery background
+                if (!isModifier && !isShift) {
+                    clearSelection();
+                    selectionAnchor = null;
+                    lastSelectedItem = null;
+                }
+            }
         } else {
             // Logic after a marquee drag
             const itemUnderMouse = e.target.closest('figure');
@@ -853,8 +841,7 @@ document.addEventListener('DOMContentLoaded', () => {
             galleryMenu.style.display = 'none';
         }
 
-        // **FIX:** Added a check for the modal. Do not clear selection if clicking inside the modal.
-        if (!wrapper.contains(e.target) && !itemMenu.contains(e.target) && !galleryMenu.contains(e.target) && !modal.contains(e.target)) {
+        if (!wrapper.contains(e.target) && !itemMenu.contains(e.target) && !galleryMenu.contains(e.target)) {
             if (!e.metaKey && !e.ctrlKey && !e.shiftKey) {
                 clearSelection();
             }
@@ -1047,6 +1034,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // START: MODAL LOGIC (SECTION WITH CHANGES)
     ==================================================================
     */
+    const modal = document.getElementById('image-modal');
     const modalContent = document.querySelector('.modal-content');
     const modalImg = document.getElementById('modal-img');
     const modalFilename = document.getElementById('modal-filename');
@@ -1203,9 +1191,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     gallery.addEventListener('dblclick', function(event) {
-        // Cancel the pending single-click action. This is the key to preserving the selection.
-        clearTimeout(clickTimer);
-
         const figure = event.target.closest('figure');
         if (!figure) return;
         const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
