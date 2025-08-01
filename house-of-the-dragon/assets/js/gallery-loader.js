@@ -92,20 +92,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 galleryContainer.appendChild(figure);
             });
             
-            // ---- Enable drag-drop of full-res image ----
-            img.draggable = true;
-            img.addEventListener('dragstart', e => {
-                // Fetch the hi-res URL
-                const hiResURL = img.dataset.fullsrc;
-                // Chrome / Firefox / Edge
-                e.dataTransfer.setData('text/uri-list', hiResURL);
-                e.dataTransfer.setData('text/plain',  hiResURL);
-                // Optional: show the hi-res as the drag image
-                const dragImg = new Image();
-                dragImg.src = hiResURL;
-                e.dataTransfer.setDragImage(dragImg, 20, 20);
-            });
-            
             document.dispatchEvent(new CustomEvent('galleryLoaded'));
         })
         .catch(error => {
