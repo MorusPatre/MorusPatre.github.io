@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 img.src = item.thumbnail;
                 img.alt = item.alt;
                 img.draggable = true;
-                // **FIX #1: Add the crossorigin attribute to grant permission**
+                // This attribute is essential for the browser to access the cross-domain image data for dragging.
                 img.crossOrigin = "anonymous";
                 
                 img.addEventListener('load', () => {
@@ -67,38 +67,23 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
 
-                // **FIX #2: The robust drag-and-drop listener**
+                // --- START: MODIFIED DRAG AND DROP LOGIC ---
+                let originalSrc = '';
+
+                // When the drag starts, swap the thumbnail SRC with the high-resolution SRC.
                 img.addEventListener('dragstart', (event) => {
-                    const highResUrl = event.target.dataset.fullsrc;
-                    let filename = event.target.dataset.filename;
-
-                    if (!filename || filename.trim() === '') {
-                        filename = highResUrl.split('/').pop();
-                    }
-                
-                    // Set the standard link format for compatibility
-                    event.dataTransfer.setData('text/uri-list', highResUrl);
-                    event.dataTransfer.setData('text/plain', highResUrl);
-
-                    // Create an invisible helper image for the browser to "drag"
-                    // This triggers the native download behavior with the high-res source
-                    const dragImg = document.createElement('img');
-                    dragImg.src = highResUrl;
-                    dragImg.crossOrigin = "anonymous";
-                    
-                    // Style it to be off-screen
-                    dragImg.style.position = 'absolute';
-                    dragImg.style.top = '-1000px';
-                    document.body.appendChild(dragImg);
-                
-                    // Use the invisible high-res image as the drag ghost
-                    event.dataTransfer.setDragImage(dragImg, 0, 0);
-
-                    // Clean up the helper image after the drag has started
-                    setTimeout(() => {
-                        document.body.removeChild(dragImg);
-                    }, 0);
+                    originalSrc = event.target.src;
+                    event.target.src = event.target.dataset.fullsrc;
                 });
+
+                // When the drag ends (no matter how), change the SRC back to the thumbnail.
+                img.addEventListener('dragend', (event) => {
+                    if (originalSrc) {
+                        event.target.src = originalSrc;
+                        originalSrc = ''; // Clear the stored src
+                    }
+                });
+                // --- END: MODIFIED DRAG AND DROP LOGIC ---
 
 
                 const figcaption = document.createElement('figcaption');
