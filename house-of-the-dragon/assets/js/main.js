@@ -407,10 +407,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let hasDragged = false;
     let mouseDownItem = null;
-
-    // MODIFICATION START: Add a timer to differentiate single and double clicks.
-    let clickTimer = null; 
-    // MODIFICATION END
+    let clickTimer = null; // Variable to manage the click vs. dblclick timer
 
     /*
     ==================================================================
@@ -769,26 +766,34 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isMarquee) return;
     
         if (!hasDragged) {
-            // MODIFICATION START: Defer single-click logic to check for a double-click.
+            // *** CORRECTION START ***
+            // This logic correctly distinguishes between a single click and a double click.
+            
+            // Capture the item that was clicked, because mouseDownItem will be cleared before the timeout runs.
+            const itemClickedOn = mouseDownItem;
+
+            // Clear any previously pending single-click action.
             clearTimeout(clickTimer);
+
+            // Set a new timer. If a double-click event happens, this timer will be cleared.
+            // If it's not cleared, the logic for a single click will run.
             clickTimer = setTimeout(() => {
                 const isShift = e.shiftKey;
                 const isModifier = e.metaKey || e.ctrlKey;
-                const clickedOnItem = mouseDownItem;
         
-                if (clickedOnItem) {
+                if (itemClickedOn) {
                     if (isShift || isModifier) {
-                        toggleSelection(clickedOnItem);
-                        if (isSelected(clickedOnItem)) {
-                            selectionAnchor = clickedOnItem;
-                            lastSelectedItem = clickedOnItem;
+                        toggleSelection(itemClickedOn);
+                        if (isSelected(itemClickedOn)) {
+                            selectionAnchor = itemClickedOn;
+                            lastSelectedItem = itemClickedOn;
                         }
                     } else {
-                        if (!isSelected(clickedOnItem) || selectedItems.size > 1) {
+                        if (!isSelected(itemClickedOn) || selectedItems.size > 1) {
                             clearSelection();
-                            toggleSelection(clickedOnItem);
-                            selectionAnchor = clickedOnItem;
-                            lastSelectedItem = clickedOnItem;
+                            toggleSelection(itemClickedOn);
+                            selectionAnchor = itemClickedOn;
+                            lastSelectedItem = itemClickedOn;
                         } else {
                             clearSelection();
                             selectionAnchor = null;
@@ -803,8 +808,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         lastSelectedItem = null;
                     }
                 }
-            }, 200); // Wait 200ms for a potential double-click
-            // MODIFICATION END
+            }, 200);
+            // *** CORRECTION END ***
+
         } else {
             // Logic after a marquee drag
             const itemUnderMouse = e.target.closest('figure');
@@ -1197,9 +1203,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     gallery.addEventListener('dblclick', function(event) {
-        // MODIFICATION START: Cancel the pending single-click action to preserve selection.
+        // *** CORRECTION START ***
+        // Cancel the pending single-click action. This is the key to preserving the selection.
         clearTimeout(clickTimer);
-        // MODIFICATION END
+        // *** CORRECTION END ***
 
         const figure = event.target.closest('figure');
         if (!figure) return;
