@@ -407,7 +407,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let hasDragged = false;
     let mouseDownItem = null;
-    let isNativeDragging = false; // NEW: Flag for native drag operations
 
     /*
     ==================================================================
@@ -670,45 +669,35 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- MouseDown Listener ---
     wrapper.addEventListener('mousedown', (e) => {
-        // If click starts in search bar, exit to allow native text selection.
+        // MODIFIED: If click starts in search bar, exit to allow native text selection.
         if (e.target === searchInput) {
             return;
         }
-    
-        // Check if the event target is within the header or footer
+
+        // MODIFIED: Check if the event target is within the header or footer
         if (e.button !== 0 || header.contains(e.target) || footer.contains(e.target)) {
             isMarquee = false; // Ensure marquee selection is not initiated if starting in header/footer
             return; 
         }
         
-        const clickedItem = e.target.closest('figure');
-
-        // If the mousedown is on an item, allow default browser behavior (like dragging).
-        // Do NOT start marquee selection.
-        if (clickedItem) {
-            isMarquee = false;
-            hasDragged = false; // Reset drag state for click detection
-            mouseDownItem = clickedItem;
-        } 
-        // If the mousedown is on the gallery background, start marquee selection.
-        else if (gallery.contains(e.target) || e.target === gallery) {
-            e.preventDefault(); // Prevent text selection on the background
-            if (searchInput) searchInput.blur();
-    
-            hasDragged = false;
-            isMarquee = true;
-            mouseDownItem = null; // No item was clicked for marquee
-            
-            const galleryRect = gallery.getBoundingClientRect();
-            startPos = {
-                x: e.clientX - galleryRect.left,
-                y: e.clientY - galleryRect.top,
-            };
-            
-            preMarqueeSelectedItems = new Set(selectedItems);
+        if(gallery.contains(e.target) || e.target === gallery) {
+            e.preventDefault();
+            if (searchInput) searchInput.blur(); // MODIFIED: Use variable and check for existence
         }
+        
+        hasDragged = false;
+        isMarquee = true;
+        mouseDownItem = e.target.closest('figure');
+        
+        const galleryRect = gallery.getBoundingClientRect();
+        startPos = {
+            x: e.clientX - galleryRect.left,
+            y: e.clientY - galleryRect.top,
+        };
+        
+        preMarqueeSelectedItems = new Set(selectedItems);
     });
-
+    
     // --- MouseMove Listener ---
     document.addEventListener('mousemove', (e) => {
         if (!isMarquee) return;
@@ -768,39 +757,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    // NEW: Event listener to handle starting a drag operation
-    gallery.addEventListener('dragstart', (e) => {
-        const figure = e.target.closest('figure');
-        if (!figure) return;
-
-        // Set a flag to indicate a native drag is happening.
-        isNativeDragging = true;
-
-        // Set the dragged data to be the high-resolution image URL.
-        const img = figure.querySelector('img');
-        const highResUrl = img.dataset.fullsrc;
-        if (highResUrl) {
-            e.dataTransfer.setData('text/uri-list', highResUrl);
-            e.dataTransfer.setData('text/plain', highResUrl);
-        }
-    });
-
     /**
      * UPDATED endDragAction function
      */
     const endDragAction = (e) => {
-        // If a native drag just happened, reset the flag and do nothing further.
-        if (isNativeDragging) {
-            isNativeDragging = false;
-            return;
-        }
-
         document.body.classList.remove('is-marquee-dragging');
-        
-        // Allow logic to run for item clicks (where isMarquee is false) or marquee drags.
-        if (!isMarquee && !mouseDownItem) {
-            return;
-        }
+        if (!isMarquee) return;
     
         if (!hasDragged) {
             // Logic for a simple click (no drag)
