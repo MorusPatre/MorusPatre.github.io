@@ -35,6 +35,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 img.src = item.thumbnail;
                 img.alt = item.alt;
                 img.draggable = true;
+                // **FIX #1: Add the crossorigin attribute to grant permission**
+                img.crossOrigin = "anonymous";
                 
                 img.addEventListener('load', () => {
                     figure.classList.add('is-visible');
@@ -65,44 +67,44 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
 
-                // Corrected drag-and-drop listener with fallback for missing filenames
+                // **FIX #2: The robust drag-and-drop listener**
                 img.addEventListener('dragstart', (event) => {
                     const highResUrl = event.target.dataset.fullsrc;
                     let filename = event.target.dataset.filename;
 
-                    // **THIS IS THE FIX:** If filename is missing or blank, extract it from the URL.
                     if (!filename || filename.trim() === '') {
-                        try {
-                            const url = new URL(highResUrl);
-                            filename = url.pathname.split('/').pop();
-                        } catch (e) {
-                            // Fallback in case of a malformed URL
-                            filename = 'downloaded-image.jpg';
-                        }
+                        filename = highResUrl.split('/').pop();
                     }
+                
+                    // Set the standard link format for compatibility
+                    event.dataTransfer.setData('text/uri-list', highResUrl);
+                    event.dataTransfer.setData('text/plain', highResUrl);
 
-                    if (highResUrl && filename) {
-                        event.dataTransfer.setData('text/uri-list', highResUrl);
-                        event.dataTransfer.setData('text/plain', highResUrl);
+                    // Create an invisible helper image for the browser to "drag"
+                    // This triggers the native download behavior with the high-res source
+                    const dragImg = document.createElement('img');
+                    dragImg.src = highResUrl;
+                    dragImg.crossOrigin = "anonymous";
+                    
+                    // Style it to be off-screen
+                    dragImg.style.position = 'absolute';
+                    dragImg.style.top = '-1000px';
+                    document.body.appendChild(dragImg);
+                
+                    // Use the invisible high-res image as the drag ghost
+                    event.dataTransfer.setDragImage(dragImg, 0, 0);
 
-                        let mimeType = 'image/jpeg'; // Default MIME type
-                        if (filename.endsWith('.png')) {
-                            mimeType = 'image/png';
-                        } else if (filename.endsWith('.webp')) {
-                            mimeType = 'image/webp';
-                        } else if (filename.endsWith('.avif')) {
-                            mimeType = 'image/avif';
-                        }
-
-                        const downloadData = `${mimeType}:${filename}:${highResUrl}`;
-                        event.dataTransfer.setData('DownloadURL', downloadData);
-                    }
+                    // Clean up the helper image after the drag has started
+                    setTimeout(() => {
+                        document.body.removeChild(dragImg);
+                    }, 0);
                 });
+
 
                 const figcaption = document.createElement('figcaption');
                 const filenameSpan = document.createElement('span');
                 filenameSpan.className = 'filename';
-                // Use the same logic for the display filename
+
                 let displayFilename = item.filename;
                 if (!displayFilename || displayFilename.trim() === '') {
                     displayFilename = item.src.split('/').pop();
