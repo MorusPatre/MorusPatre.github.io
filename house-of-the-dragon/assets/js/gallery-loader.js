@@ -19,7 +19,6 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(galleryData => {
             
-            // If there are no images, show the footer immediately.
             if (galleryData.length === 0 && footer) {
                 footer.style.opacity = '1';
                 footer.style.pointerEvents = 'auto';
@@ -36,14 +35,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 img.src = item.thumbnail;
                 img.alt = item.alt;
                 img.draggable = true;
+                
                 img.addEventListener('load', () => {
                     figure.classList.add('is-visible');
                     
-                    // When the first image loads, make the footer visible.
                     if (!firstImageLoaded && footer) {
                         footer.style.opacity = '1';
                         footer.style.pointerEvents = 'auto';
-                        firstImageLoaded = true; // Ensure this only runs once
+                        firstImageLoaded = true;
                     }
                 });
 
@@ -66,10 +65,49 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
 
+                // Corrected drag-and-drop listener with fallback for missing filenames
+                img.addEventListener('dragstart', (event) => {
+                    const highResUrl = event.target.dataset.fullsrc;
+                    let filename = event.target.dataset.filename;
+
+                    // **THIS IS THE FIX:** If filename is missing or blank, extract it from the URL.
+                    if (!filename || filename.trim() === '') {
+                        try {
+                            const url = new URL(highResUrl);
+                            filename = url.pathname.split('/').pop();
+                        } catch (e) {
+                            // Fallback in case of a malformed URL
+                            filename = 'downloaded-image.jpg';
+                        }
+                    }
+
+                    if (highResUrl && filename) {
+                        event.dataTransfer.setData('text/uri-list', highResUrl);
+                        event.dataTransfer.setData('text/plain', highResUrl);
+
+                        let mimeType = 'image/jpeg'; // Default MIME type
+                        if (filename.endsWith('.png')) {
+                            mimeType = 'image/png';
+                        } else if (filename.endsWith('.webp')) {
+                            mimeType = 'image/webp';
+                        } else if (filename.endsWith('.avif')) {
+                            mimeType = 'image/avif';
+                        }
+
+                        const downloadData = `${mimeType}:${filename}:${highResUrl}`;
+                        event.dataTransfer.setData('DownloadURL', downloadData);
+                    }
+                });
+
                 const figcaption = document.createElement('figcaption');
                 const filenameSpan = document.createElement('span');
                 filenameSpan.className = 'filename';
-                filenameSpan.textContent = truncateFilename(item.filename);
+                // Use the same logic for the display filename
+                let displayFilename = item.filename;
+                if (!displayFilename || displayFilename.trim() === '') {
+                    displayFilename = item.src.split('/').pop();
+                }
+                filenameSpan.textContent = truncateFilename(displayFilename);
                 figcaption.appendChild(filenameSpan);
 
                 const dimensionsSpan = document.createElement('span');
@@ -99,7 +137,6 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error loading gallery data:', error);
             galleryContainer.innerHTML = 'Error loading gallery. Please check the console.';
             
-            // If the gallery fails to load, still show the footer.
             if (footer) {
                 footer.style.opacity = '1';
                 footer.style.pointerEvents = 'auto';
