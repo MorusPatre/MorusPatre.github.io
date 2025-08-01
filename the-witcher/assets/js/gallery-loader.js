@@ -1,7 +1,9 @@
 document.addEventListener('DOMContentLoaded', function() {
     const jsonPath = 'gallery-data.json';
-    const galleryContainerId = 'photo-gallery'; // Corrected from 'wrapper'
+    const galleryContainerId = 'photo-gallery';
     const galleryContainer = document.getElementById(galleryContainerId);
+    const footer = document.getElementById('footer');
+    let firstImageLoaded = false;
 
     if (!galleryContainer) {
         console.error(`Error: The element with ID '${galleryContainerId}' was not found.`);
@@ -16,40 +18,53 @@ document.addEventListener('DOMContentLoaded', function() {
             return response.json();
         })
         .then(galleryData => {
-            galleryData.forEach(item => {
-                // 1. Create the <figure> element for each grid item
-                const figure = document.createElement('figure');
+            
+            // If there are no images, show the footer immediately.
+            if (galleryData.length === 0 && footer) {
+                footer.style.opacity = '1';
+                footer.style.pointerEvents = 'auto';
+                return;
+            }
 
-                // 2. Create the container for the image
+            galleryData.forEach(item => {
+                const figure = document.createElement('figure');
                 const imageContainer = document.createElement('div');
                 imageContainer.className = 'image-container';
                 
-                // 3. Create the <img> element for the thumbnail
                 const img = document.createElement('img');
                 img.loading = 'lazy';
                 img.src = item.thumbnail;
                 img.alt = item.alt;
                 img.addEventListener('load', () => {
                     figure.classList.add('is-visible');
+                    
+                    // When the first image loads, make the footer visible.
+                    if (!firstImageLoaded && footer) {
+                        footer.style.opacity = '1';
+                        footer.style.pointerEvents = 'auto';
+                        firstImageLoaded = true; // Ensure this only runs once
+                    }
                 });
 
-                // 4. Add all the data attributes needed for the modal and search
                 img.dataset.fullsrc = item.src;
                 img.dataset.filename = item.filename;
                 img.dataset.search = item.search;
-                img.dataset.actors = item.actors;
-                img.dataset.characters = item.characters;
-                img.dataset.size = item.size;
-                img.dataset.dimensions = item.dimensions;
-                img.dataset.season = item.season;
+                
+                if (item.cast) { img.dataset.cast = item.cast; }
+                if (item.crew) { img.dataset.crew = item.crew; }
+                if (item.castAndCrew) { img.dataset.castAndCrew = item.castAndCrew; }
+                if (item.characters) { img.dataset.characters = item.characters; }
+                if (item.size) { img.dataset.size = item.size; }
+                if (item.dimensions) { img.dataset.dimensions = item.dimensions; }
+                if (item.season) { img.dataset.season = item.season; }
                 if (item.episode) { img.dataset.episode = item.episode; }
+                
                 for (const key in item) {
                     if (!img.dataset[key] && key !== 'src' && key !== 'thumbnail' && key !== 'alt') {
                         img.dataset[key] = item[key];
                     }
                 }
 
-                // 5. Create the <figcaption> for the filename and dimensions
                 const figcaption = document.createElement('figcaption');
                 const filenameSpan = document.createElement('span');
                 filenameSpan.className = 'filename';
@@ -71,39 +86,37 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 figcaption.appendChild(dimensionsSpan);
 
-                // 6. Assemble the pieces
-                imageContainer.appendChild(img); // Image goes into its container
-                figure.appendChild(imageContainer); // Image container goes into the figure
-                figure.appendChild(figcaption); // Caption goes into the figure
-
-                // 7. Add the completed figure to the gallery
+                imageContainer.appendChild(img);
+                figure.appendChild(imageContainer);
+                figure.appendChild(figcaption);
                 galleryContainer.appendChild(figure);
             });
             
-            // Send a custom event to let the other scripts know the gallery is ready
             document.dispatchEvent(new CustomEvent('galleryLoaded'));
         })
         .catch(error => {
             console.error('Error loading gallery data:', error);
             galleryContainer.innerHTML = 'Error loading gallery. Please check the console.';
+            
+            // If the gallery fails to load, still show the footer.
+            if (footer) {
+                footer.style.opacity = '1';
+                footer.style.pointerEvents = 'auto';
+            }
         });
 
     function truncateFilename(filename, maxLength = 48) {
-        if (filename.length <= maxLength) {
+        if (!filename || filename.length <= maxLength) {
             return filename;
         }
-
         const extension = filename.slice(filename.lastIndexOf('.'));
         const name = filename.slice(0, filename.lastIndexOf('.'));
-        const remainingLength = maxLength - extension.length - 3; // 3 for '...'
-
+        const remainingLength = maxLength - extension.length - 3;
         if (remainingLength <= 0) {
             return '...' + extension;
         }
-
         const startLength = Math.ceil(remainingLength / 2);
         const endLength = Math.floor(remainingLength / 2);
-
         return `${name.slice(0, startLength)}...${name.slice(name.length - endLength)}${extension}`;
     }
 });
