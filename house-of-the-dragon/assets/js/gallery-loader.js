@@ -28,7 +28,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
             galleryData.forEach(item => {
                 const figure = document.createElement('figure');
-                figure.draggable = true;
                 const imageContainer = document.createElement('div');
                 imageContainer.className = 'image-container';
                 
