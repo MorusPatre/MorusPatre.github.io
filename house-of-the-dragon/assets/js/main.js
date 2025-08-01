@@ -408,6 +408,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let hasDragged = false;
     let mouseDownItem = null;
 
+    // MODIFICATION START: Add a timer to differentiate single and double clicks.
+    let clickTimer = null; 
+    // MODIFICATION END
+
     /*
     ==================================================================
     // START: SEARCH LOGIC (MOVED FROM INDEX.HTML)
@@ -765,40 +769,42 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isMarquee) return;
     
         if (!hasDragged) {
-            // Logic for a simple click (no drag)
-            const isShift = e.shiftKey;
-            const isModifier = e.metaKey || e.ctrlKey;
-            const clickedOnItem = mouseDownItem;
-    
-            if (clickedOnItem) {
-                // MODIFIED: Shift+Click now acts like Ctrl+Click
-                if (isShift || isModifier) {
-                    toggleSelection(clickedOnItem);
-                    if (isSelected(clickedOnItem)) {
-                        selectionAnchor = clickedOnItem;
-                        lastSelectedItem = clickedOnItem;
+            // MODIFICATION START: Defer single-click logic to check for a double-click.
+            clearTimeout(clickTimer);
+            clickTimer = setTimeout(() => {
+                const isShift = e.shiftKey;
+                const isModifier = e.metaKey || e.ctrlKey;
+                const clickedOnItem = mouseDownItem;
+        
+                if (clickedOnItem) {
+                    if (isShift || isModifier) {
+                        toggleSelection(clickedOnItem);
+                        if (isSelected(clickedOnItem)) {
+                            selectionAnchor = clickedOnItem;
+                            lastSelectedItem = clickedOnItem;
+                        }
+                    } else {
+                        if (!isSelected(clickedOnItem) || selectedItems.size > 1) {
+                            clearSelection();
+                            toggleSelection(clickedOnItem);
+                            selectionAnchor = clickedOnItem;
+                            lastSelectedItem = clickedOnItem;
+                        } else {
+                            clearSelection();
+                            selectionAnchor = null;
+                            lastSelectedItem = null;
+                        }
                     }
                 } else {
-                    // MODIFIED: A single click on a lone selected item now deselects it
-                    if (!isSelected(clickedOnItem) || selectedItems.size > 1) {
-                        clearSelection();
-                        toggleSelection(clickedOnItem);
-                        selectionAnchor = clickedOnItem;
-                        lastSelectedItem = clickedOnItem;
-                    } else {
+                    // Click was on the gallery background
+                    if (!isModifier && !isShift) {
                         clearSelection();
                         selectionAnchor = null;
                         lastSelectedItem = null;
                     }
                 }
-            } else {
-                // Click was on the gallery background
-                if (!isModifier && !isShift) {
-                    clearSelection();
-                    selectionAnchor = null;
-                    lastSelectedItem = null;
-                }
-            }
+            }, 200); // Wait 200ms for a potential double-click
+            // MODIFICATION END
         } else {
             // Logic after a marquee drag
             const itemUnderMouse = e.target.closest('figure');
@@ -1191,6 +1197,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     gallery.addEventListener('dblclick', function(event) {
+        // MODIFICATION START: Cancel the pending single-click action to preserve selection.
+        clearTimeout(clickTimer);
+        // MODIFICATION END
+
         const figure = event.target.closest('figure');
         if (!figure) return;
         const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
