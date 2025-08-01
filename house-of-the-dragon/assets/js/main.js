@@ -393,7 +393,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const header = document.getElementById('header');
     const footer = document.getElementById('footer');
     const gallery = document.getElementById('photo-gallery');
-    const searchInput = document.getElementById('search-input'); 
+    const searchInput = document.getElementById('search-input');
+    // **FIX:** Define modal here so it can be used by the mousedown listener below
+    const modal = document.getElementById('image-modal');
 
     if (!gallery || !wrapper) return;
 
@@ -766,7 +768,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isMarquee) return;
     
         if (!hasDragged) {
-            // *** CORRECTION START ***
             // This logic correctly distinguishes between a single click and a double click.
             
             // Capture the item that was clicked, because mouseDownItem will be cleared before the timeout runs.
@@ -809,7 +810,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             }, 200);
-            // *** CORRECTION END ***
 
         } else {
             // Logic after a marquee drag
@@ -853,7 +853,8 @@ document.addEventListener('DOMContentLoaded', () => {
             galleryMenu.style.display = 'none';
         }
 
-        if (!wrapper.contains(e.target) && !itemMenu.contains(e.target) && !galleryMenu.contains(e.target)) {
+        // **FIX:** Added a check for the modal. Do not clear selection if clicking inside the modal.
+        if (!wrapper.contains(e.target) && !itemMenu.contains(e.target) && !galleryMenu.contains(e.target) && !modal.contains(e.target)) {
             if (!e.metaKey && !e.ctrlKey && !e.shiftKey) {
                 clearSelection();
             }
@@ -1046,7 +1047,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // START: MODAL LOGIC (SECTION WITH CHANGES)
     ==================================================================
     */
-    const modal = document.getElementById('image-modal');
     const modalContent = document.querySelector('.modal-content');
     const modalImg = document.getElementById('modal-img');
     const modalFilename = document.getElementById('modal-filename');
@@ -1203,10 +1203,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     gallery.addEventListener('dblclick', function(event) {
-        // *** CORRECTION START ***
         // Cancel the pending single-click action. This is the key to preserving the selection.
         clearTimeout(clickTimer);
-        // *** CORRECTION END ***
 
         const figure = event.target.closest('figure');
         if (!figure) return;
