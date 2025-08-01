@@ -1,5 +1,11 @@
 @import url("https://fonts.googleapis.com/css?family=Source+Sans+Pro:300italic,600italic,300,600");
 
+/*
+    Dimension by HTML5 UP
+    html5up.net | @ajlkn
+    Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
+*/
+
 html, body, div, span, applet, object,
 iframe, h1, h2, h3, h4, h5, h6, p, blockquote,
 pre, a, abbr, acronym, address, big, cite,
@@ -92,6 +98,17 @@ input, select, textarea {
     body {
         background: #1f1b18;
     }
+
+        body.is-preload *, body.is-preload *:before, body.is-preload *:after {
+            -moz-animation: none !important;
+            -webkit-animation: none !important;
+            -ms-animation: none !important;
+            animation: none !important;
+            -moz-transition: none !important;
+            -webkit-transition: none !important;
+            -ms-transition: none !important;
+            transition: none !important;
+        }
 
 /* Type */
 
@@ -1135,6 +1152,10 @@ input, select, textarea {
             filter: blur(0.2rem);
         }
 
+        body.is-preload #bg:before {
+            background-color: #000000;
+        }
+
 /* Wrapper */
 #wrapper {
     display: -moz-flex;
@@ -1183,33 +1204,29 @@ input, select, textarea {
 
     }
 
-#header {
-    width: 100%;
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 10;
-    transition: transform 0.325s ease-in-out, filter 0.325s ease-in-out, opacity 0.325s ease-in-out;
-    height: 2.5rem;
+/* Header */
+ #header {
+     width: 100%;
+     position: fixed;
+     top: 0; /* MODIFIED: Sticks it to the very top of the viewport */
+     left: 0; /* Add left: 0 to span full width */
+     z-index: 10; /* MODIFIED: Ensures it stays on top of all other content */
+     transition: transform 0.325s ease-in-out, filter 0.325s ease-in-out, opacity 0.325s ease-in-out;
+     height: 2.5rem;
 
-    /* === NEW: Background for visibility when scrolling === */
-    background-color: rgba(25, 25, 25, 0.8);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    cursor: default;
-
-    /* Add these lines to disable selection on the header itself */
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-
-    /* These lines center the content inside the header */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 0.3rem;
+     /* === NEW: Background for visibility when scrolling === */
+     background-color: rgba(25, 25, 25, 0.8); /* Semi-transparent background */
+     backdrop-filter: blur(12px); /* Blurs the content scrolling underneath */
+     -webkit-backdrop-filter: blur(12px); /* Adds blur effect for Safari */
+     border-bottom: 1px solid rgba(255, 255, 255, 0.1); /* Adds a subtle separator line */
+     /* NEW: Set cursor to default for the entire header */
+     cursor: default;
+     
+     /* These lines center the content inside the header */
+     display: flex;
+     justify-content: center; /* Horizontally centers */
+     align-items: center;     /* Vertically centers */
+     gap: 0.3rem;             /* Sets space between logo and search */
 }
 
     /* Medallion */
@@ -1406,9 +1423,9 @@ input, select, textarea {
         -ms-user-select: none;
         user-select: none;
         cursor: default;
-        margin-top: auto; /* Push the footer to the bottom */
-        opacity: 0; /* Hide the footer initially */
-        pointer-events: none; /* Prevent interactions while invisible */
+
+        /* ADD THIS LINE to push the footer to the bottom */
+        margin-top: auto;
     }
 
         #footer .copyright {
@@ -1429,6 +1446,10 @@ input, select, textarea {
             -webkit-filter: blur(0.1rem);
             -ms-filter: blur(0.1rem);
             filter: blur(0.1rem);
+            opacity: 0;
+        }
+
+        body.is-preload #footer {
             opacity: 0;
         }
 
@@ -1504,6 +1525,8 @@ Styling for the Finder-Style Photo Gallery
     line-height: 1.4;
     word-break: break-all;
     padding: 0 0.25rem;
+    max-height: 2.8em;
+    overflow: hidden;
     pointer-events: none; /* Makes sure clicks go to the parent figure */
 }
 
@@ -1528,28 +1551,11 @@ Styling for the Finder-Style Photo Gallery
 /* 6. Marquee Selection Box */
 #marquee {
     position: absolute;
-    border: 1px solid rgba(255, 255, 255, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.4); /* MODIFIED: Changed to semi-transparent white */
     background-color: rgba(255, 255, 255, 0.2);
     pointer-events: none;
     visibility: hidden;
-    z-index: 9; /* Changed from 10 to 9 */
-}
-
-/* FINAL FIX: Prevents object-highlighting on the search input during a drag */
-body.is-marquee-dragging #search-input {
-    pointer-events: none;
-    outline: none;
-    -webkit-user-drag: none;
-}
-
-/* FINAL FIX: Globally disables default browser selection during a marquee drag */
-body.is-marquee-dragging,
-body.is-marquee-dragging * {
-    cursor: default !important;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
+    z-index: 10;
 }
 
 /*
@@ -1936,24 +1942,18 @@ html, body {
 
 /* ===== Enhanced Selection Style ===== */
 
-/* Adds a smooth transition to the elements that change during selection */
-#photo-gallery figure img,
-#photo-gallery figure figcaption .filename {
-    transition: background-color 0.2s ease-out, border-color 0.2s ease-out, box-shadow 0.2s ease-out, color 0.2s ease-out, text-shadow 0.2s ease-out;
+/* Adds a smooth transition to the figure and image elements for a less jarring change */
+#photo-gallery figure,
+#photo-gallery figure img {
+    transition: background-color 0.2s ease-out, border-color 0.2s ease-out, box-shadow 0.2s ease-out;
 }
 
-/* Changes the image border to gold and adds a soft glow effect */
+/* Changes the image border to blue and adds a soft glow effect */
 #photo-gallery figure.selected img {
-    border-color: #dbb7a7; /* Gold */
-    box-shadow: 0 0 18px rgba(255, 184, 130, 0.5); /* Gold with 50% opacity */
+    border-color: #E8E7E0; /* A vibrant blue border */
+    box-shadow: 0 0 18px rgba(232, 231, 224, 0.5); /* A light glow */
 }
 
-/* Makes the filename text color and glow match the selected image's border. */
-#photo-gallery figure.selected figcaption .filename {
-    color: #dbb7a7; /* Same color as the selected image border */
-    /* A single shadow with a large blur-radius for a very soft effect. */
-    text-shadow: 0 0 22px rgba(255, 184, 130, 0.6);
-}
 /*
 ==================================================================
 // Lazy Load Image Fade-in
@@ -2019,66 +2019,9 @@ html, body {
 */
 
 ::selection {
-  background-color: rgba(255, 222, 150, 0.3); /* An muted, semi-transparent, gold */
+  background-color: rgba(80, 139, 200, 0.3); /* A muted, semi-transparent blue */
 }
 
 ::-moz-selection { /* Firefox compatibility */
-  background-color: rgba(255, 222, 150, 0.3);
-}
-
-/*
-==================================================================
-// Search Suggestions / Autocomplete
-==================================================================
-*/
-#search-container form {
-    position: relative;
-}
-
-#suggestions-container {
-    display: none;
-    position: absolute;
-    top: calc(100% + 2px);
-    left: 0;
-    width: 100%;
-    background-color: rgba(31, 27, 24, 0.85);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 4px;
-    z-index: 1001;
-    max-height: 280px;
-    overflow-y: auto;
-    overflow-x: hidden;
-}
-
-.suggestion-item {
-    padding: 8px 30px;
-    cursor: default;
-    font-size: 0.65rem;
-    color: #ccc;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    transition: background-color 0.2s ease-in-out;
-}
-
-.suggestion-item:hover,
-.suggestion-item.active {
-    background-color: rgba(255, 255, 255, 0.1);
-    color: #fff;
-}
-
-#suggestions-container::-webkit-scrollbar {
-    width: 8px;
-}
-#suggestions-container::-webkit-scrollbar-track {
-    background: transparent;
-}
-#suggestions-container::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 4px;
-}
-#suggestions-container::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.5);
+  background-color: rgba(80, 139, 200, 0.3);
 }
