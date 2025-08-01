@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 const img = document.createElement('img');
                 img.loading = 'lazy';
+                img.draggable = true;
                 img.src = item.thumbnail;
                 img.alt = item.alt;
                 img.addEventListener('load', () => {
