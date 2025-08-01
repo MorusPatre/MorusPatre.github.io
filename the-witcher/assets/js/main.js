@@ -1045,16 +1045,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const nextButton = document.querySelector('.modal-next');
     const imageContainer = document.querySelector('.modal-image-container');
     const infoPanel = document.querySelector('.modal-info-panel');
-    
     let currentImageIndex = -1;
-
-    // NEW: Zoom and Pan State
-    let currentScale = 1;
-    let isPanning = false;
-    let startPanPos = { x: 0, y: 0 };
-    let currentTranslate = { x: 0, y: 0 };
-    const MIN_SCALE = 1.0;
-    const MAX_SCALE = 8.0;
 
     // A map to get the correct display label for each data key.
     const KEY_TO_LABEL_MAP = {
@@ -1069,24 +1060,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // The order in which to display the primary data fields.
     const primaryKeys = ['season', 'episode', 'cast', 'crew', 'castAndCrew', 'characters'];
 
-    // NEW: Helper function to apply CSS transform for zoom and pan
-    function applyTransform() {
-        if (currentScale <= MIN_SCALE) {
-            modalImg.style.transform = 'none';
-            modalImg.style.cursor = 'default';
-        } else {
-            modalImg.style.transform = `translate(${currentTranslate.x}px, ${currentTranslate.y}px) scale(${currentScale})`;
-            modalImg.style.cursor = isPanning ? 'grabbing' : 'grab';
-        }
-    }
-
-    // NEW: Helper function to reset the zoom and pan state
-    function resetZoomAndPan() {
-        currentScale = 1;
-        isPanning = false;
-        currentTranslate = { x: 0, y: 0 };
-        applyTransform();
-    }
 
     modalContent.addEventListener('mouseenter', () => {
         if (modal.classList.contains('is-visible')) {
@@ -1101,7 +1074,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function showImage(index) {
-        resetZoomAndPan(); // NEW: Reset on new image
         const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
         if (index < 0 || index >= visibleFigures.length) {
             return;
@@ -1229,7 +1201,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function hideModal() {
-        resetZoomAndPan(); // NEW: Reset on close
         document.body.classList.remove('is-article-visible');
         modal.classList.remove('is-visible');
         currentImageIndex = -1;
@@ -1250,124 +1221,6 @@ document.addEventListener('DOMContentLoaded', () => {
     closeModal.addEventListener('click', hideModal);
     prevButton.addEventListener('click', showPrevImage);
     nextButton.addEventListener('click', showNextImage);
-
-    // NEW: Zoom Event Listener
-    imageContainer.addEventListener('wheel', (e) => {
-        if (e.ctrlKey || e.metaKey) {
-            e.preventDefault();
-
-            const containerRect = imageContainer.getBoundingClientRect();
-            const mouseX = e.clientX - containerRect.left;
-            const mouseY = e.clientY - containerRect.top;
-
-            const oldScale = currentScale;
-            const zoomFactor = 1.1;
-            let newScale;
-
-            if (e.deltaY < 0) { // Zoom in
-                newScale = oldScale * zoomFactor;
-            } else { // Zoom out
-                newScale = oldScale / zoomFactor;
-            }
-
-            currentScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
-
-            if (currentScale <= MIN_SCALE) {
-                resetZoomAndPan();
-                return;
-            }
-
-            const imgPointX = (mouseX - currentTranslate.x) / oldScale;
-            const imgPointY = (mouseY - currentTranslate.y) / oldScale;
-
-            currentTranslate.x = mouseX - imgPointX * currentScale;
-            currentTranslate.y = mouseY - imgPointY * currentScale;
-
-            // Constrain translation after zooming
-            const containerRatio = containerRect.width / containerRect.height;
-            const naturalRatio = modalImg.naturalWidth / modalImg.naturalHeight;
-            let baseWidth, baseHeight;
-
-            if (modalImg.naturalHeight > 0 && modalImg.naturalWidth > 0) {
-                if (containerRatio > naturalRatio) {
-                    baseHeight = containerRect.height;
-                    baseWidth = baseHeight * naturalRatio;
-                } else {
-                    baseWidth = containerRect.width;
-                    baseHeight = baseWidth / naturalRatio;
-                }
-            } else {
-                baseWidth = containerRect.width;
-                baseHeight = containerRect.height;
-            }
-
-            const imgDisplayWidth = baseWidth * currentScale;
-            const imgDisplayHeight = baseHeight * currentScale;
-            const overhangX = Math.max(0, (imgDisplayWidth - containerRect.width) / 2);
-            const overhangY = Math.max(0, (imgDisplayHeight - containerRect.height) / 2);
-
-            currentTranslate.x = Math.max(-overhangX, Math.min(overhangX, currentTranslate.x));
-            currentTranslate.y = Math.max(-overhangY, Math.min(overhangY, currentTranslate.y));
-
-            applyTransform();
-        }
-    });
-
-    // NEW: Pan Event Listeners
-    modalImg.addEventListener('mousedown', (e) => {
-        if (e.button === 0 && currentScale > MIN_SCALE) {
-            e.preventDefault();
-            isPanning = true;
-            startPanPos = {
-                x: e.clientX - currentTranslate.x,
-                y: e.clientY - currentTranslate.y
-            };
-            applyTransform(); // To set cursor to 'grabbing'
-        }
-    });
-
-    document.addEventListener('mousemove', (e) => {
-        if (isPanning) {
-            e.preventDefault();
-            const rawX = e.clientX - startPanPos.x;
-            const rawY = e.clientY - startPanPos.y;
-
-            const containerRect = imageContainer.getBoundingClientRect();
-            const containerRatio = containerRect.width / containerRect.height;
-            const naturalRatio = modalImg.naturalWidth / modalImg.naturalHeight;
-            let baseWidth, baseHeight;
-
-            if (modalImg.naturalHeight > 0 && modalImg.naturalWidth > 0) {
-                 if (containerRatio > naturalRatio) {
-                    baseHeight = containerRect.height;
-                    baseWidth = baseHeight * naturalRatio;
-                } else {
-                    baseWidth = containerRect.width;
-                    baseHeight = baseWidth / naturalRatio;
-                }
-            } else {
-                baseWidth = containerRect.width;
-                baseHeight = containerRect.height;
-            }
-
-            const imgDisplayWidth = baseWidth * currentScale;
-            const imgDisplayHeight = baseHeight * currentScale;
-            const overhangX = Math.max(0, (imgDisplayWidth - containerRect.width) / 2);
-            const overhangY = Math.max(0, (imgDisplayHeight - containerRect.height) / 2);
-
-            currentTranslate.x = Math.max(-overhangX, Math.min(overhangX, rawX));
-            currentTranslate.y = Math.max(-overhangY, Math.min(overhangY, rawY));
-
-            applyTransform();
-        }
-    });
-
-    document.addEventListener('mouseup', () => {
-        if (isPanning) {
-            isPanning = false;
-            applyTransform(); // To set cursor back to 'grab'
-        }
-    });
 
     let mouseDownOnOverlay = false;
 
