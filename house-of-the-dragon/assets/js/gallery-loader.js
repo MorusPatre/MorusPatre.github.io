@@ -19,7 +19,6 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(galleryData => {
             
-            // If there are no images, show the footer immediately.
             if (galleryData.length === 0 && footer) {
                 footer.style.opacity = '1';
                 footer.style.pointerEvents = 'auto';
@@ -35,16 +34,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 img.loading = 'lazy';
                 img.src = item.thumbnail;
                 img.alt = item.alt;
-                img.draggable = true; // Make the image draggable
+                img.draggable = true;
                 
                 img.addEventListener('load', () => {
                     figure.classList.add('is-visible');
                     
-                    // When the first image loads, make the footer visible.
                     if (!firstImageLoaded && footer) {
                         footer.style.opacity = '1';
                         footer.style.pointerEvents = 'auto';
-                        firstImageLoaded = true; // Ensure this only runs once
+                        firstImageLoaded = true;
                     }
                 });
 
@@ -67,17 +65,26 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
 
-                // This event listener ensures the high-resolution image is used for drag-and-drop.
+                // Corrected drag-and-drop listener with fallback for missing filenames
                 img.addEventListener('dragstart', (event) => {
                     const highResUrl = event.target.dataset.fullsrc;
-                    const filename = event.target.dataset.filename;
-                
+                    let filename = event.target.dataset.filename;
+
+                    // **THIS IS THE FIX:** If filename is missing or blank, extract it from the URL.
+                    if (!filename || filename.trim() === '') {
+                        try {
+                            const url = new URL(highResUrl);
+                            filename = url.pathname.split('/').pop();
+                        } catch (e) {
+                            // Fallback in case of a malformed URL
+                            filename = 'downloaded-image.jpg';
+                        }
+                    }
+
                     if (highResUrl && filename) {
-                        // For compatibility (e.g., dropping into a text editor)
                         event.dataTransfer.setData('text/uri-list', highResUrl);
                         event.dataTransfer.setData('text/plain', highResUrl);
-                
-                        // The special format to trigger a file download on drop
+
                         let mimeType = 'image/jpeg'; // Default MIME type
                         if (filename.endsWith('.png')) {
                             mimeType = 'image/png';
@@ -86,7 +93,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         } else if (filename.endsWith('.avif')) {
                             mimeType = 'image/avif';
                         }
-                
+
                         const downloadData = `${mimeType}:${filename}:${highResUrl}`;
                         event.dataTransfer.setData('DownloadURL', downloadData);
                     }
@@ -95,7 +102,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 const figcaption = document.createElement('figcaption');
                 const filenameSpan = document.createElement('span');
                 filenameSpan.className = 'filename';
-                filenameSpan.textContent = truncateFilename(item.filename);
+                // Use the same logic for the display filename
+                let displayFilename = item.filename;
+                if (!displayFilename || displayFilename.trim() === '') {
+                    displayFilename = item.src.split('/').pop();
+                }
+                filenameSpan.textContent = truncateFilename(displayFilename);
                 figcaption.appendChild(filenameSpan);
 
                 const dimensionsSpan = document.createElement('span');
@@ -125,7 +137,6 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error loading gallery data:', error);
             galleryContainer.innerHTML = 'Error loading gallery. Please check the console.';
             
-            // If the gallery fails to load, still show the footer.
             if (footer) {
                 footer.style.opacity = '1';
                 footer.style.pointerEvents = 'auto';
