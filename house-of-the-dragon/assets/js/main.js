@@ -1615,25 +1615,41 @@ document.addEventListener('DOMContentLoaded', () => {
  …
 });
 
-/* ------------------------------------------------------------------
-AFTER galleryLoaded – override native drag payload
------------------------------------------------------------------- */
-document.addEventListener('galleryLoaded', () => {
- const gallery = document.getElementById('photo-gallery');
- if (!gallery) return;
+ /* ------------------------------------------------------------------
+    Force drag of full-resolution image instead of thumbnail
+ ------------------------------------------------------------------ */
+ document.addEventListener('galleryLoaded', () => {
+     const gallery = document.getElementById('photo-gallery');
+     if (!gallery) return;
 
- gallery.addEventListener('dragstart', e => {
-     const img = e.target;
-     if (img.tagName !== 'IMG') return;
+     gallery.addEventListener('dragstart', e => {
+         const img = e.target;
+         if (img.tagName !== 'IMG') return;
 
-     const fullUrl = img.dataset.fullsrc;
-     if (!fullUrl) return;
+         const fullUrl = img.dataset.fullsrc;
+         if (!fullUrl) return;
 
-     e.dataTransfer.setData('text/uri-list', fullUrl);
-     e.dataTransfer.setData('text/plain', fullUrl);
+         /* 1. Prevent the default thumbnail drag */
+         e.preventDefault();
 
-     const ghost = new Image();
-     ghost.src = fullUrl;
-     e.dataTransfer.setDragImage(ghost, ghost.width / 2, ghost.height / 2);
+         /* 2. Fetch the high-res blob asynchronously and push it into the drag */
+         fetch(fullUrl)
+             .then(r => r.blob())
+             .then(blob => {
+                 const file = new File([blob], img.dataset.filename || 'image', { type: blob.type });
+                 const dt = new DataTransfer();
+                 dt.items.add(file);
+
+                 /* 3. Replace the native dataTransfer object with ours */
+                 e.dataTransfer.items.clear();
+                 for (let i = 0; i < dt.items.length; i++) {
+                     e.dataTransfer.items.add(dt.items[i]);
+                 }
+             });
+
+         /* 4. Provide a nicer ghost image */
+         const ghost = new Image();
+         ghost.src = fullUrl;
+         e.dataTransfer.setDragImage(ghost, ghost.width / 2, ghost.height / 2);
+     });
  });
-});
