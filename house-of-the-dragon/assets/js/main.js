@@ -667,38 +667,43 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    // --- MouseDown Listener ---
+    //--- MouseDown Listener ---
     wrapper.addEventListener('mousedown', (e) => {
-        // MODIFIED: If click starts in search bar, exit to allow native text selection.
-        if (e.target === searchInput) {
+        // Ignore if not the main left mouse button or if the click is inside the header or footer.
+        if (e.button !== 0 || header.contains(e.target) || footer.contains(e.target) || searchInput.contains(e.target)) {
+            isMarquee = false;
             return;
         }
 
-        // MODIFIED: Check if the event target is within the header or footer
-        if (e.button !== 0 || header.contains(e.target) || footer.contains(e.target)) {
-            isMarquee = false; // Ensure marquee selection is not initiated if starting in header/footer
-            return; 
+        // Check if the click's target is an image within a figure.
+        const targetImage = e.target.closest('figure') ? e.target.closest('figure').querySelector('img') : null;
+
+        // If the user clicks directly on an image, allow the native browser drag to start.
+        // We do this by returning early and NOT calling e.preventDefault() or setting isMarquee to true.
+        if (targetImage && e.target === targetImage) {
+            isMarquee = false;
+            return;
         }
-        
-        if(gallery.contains(e.target) || e.target === gallery) {
-            e.preventDefault();
-            if (searchInput) searchInput.blur(); // MODIFIED: Use variable and check for existence
-        }
-        
+
+        // If the code reaches here, the click was on the gallery background or a figure's empty space.
+        // Now, we can safely start the marquee selection logic.
+        e.preventDefault();
+        if (searchInput) searchInput.blur();
+
         hasDragged = false;
         isMarquee = true;
         mouseDownItem = e.target.closest('figure');
-        
+
         const galleryRect = gallery.getBoundingClientRect();
         startPos = {
             x: e.clientX - galleryRect.left,
             y: e.clientY - galleryRect.top,
         };
-        
+
         preMarqueeSelectedItems = new Set(selectedItems);
     });
     
-/*  // --- MouseMove Listener ---
+    // --- MouseMove Listener ---
     document.addEventListener('mousemove', (e) => {
         if (!isMarquee) return;
         
