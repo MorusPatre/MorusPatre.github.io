@@ -65,6 +65,15 @@ document.addEventListener('DOMContentLoaded', function() {
                         img.dataset[key] = item[key];
                     }
                 }
+                
+                img.addEventListener('dragstart', (event) => {
+                    const highResUrl = event.target.dataset.fullsrc;
+                    if (highResUrl) {
+                        // This tells the browser and other applications to use the high-res URL for the drop.
+                        event.dataTransfer.setData('text/uri-list', highResUrl);
+                        event.dataTransfer.setData('text/plain', highResUrl);
+                    }
+                });
 
                 const figcaption = document.createElement('figcaption');
                 const filenameSpan = document.createElement('span');
