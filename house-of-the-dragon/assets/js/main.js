@@ -1033,41 +1033,51 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    // Add event listener for when a file is selected for upload
+    // Add event listener for when files are selected for upload
     if (imageUploadInput) {
         imageUploadInput.addEventListener('change', async (event) => {
-            const file = event.target.files[0];
-            if (!file) {
-                return;
+            const files = event.target.files;
+            if (!files.length) {
+                return; // Exit if no files were selected
             }
     
             // URL of your Cloudflare Worker
             const UPLOAD_URL = 'https://r2-upload-presigner.witcherarchive.workers.dev';
+            const uploadPromises = [];
     
-            try {
-                // You can add a visual indicator here to show the upload is in progress
-                document.body.style.cursor = 'wait';
+            document.body.style.cursor = 'wait'; // Show waiting cursor
     
-                const response = await fetch(UPLOAD_URL, {
+            // Loop through each selected file
+            for (const file of files) {
+                const uploadTask = fetch(UPLOAD_URL, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': file.type,
-                        'X-Custom-Filename': file.name // Send the filename in a header
+                        'X-Custom-Filename': file.name
                     },
                     body: file
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        // If any upload fails, throw an error to be caught later
+                        return response.text().then(text => { 
+                            throw new Error(`Failed to upload ${file.name}: ${text}`); 
+                        });
+                    }
+                    return response.json();
                 });
     
-                if (response.ok) {
-                    const result = await response.json();
-                    alert('Image uploaded successfully!');
-                    location.reload(); // Simple way to refresh the gallery
-                } else {
-                    const errorText = await response.text();
-                    alert(`Upload failed: ${errorText}`);
-                }
+                uploadPromises.push(uploadTask);
+            }
+    
+            try {
+                // Wait for all upload promises to resolve
+                await Promise.all(uploadPromises);
+                alert(`${files.length} image(s) uploaded successfully!`);
+                location.reload(); // Reload the page once all uploads are complete
             } catch (error) {
-                console.error('Error uploading file:', error);
-                alert('An error occurred during upload. Check the console for details.');
+                console.error('An error occurred during one of the uploads:', error);
+                alert(`An error occurred during upload: ${error.message}`);
             } finally {
                 // Reset cursor and input value
                 document.body.style.cursor = 'default';
