@@ -994,8 +994,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                         
                         const zipBlob = await response.blob();
-                        const date = new Date().toISOString().split('T')[0];
-                        const dynamicFilename = `HOTD-Selection_${selectedItems.size}-images_${date}.zip`;
+
+                        // Map the gallery ID to a clean name, just like in the worker
+                        const nameMap = {
+                          'house-of-the-dragon': 'HOTD',
+                          'the-witcher': 'The Witcher'
+                        };
+                        const galleryId = document.getElementById('photo-gallery').dataset.galleryId;
+                        const cleanName = nameMap[galleryId] || galleryId;
+
+                        // Build the new, correct filename
+                        const dynamicFilename = `${cleanName} - ${selectedItems.size} selected assets.zip`;
+
                         saveAs(zipBlob, dynamicFilename);
 
                     } else if (selectedItems.size === 1) {
