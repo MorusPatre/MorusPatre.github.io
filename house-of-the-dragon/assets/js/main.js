@@ -972,11 +972,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (selectedItems.size > 1) {
                         saveMenuItem.textContent = 'Preparing Zip...'; // Provide user feedback
 
-                        // 1. Get the filenames of all selected images
+                        // 1. Get the filenames of all selected images by extracting them from the source URL
                         const filenames = Array.from(selectedItems).map(item => {
                             const img = item.querySelector('img');
-                            // Ensure you're sending the exact name of the file in the B2 bucket
-                            return img ? img.dataset.filename : null;
+                            const fullSrc = img ? img.dataset.fullsrc : null;
+                            if (!fullSrc) return null;
+                            // This finds the last '/' and takes everything after it
+                            return fullSrc.substring(fullSrc.lastIndexOf('/') + 1);
                         }).filter(name => name); // Filter out any potential null values
 
                         // 2. Send the list to your new Cloudflare Worker
