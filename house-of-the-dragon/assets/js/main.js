@@ -981,7 +981,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         // 2. Send the list to your new Cloudflare Worker
                         //    IMPORTANT: Replace with your actual worker URL once deployed.
-                        const response = await fetch('https://b2-asset-bundler.your-account-name.workers.dev', {
+                        const response = await fetch('https://b2-asset-bundler.witcherarchive.workers.dev', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ files: filenames })
