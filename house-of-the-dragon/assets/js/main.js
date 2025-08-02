@@ -393,7 +393,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const header = document.getElementById('header');
     const footer = document.getElementById('footer');
     const gallery = document.getElementById('photo-gallery');
-    const searchInput = document.getElementById('search-input'); 
+    const searchInput = document.getElementById('search-input');
 
     if (!gallery || !wrapper) return;
 
@@ -455,7 +455,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const searchData = img.dataset.search.toLowerCase();
-            
+
             // Check if ALL terms (both phrases and individual words) are present
             const isMatch = searchTerms.every(term => searchData.includes(term));
 
@@ -532,7 +532,7 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i = start; i <= end; i++) {
             itemsToSelect.add(visibleItems[i]);
         }
-        
+
         // Now, update the DOM and the main selectedItems set in one pass
         for(const item of visibleItems) {
             if(itemsToSelect.has(item)) {
@@ -598,7 +598,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Check if the new index is valid
         if (newIndex >= 0 && newIndex < visibleItems.length) {
             const newItem = visibleItems[newIndex];
-            
+
             if (e.shiftKey) {
                 // If Shift is pressed, extend the selection
                 lastSelectedItem = newItem; // Update the focus
@@ -610,7 +610,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 selectionAnchor = newItem; // The new item is now the anchor
                 lastSelectedItem = newItem;
             }
-            
+
             // Ensure the newly selected item is visible
             newItem.scrollIntoView({ block: 'nearest', inline: 'nearest' });
         }
@@ -635,7 +635,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // END: FINDER-STYLE ARROW KEY NAVIGATION LOGIC
     ==================================================================
     */
-    
+
     // Helper functions
     const isSelected = (el) => selectedItems.has(el);
     const toggleSelection = (el) => {
@@ -666,7 +666,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     };
-    
+
     // --- MouseDown Listener ---
     wrapper.addEventListener('mousedown', (e) => {
         // MODIFIED: If click starts in search bar, exit to allow native text selection.
@@ -677,60 +677,60 @@ document.addEventListener('DOMContentLoaded', () => {
         // MODIFIED: Check if the event target is within the header or footer
         if (e.button !== 0 || header.contains(e.target) || footer.contains(e.target)) {
             isMarquee = false; // Ensure marquee selection is not initiated if starting in header/footer
-            return; 
+            return;
         }
-        
+
         if(gallery.contains(e.target) || e.target === gallery) {
             e.preventDefault();
             if (searchInput) searchInput.blur(); // MODIFIED: Use variable and check for existence
         }
-        
+
         hasDragged = false;
         isMarquee = true;
         mouseDownItem = e.target.closest('figure');
-        
+
         const galleryRect = gallery.getBoundingClientRect();
         startPos = {
             x: e.clientX - galleryRect.left,
             y: e.clientY - galleryRect.top,
         };
-        
+
         preMarqueeSelectedItems = new Set(selectedItems);
     });
-    
+
     // --- MouseMove Listener ---
     document.addEventListener('mousemove', (e) => {
         if (!isMarquee) return;
-        
+
         e.preventDefault();
         hasDragged = true;
         document.body.classList.add('is-marquee-dragging');
-        
+
         marquee.style.visibility = 'visible';
-        
+
         const galleryRect = gallery.getBoundingClientRect();
         let rawX = e.clientX - galleryRect.left;
         let rawY = e.clientY - galleryRect.top;
         let currentX = Math.max(0, Math.min(rawX, galleryRect.width));
         let currentY = rawY;
-        
+
         const marqueeRect = {
             x: Math.min(startPos.x, currentX),
             y: Math.min(startPos.y, currentY),
             w: Math.abs(startPos.x - currentX),
             h: Math.abs(startPos.y - currentY)
         };
-        
+
         marquee.style.left = `${marqueeRect.x}px`;
         marquee.style.top = `${marqueeRect.y}px`;
         marquee.style.width = `${marqueeRect.w}px`;
         marquee.style.height = `${marqueeRect.h}px`;
-        
+
         const isModifier = e.metaKey || e.ctrlKey || e.shiftKey;
-        
+
         for (const item of items) {
             if (item.style.display === 'none') continue;
-            
+
             const itemRect = item.getBoundingClientRect();
             const relativeItemRect = {
                 left: itemRect.left - galleryRect.left,
@@ -738,13 +738,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 right: itemRect.right - galleryRect.left,
                 bottom: itemRect.bottom - galleryRect.top
             };
-            
+
             const intersects =
             marqueeRect.x < relativeItemRect.right &&
             marqueeRect.x + marqueeRect.w > relativeItemRect.left &&
             marqueeRect.y < relativeItemRect.bottom &&
             marqueeRect.y + marqueeRect.h > relativeItemRect.top;
-            
+
             if (isModifier) {
                 if (intersects) {
                     setSelection(item, !preMarqueeSelectedItems.has(item));
@@ -756,20 +756,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
-    
+
     /**
      * UPDATED endDragAction function
      */
     const endDragAction = (e) => {
         document.body.classList.remove('is-marquee-dragging');
         if (!isMarquee) return;
-    
+
         if (!hasDragged) {
             // Logic for a simple click (no drag)
             const isShift = e.shiftKey;
             const isModifier = e.metaKey || e.ctrlKey;
             const clickedOnItem = mouseDownItem;
-    
+
             if (clickedOnItem) {
                 // MODIFIED: Shift+Click now acts like Ctrl+Click
                 if (isShift || isModifier) {
@@ -802,7 +802,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             // Logic after a marquee drag
             const itemUnderMouse = e.target.closest('figure');
-            
+
             if (mouseDownItem) {
                 selectionAnchor = mouseDownItem;
             }
@@ -818,7 +818,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         }
-    
+
         // Cleanup marquee state
         isMarquee = false;
         hasDragged = false;
@@ -828,9 +828,9 @@ document.addEventListener('DOMContentLoaded', () => {
         marquee.style.height = '0px';
         preMarqueeSelectedItems.clear();
     };
-    
+
     document.addEventListener('mouseup', endDragAction);
-    
+
     // --- Mousedown listener for the whole document ---
     document.addEventListener('mousedown', (e) => {
         const itemMenu = document.getElementById('custom-context-menu');
@@ -847,7 +847,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
-    
+
     /**
      * SELECT ALL FUNCTIONALITY
      */
@@ -855,7 +855,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
             const activeEl = document.activeElement;
             if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
-                return; 
+                return;
             }
             e.preventDefault();
             const visibleItems = Array.from(items).filter(item => item.style.display !== 'none');
@@ -864,27 +864,28 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     });
-    
-    /**
-     * ----------------------------------------------------------------
-     * Custom Right-Click Context Menu Logic
-     * ----------------------------------------------------------------
-     */
+
+    /*
+    ==================================================================
+    // START: CUSTOM CONTEXT MENU & UPLOAD LOGIC
+    ==================================================================
+    */
 
     const itemContextMenu = document.getElementById('custom-context-menu');
     const galleryContextMenu = document.getElementById('gallery-context-menu');
+    const imageUploadInput = document.getElementById('image-upload-input');
     let rightClickedItem = null;
 
     gallery.addEventListener('contextmenu', (e) => {
-        e.preventDefault(); 
+        e.preventDefault();
 
         const figure = e.target.closest('figure');
 
         itemContextMenu.style.display = 'none';
         galleryContextMenu.style.display = 'none';
-        
+
         if (figure) {
-            rightClickedItem = figure; 
+            rightClickedItem = figure;
 
             if (!selectedItems.has(figure)) {
                 clearSelection();
@@ -899,7 +900,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 saveMenuItem.textContent = 'Save Image to "Downloads"';
             }
-            
+
             itemContextMenu.style.display = 'block';
             itemContextMenu.style.left = `${e.clientX}px`;
             itemContextMenu.style.top = `${e.clientY}px`;
@@ -911,11 +912,11 @@ document.addEventListener('DOMContentLoaded', () => {
             galleryContextMenu.style.top = `${e.clientY}px`;
         }
     });
-    
+
     // =================================================================
     // START: UNIFIED DOWNLOAD LOGIC
     // =================================================================
-    
+
     /**
      * Asynchronously fetches an image from a URL and returns its blob data.
      * @param {string} url - The URL of the image to fetch.
@@ -984,7 +985,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         await Promise.all(promises);
                         const zipBlob = await zip.generateAsync({ type: "blob" });
-                        
+
                         // Create dynamic filename
                         const date = new Date().toISOString().split('T')[0];
                         const imageCount = selectedItems.size;
@@ -998,7 +999,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const img = item.querySelector('img');
                         const url = img.dataset.fullsrc;
                         let filename = img.dataset.filename || url.split('/').pop();
-                        
+
                         const blob = await fetchImageBlob(url);
                         triggerDownload(blob, filename);
                     }
@@ -1018,7 +1019,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         switch (targetId) {
             case 'gallery-context-add':
-                alert('Functionality for "Add Image" is not yet implemented.');
+                // Programmatically click the hidden file input
+                if (imageUploadInput) {
+                    imageUploadInput.click();
+                }
                 break;
             case 'gallery-context-sort':
                 alert('Functionality for "Sort By" is not yet implemented.');
@@ -1028,6 +1032,49 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
         }
     });
+    
+    // Add event listener for when a file is selected for upload
+    if (imageUploadInput) {
+        imageUploadInput.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (!file) {
+                return;
+            }
+    
+            // URL of your Cloudflare Worker
+            const UPLOAD_URL = 'https://r2-upload-presigner.witcherarchive.workers.dev';
+    
+            try {
+                // You can add a visual indicator here to show the upload is in progress
+                document.body.style.cursor = 'wait';
+    
+                const response = await fetch(UPLOAD_URL, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': file.type,
+                        'X-Custom-Filename': file.name // Send the filename in a header
+                    },
+                    body: file
+                });
+    
+                if (response.ok) {
+                    const result = await response.json();
+                    alert('Image uploaded successfully!');
+                    location.reload(); // Simple way to refresh the gallery
+                } else {
+                    const errorText = await response.text();
+                    alert(`Upload failed: ${errorText}`);
+                }
+            } catch (error) {
+                console.error('Error uploading file:', error);
+                alert('An error occurred during upload. Check the console for details.');
+            } finally {
+                // Reset cursor and input value
+                document.body.style.cursor = 'default';
+                event.target.value = '';
+            }
+        });
+    }
 
     /*
     ==================================================================
@@ -1094,13 +1141,13 @@ document.addEventListener('DOMContentLoaded', () => {
             modalImg.src = highResImage.src;
         };
         modalImg.alt = img.alt;
-        
+
         modalFilename.textContent = img.dataset.filename;
 
         let primaryHTML = '<dl class="info-grid">';
         let detailsHTML = '<dl class="info-grid">';
         const dataset = img.dataset;
-        
+
         primaryKeys.forEach(key => {
             if (dataset[key] && dataset[key].trim() !== '' && dataset[key].trim() !== '-' && dataset[key].trim() !== '- (-)') {
                 const label = KEY_TO_LABEL_MAP[key] || key;
@@ -1110,7 +1157,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let hasDetails = false;
         const handledKeys = ['search', 'fullsrc', 'filename', ...primaryKeys];
-        
+
         for (const key in dataset) {
             if (!handledKeys.includes(key) && dataset[key] && dataset[key].trim() !== '' && dataset[key].trim() !== '-') {
                 hasDetails = true;
@@ -1123,7 +1170,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 detailsHTML += `<div class="info-item"><dt>${label}</dt><dd>${value}</dd></div>`;
             }
         }
-        
+
         primaryHTML += '</dl>';
         detailsHTML += '</dl>';
 
@@ -1141,27 +1188,27 @@ document.addEventListener('DOMContentLoaded', () => {
     downloadBtn.addEventListener('click', async (event) => {
         event.preventDefault();
         event.stopPropagation();
-    
+
         const url = event.currentTarget.dataset.fullsrc; // Use the stored high-res URL
         // Get filename, with a fallback for missing names
         const filename = modalFilename.textContent || url.split('/').pop();
-    
+
         if (!url || !filename) {
             console.error("Modal download failed: URL or filename not found.");
             alert("Could not download the image because its data is missing.");
             return;
         }
-    
+
         const buttonText = downloadBtn.textContent;
         try {
             // Provide visual feedback to the user
             downloadBtn.textContent = 'Downloading...';
             downloadBtn.disabled = true;
-    
+
             // Fetch the image blob and trigger the download
             const blob = await fetchImageBlob(url);
             triggerDownload(blob, filename);
-    
+
         } catch (error) {
             console.error("Modal download failed:", error);
             alert("An error occurred while trying to download the image.");
@@ -1173,7 +1220,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 1000);
         }
     });
-    
+
     downloadBtn.addEventListener('dragstart', function(event) {
         event.preventDefault();
     });
@@ -1213,7 +1260,7 @@ document.addEventListener('DOMContentLoaded', () => {
             modalMetadata.innerHTML = "";
         }, 250);
     }
-    
+
     modalContent.addEventListener('click', function(event) {
         event.stopPropagation();
     });
@@ -1248,7 +1295,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
-    
+
     imageContainer.addEventListener('mousedown', (e) => {
         if (e.button === 0) {
             document.body.classList.add('is-selecting-text');
@@ -1303,13 +1350,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const viewportHeight = window.innerHeight;
         const trackHeight = track.offsetHeight;
         const thumbHeight = thumb.offsetHeight;
-        
+
         // Prevent division by zero if content is smaller than viewport
         if (scrollableHeight <= viewportHeight) return;
 
         const scrollPercentage = window.scrollY / (scrollableHeight - viewportHeight);
         const thumbPosition = scrollPercentage * (trackHeight - thumbHeight);
-        
+
         thumb.style.transform = `translateY(${thumbPosition}px)`;
     }
 
@@ -1336,7 +1383,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Run a position update immediately
         updateThumbPosition();
     }
-    
+
     // On scroll, request an animation frame to update the thumb.
     // The 'ticking' flag ensures we don't have multiple animation frames queued.
     document.addEventListener('scroll', () => {
@@ -1388,7 +1435,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initial setup
     setupScrollbar();
     // A small timeout helps ensure all content (like images) has loaded and affected the page height
-    setTimeout(setupScrollbar, 500); 
+    setTimeout(setupScrollbar, 500);
 });
 
 /*
@@ -1438,11 +1485,11 @@ document.addEventListener('galleryLoaded', () => {
     const searchInput = document.getElementById('search-input');
     const suggestionsContainer = document.getElementById('suggestions-container');
     const galleryItems = document.querySelectorAll('#photo-gallery figure img');
-    
+
     if (!searchInput || !suggestionsContainer || galleryItems.length === 0) {
         return;
     }
-    
+
     // Build a unique, sorted list of searchable terms from the JSON data.
     const searchTerms = new Set();
     galleryItems.forEach(img => {
@@ -1466,7 +1513,7 @@ document.addEventListener('galleryLoaded', () => {
         }
     });
     const sortedSearchTerms = Array.from(searchTerms).sort((a, b) => a.localeCompare(b));
-    
+
     let activeSuggestionIndex = -1;
 
     // Updates and displays the suggestion list based on user input.
@@ -1507,7 +1554,7 @@ document.addEventListener('galleryLoaded', () => {
         // Manually trigger the original 'keyup' event to perform the search.
         searchInput.dispatchEvent(new Event('keyup', { bubbles: true }));
     }
-    
+
     // Manages the 'active' class for keyboard navigation.
     function updateActiveSuggestion(items) {
         items.forEach((item, index) => {
@@ -1521,7 +1568,7 @@ document.addEventListener('galleryLoaded', () => {
     }
 
     // --- Event Listeners ---
-    
+
     // Update suggestions on every input change.
     searchInput.addEventListener('input', updateSuggestions);
 
