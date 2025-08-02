@@ -965,24 +965,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             case 'context-menu-save': {
                 const saveMenuItem = document.getElementById('context-menu-save');
-                const originalButtonText = saveMenuItem.textContent; // Store original text
+                const originalButtonText = saveMenuItem.textContent;
+                saveMenuItem.textContent = 'Preparing...';
 
                 try {
-                    // --- If MORE THAN ONE item is selected, use the new server-side ZIP method ---
+                    // --- If MORE THAN ONE item is selected, use the server-side ZIP method ---
                     if (selectedItems.size > 1) {
-                        saveMenuItem.textContent = 'Preparing Zip...'; // Provide user feedback
-
-                        // 1. Get the filenames of all selected images by extracting them from the source URL
                         const filenames = Array.from(selectedItems).map(item => {
                             const img = item.querySelector('img');
                             const fullSrc = img ? img.dataset.fullsrc : null;
                             if (!fullSrc) return null;
-                            // This finds the last '/' and takes everything after it
                             return fullSrc.substring(fullSrc.lastIndexOf('/') + 1);
-                        }).filter(name => name); // Filter out any potential null values
+                        }).filter(name => name);
 
-                        // 2. Send the list to your new Cloudflare Worker
-                        //    IMPORTANT: Replace with your actual worker URL once deployed.
+                        if (filenames.length === 0) throw new Error("No valid files selected.");
+
                         const response = await fetch('https://b2-asset-bundler.witcherarchive.workers.dev', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -990,40 +987,36 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
 
                         if (!response.ok) {
-                            const errorText = await response.text();
-                            throw new Error(`Server could not create zip: ${errorText}`);
+                            throw new Error(`Server could not create zip: ${await response.text()}`);
                         }
-
-                        // 3. The worker streams back the ZIP. The browser's download manager takes over.
+                        
                         const zipBlob = await response.blob();
                         const date = new Date().toISOString().split('T')[0];
                         const dynamicFilename = `HOTD-Selection_${selectedItems.size}-images_${date}.zip`;
-                        
-                        // Use FileSaver.js to save the blob streamed from the worker
                         saveAs(zipBlob, dynamicFilename);
 
                     } else if (selectedItems.size === 1) {
-                        // --- If ONLY ONE item is selected, trigger a direct browser download ---
+                        // --- NEW, CORRECTED SINGLE FILE LOGIC ---
                         const item = Array.from(selectedItems)[0];
                         const img = item.querySelector('img');
-                        const url = img.dataset.fullsrc; // The direct URL to the image on Backblaze
-                        const filename = img.dataset.filename;
+                        const url = img.dataset.fullsrc;
+                        const filename = url.substring(url.lastIndexOf('/') + 1);
 
-                        // This creates a temporary, invisible link and clicks it.
-                        // The 'download' attribute tells the browser to save the file instead of navigating to it.
-                        const link = document.createElement('a');
-                        link.href = url;
-                        link.download = filename || url.split('/').pop(); // Sets the filename for the download
-                        
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
+                        // Fetch the image data directly
+                        const response = await fetch(url);
+                        if (!response.ok) {
+                            throw new Error(`Failed to fetch image: ${response.statusText}`);
+                        }
+                        const blob = await response.blob();
+
+                        // Use FileSaver.js to save the single file
+                        saveAs(blob, filename);
                     }
                 } catch (error) {
                     console.error("Download failed:", error);
                     alert(`An error occurred during the download: ${error.message}`);
                 } finally {
-                    // Restore the button text after the operation completes or fails
+                    // Restore button text
                     saveMenuItem.textContent = originalButtonText;
                 }
                 break;
