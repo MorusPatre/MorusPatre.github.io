@@ -980,10 +980,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         if (filenames.length === 0) throw new Error("No valid files selected.");
 
+                        // Get the current gallery's ID from the HTML data attribute
+                        const galleryId = document.getElementById('photo-gallery').dataset.galleryId;
+
                         const response = await fetch('https://b2-asset-bundler.witcherarchive.workers.dev', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ files: filenames })
+                            body: JSON.stringify({ gallery: galleryId, files: filenames })
                         });
 
                         if (!response.ok) {
