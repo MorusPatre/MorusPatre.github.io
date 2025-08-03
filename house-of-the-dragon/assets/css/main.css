@@ -2128,7 +2128,7 @@ html, body {
     /* 1. The conic-gradient creates the progress fill using our variable */
     /* 2. The radial-gradient uses the page background color to create the "hole" in the middle */
     background: radial-gradient(#1f1b18 60%, transparent 61%),
-                conic-gradient(var(--ancient-gold) var(--progress-angle), rgba(255,255,255,0.2) 0deg);
+                conic-gradient(#fff var(--progress-angle), rgba(255,255,255,0.2) 0deg);
     opacity: 0;
     pointer-events: none;
     /* 3. This animates the --progress-angle variable smoothly */
