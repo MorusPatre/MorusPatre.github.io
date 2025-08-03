@@ -1,7 +1,10 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const jsonPath = 'gallery-data.json';
     const galleryContainerId = 'photo-gallery';
     const galleryContainer = document.getElementById(galleryContainerId);
+
+    // This line now reads the JSON path from your HTML data-attribute
+    const jsonPath = galleryContainer.dataset.galleryJson || 'gallery-data.json';
+
     const footer = document.getElementById('footer');
     let firstImageLoaded = false;
 
