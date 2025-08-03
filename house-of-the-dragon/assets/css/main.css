@@ -2127,8 +2127,8 @@ html, body {
     background: conic-gradient(#fff var(--progress-angle), rgba(255,255,255,0.2) 0deg);
 
     /* This mask now correctly cuts a real hole out of the background */
-    -webkit-mask-image: radial-gradient(transparent 57%, black 58%);
-    mask-image: radial-gradient(transparent 57%, black 58%);
+    -webkit-mask-image: radial-gradient(transparent 56%, black 57%);
+    mask-image: radial-gradient(transparent 56%, black 57%);
 
     opacity: 0;
     pointer-events: none;
