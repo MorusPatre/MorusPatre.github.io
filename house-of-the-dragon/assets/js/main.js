@@ -987,13 +987,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 indicator.classList.remove('is-complete');
                 indicator.classList.add('is-active', 'is-downloading');
 
-                // Helper function to parse size strings like "5.8 MB" into bytes
                 const parseSizeToBytes = (sizeStr) => {
                     if (!sizeStr) return 0;
                     const [value, unit] = sizeStr.split(' ');
                     const num = parseFloat(value);
                     if (isNaN(num)) return 0;
-
                     switch (unit.toUpperCase()) {
                         case 'KB': return num * 1024;
                         case 'MB': return num * 1024 * 1024;
@@ -1002,8 +1000,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 };
 
+                // THIS IS THE MODIFIED HELPER FUNCTION
                 const updateProgress = (percent) => {
-                    progressCircle.style.background = `conic-gradient(var(--ancient-gold, #c7a465) ${percent}%, rgba(255,255,255,0.2) 0%)`;
+                    // We now set the --progress-angle custom property (1% = 3.6 degrees)
+                    progressCircle.style.setProperty('--progress-angle', `${percent * 3.6}deg`);
                 };
                 
                 updateProgress(0);
@@ -1019,7 +1019,6 @@ document.addEventListener('DOMContentLoaded', () => {
                              return;
                         }
 
-                        // 1. Calculate the total size of all selected files
                         itemsToDownload.forEach(item => {
                             const img = item.querySelector('img');
                             totalDownloadSize += parseSizeToBytes(img.dataset.size);
@@ -1035,7 +1034,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         };
 
-                        // 2. Process downloads in parallel batches
                         await processInBatches(itemsToDownload, 6, async (item) => {
                             const img = item.querySelector('img');
                             const url = img.dataset.fullsrc;
@@ -1051,7 +1049,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 const blob = await response.blob();
                                 saveAs(blob, filename);
 
-                                // 3. Update progress after each successful download
                                 totalDownloaded += blob.size;
                                 const percent = totalDownloadSize > 0 ? (totalDownloaded / totalDownloadSize) * 100 : 0;
                                 updateProgress(percent);
