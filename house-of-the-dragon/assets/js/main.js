@@ -983,26 +983,61 @@ document.addEventListener('DOMContentLoaded', () => {
                 const signal = downloadAbortController.signal;
 
                 const indicator = document.getElementById('download-indicator');
+                const progressCircle = indicator.querySelector('.progress-circle');
                 indicator.classList.remove('is-complete');
                 indicator.classList.add('is-active', 'is-downloading');
 
-                // Helper function to process items in concurrent batches
-                const processInBatches = async (items, batchSize, processFn) => {
-                    let position = 0;
-                    while (position < items.length) {
-                        if (signal.aborted) throw new Error('AbortError');
-                        const itemsForBatch = items.slice(position, position + batchSize);
-                        await Promise.all(itemsForBatch.map(item => processFn(item)));
-                        position += batchSize;
+                // Helper function to parse size strings like "5.8 MB" into bytes
+                const parseSizeToBytes = (sizeStr) => {
+                    if (!sizeStr) return 0;
+                    const [value, unit] = sizeStr.split(' ');
+                    const num = parseFloat(value);
+                    if (isNaN(num)) return 0;
+
+                    switch (unit.toUpperCase()) {
+                        case 'KB': return num * 1024;
+                        case 'MB': return num * 1024 * 1024;
+                        case 'GB': return num * 1024 * 1024 * 1024;
+                        default: return num;
                     }
                 };
 
+                const updateProgress = (percent) => {
+                    progressCircle.style.background = `radial-gradient(white 60%, transparent 61%), conic-gradient(#fff ${percent}%, rgba(255,255,255,0.2) 0%)`;
+                };
+                
+                // Reset progress to 0 at the start
+                updateProgress(0);
+
                 const performDownloads = async () => {
+                    let totalDownloaded = 0;
+                    let totalDownloadSize = 0;
+
                     try {
                         const itemsToDownload = Array.from(selectedItems);
-                        if (itemsToDownload.length === 0) return;
+                        if (itemsToDownload.length === 0) {
+                             indicator.classList.remove('is-active', 'is-downloading');
+                             return;
+                        }
 
-                        // Process downloads in parallel batches of 6 (a good browser limit)
+                        // 1. Calculate the total size of all selected files
+                        itemsToDownload.forEach(item => {
+                            const img = item.querySelector('img');
+                            totalDownloadSize += parseSizeToBytes(img.dataset.size);
+                        });
+
+                        // Helper function to process items in concurrent batches
+                        const processInBatches = async (items, batchSize, processFn) => {
+                            let position = 0;
+                            while (position < items.length) {
+                                if (signal.aborted) throw new Error('AbortError');
+                                const itemsForBatch = items.slice(position, position + batchSize);
+                                await Promise.all(itemsForBatch.map(item => processFn(item)));
+                                position += batchSize;
+                            }
+                        };
+
+                        // 2. Process downloads in parallel batches
                         await processInBatches(itemsToDownload, 6, async (item) => {
                             const img = item.querySelector('img');
                             const url = img.dataset.fullsrc;
@@ -1012,15 +1047,22 @@ document.addEventListener('DOMContentLoaded', () => {
                                 const response = await fetch(url, { signal });
                                 if (!response.ok) {
                                     console.error(`Failed to fetch ${filename}: ${response.statusText}`);
-                                    return; // Skip this file, but continue the batch
+                                    // If a file fails, subtract its size from the total so the percentage remains accurate
+                                    totalDownloadSize -= parseSizeToBytes(img.dataset.size);
+                                    return;
                                 }
                                 const blob = await response.blob();
                                 saveAs(blob, filename);
+
+                                // 3. Update progress after each successful download
+                                totalDownloaded += blob.size;
+                                const percent = totalDownloadSize > 0 ? (totalDownloaded / totalDownloadSize) * 100 : 0;
+                                updateProgress(percent);
+
                             } catch (error) {
                                 if (error.name !== 'AbortError') {
                                     console.error(`Could not download ${filename}:`, error);
                                 } else {
-                                    // Re-throw to stop the entire batching process
                                     throw error;
                                 }
                             }
@@ -1041,6 +1083,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         setTimeout(() => {
                             indicator.classList.remove('is-active', 'is-complete');
                             downloadAbortController = null;
+                            // Reset progress to 0 for the next time
+                            setTimeout(() => updateProgress(0), 300);
                         }, 3000);
                     }
                 };
