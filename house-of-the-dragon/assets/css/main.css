@@ -2127,7 +2127,7 @@ html, body {
                 conic-gradient(#fff var(--progress-angle), rgba(255,255,255,0.2) 0deg);
 
     /* Change the mask values here to make the ring thicker */
-    -webkit-mask-image: radial-gradient(transparent 50%, black 51%);
+    -webkit-mask-image: radial-gradient(transparent 10%, black 11%);
     mask-image: radial-gradient(transparent 10%, black 11%);
 
     opacity: 0;
