@@ -2123,9 +2123,13 @@ html, body {
 }
 
 #download-indicator .progress-circle {
-    /* Changed the inner circle back to the page's background color for a transparent effect */
-    background: radial-gradient(#1f1b18 60%, transparent 61%),
-                conic-gradient(#fff var(--progress-angle), rgba(255,255,255,0.2) 0deg);
+    /* The background is now ONLY the progress fill */
+    background: conic-gradient(#fff var(--progress-angle), rgba(255,255,255,0.2) 0deg);
+
+    /* This mask creates the "real" transparent hole in the middle */
+    -webkit-mask-image: radial-gradient(transparent 60%, black 61%);
+    mask-image: radial-gradient(transparent 60%, black 61%);
+
     opacity: 0;
     pointer-events: none;
     transition: --progress-angle 0.4s ease-in-out;
