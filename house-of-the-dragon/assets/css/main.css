@@ -2121,6 +2121,7 @@ html, body {
     border-top-color: #fff;
     animation: spin 1s linear infinite;
     opacity: 0;
+    pointer-events: none;
 }
 
 #download-indicator.is-downloading .progress-circle {
