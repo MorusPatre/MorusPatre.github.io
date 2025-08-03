@@ -1002,7 +1002,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (allFilenames.length === 0) throw new Error("No valid files selected.");
 
                         const galleryId = document.getElementById('photo-gallery').dataset.galleryId;
-                        const batchSize = 200; // Download in chunks of 200
+                        const batchSize = 40; // Download in chunks of 40 (safely below the 50 limit)
                         let part = 1;
 
                         for (let i = 0; i < allFilenames.length; i += batchSize) {
