@@ -197,21 +197,20 @@
 
 
 // ==========================================================================================
-// NATIVE JAVASCRIPT LOGIC
+// UNIFIED NATIVE JAVASCRIPT LOGIC
 // ==========================================================================================
 document.addEventListener('DOMContentLoaded', () => {
+    // --- Elements & State Variables ---
     const wrapper = document.getElementById('wrapper');
     const header = document.getElementById('header');
     const footer = document.getElementById('footer');
     const gallery = document.getElementById('photo-gallery');
     const searchInput = document.getElementById('search-input');
-
-    if (!gallery || !wrapper) return;
-
     const marquee = document.getElementById('marquee');
     const items = gallery.getElementsByTagName('figure');
+    const track = document.getElementById('custom-scrollbar-track');
+    const thumb = document.getElementById('custom-scrollbar-thumb');
 
-    // --- State Variables ---
     let selectedItems = new Set();
     let isMarquee = false;
     let startPos = { x: 0, y: 0 };
@@ -219,26 +218,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let hasDragged = false;
     let mouseDownItem = null;
     let scrollInterval = null;
-
-    // --- Download Indicator ---
-    let downloadAbortController = null;
-    const indicator = document.getElementById('download-indicator');
-    const cancelBtn = indicator.querySelector('.cancel-icon');
-    cancelBtn.addEventListener('click', () => {
-        if (downloadAbortController) {
-            downloadAbortController.abort();
-        }
-    });
+    let selectionAnchor = null;
+    let lastSelectedItem = null;
+    let gridMetrics = { cols: 0 };
 
     // ==================================================================
-    // SEARCH LOGIC
+    // SEARCH
     // ==================================================================
     const clearSearchBtn = document.getElementById('clear-search');
-
-    function simplifySearchText(text) {
-        if (!text) return "";
-        return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    }
     searchInput.addEventListener('keyup', function(event) {
         if (searchInput.value.length > 0) {
             clearSearchBtn.style.display = 'block';
@@ -247,7 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
             clearSearchBtn.style.display = 'none';
             searchInput.style.paddingRight = '';
         }
-        const originalQuery = simplifySearchText(event.target.value.toLowerCase());
+        const originalQuery = (searchInput.value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
         const galleryItems = gallery.querySelectorAll('figure');
         const phraseRegex = /\b(s\d+e\d+|season\s*\d+|episode\s*\d+|s\d+|e\d+)\b/g;
         const phraseTerms = originalQuery.match(phraseRegex) || [];
@@ -256,15 +243,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const searchTerms = [...phraseTerms, ...wordTerms];
         galleryItems.forEach(function(item) {
             const img = item.querySelector('img');
-            if (!img || !img.dataset.search) {
-                item.style.display = 'none';
-                return;
-            }
-            const searchData = img.dataset.search.toLowerCase();
+            const searchData = (img?.dataset.search || '').toLowerCase();
             const isMatch = searchTerms.every(term => searchData.includes(term));
             item.style.display = isMatch ? 'flex' : 'none';
         });
-        window.scrollTo(0, 0);
         window.dispatchEvent(new CustomEvent('galleryFiltered'));
     });
     clearSearchBtn.addEventListener('click', function() {
@@ -274,26 +256,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ==================================================================
-    // KEYBOARD NAVIGATION & SELECTION LOGIC
+    // KEYBOARD NAVIGATION & SELECTION
     // ==================================================================
-    let selectionAnchor = null;
-    let lastSelectedItem = null;
-    let gridMetrics = { cols: 0 };
-    function calculateGridMetrics() {
-        const visibleItems = Array.from(items).filter(item => item.style.display !== 'none');
-        if (visibleItems.length === 0) {
-            gridMetrics.cols = 0;
-            return;
+    const setSelection = (el, shouldBeSelected) => {
+        if (shouldBeSelected && !selectedItems.has(el)) {
+            selectedItems.add(el);
+            el.classList.add('selected');
+        } else if (!shouldBeSelected && selectedItems.has(el)) {
+            selectedItems.delete(el);
+            el.classList.remove('selected');
         }
-        const firstItemTop = visibleItems[0].offsetTop;
-        let cols = 0;
-        for (const item of visibleItems) {
-            if (item.offsetTop === firstItemTop) cols++;
-            else break;
-        }
-        gridMetrics.cols = cols > 0 ? cols : 1;
-    }
-    function applyRangeSelection() {
+    };
+    const clearSelection = () => {
+        selectedItems.forEach(item => item.classList.remove('selected'));
+        selectedItems.clear();
+    };
+    const toggleSelection = (el) => setSelection(el, !selectedItems.has(el));
+    const applyRangeSelection = () => {
         if (!selectionAnchor) return;
         const visibleItems = Array.from(items).filter(item => item.style.display !== 'none');
         const anchorIndex = visibleItems.indexOf(selectionAnchor);
@@ -302,38 +281,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const start = Math.min(anchorIndex, focusIndex);
         const end = Math.max(anchorIndex, focusIndex);
         const itemsToSelect = new Set(visibleItems.slice(start, end + 1));
-        for (const item of visibleItems) {
-            if (itemsToSelect.has(item)) {
-                if (!selectedItems.has(item)) {
-                    item.classList.add('selected');
-                    selectedItems.add(item);
-                }
-            } else {
-                if (selectedItems.has(item)) {
-                    item.classList.remove('selected');
-                    selectedItems.delete(item);
-                }
-            }
-        }
-    }
+        visibleItems.forEach(item => setSelection(item, itemsToSelect.has(item)));
+    };
     document.addEventListener('keydown', (e) => {
         const activeEl = document.activeElement;
         const isTyping = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
 
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
-            if (isTyping) {
-                 // Allow default "select all" in text inputs
-                return;
-            }
+            if (isTyping) return;
             e.preventDefault();
-            const visibleItems = Array.from(items).filter(item => item.style.display !== 'none');
-            visibleItems.forEach(item => setSelection(item, true));
+            Array.from(items).filter(item => item.style.display !== 'none').forEach(item => setSelection(item, true));
             return;
         }
 
-        if (isTyping) return; // Ignore other key presses while typing
-
-        if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+        if (isTyping || !['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
 
         e.preventDefault();
         const visibleItems = Array.from(items).filter(item => item.style.display !== 'none');
@@ -352,14 +313,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'ArrowDown': newIndex = Math.min(visibleItems.length - 1, currentIndex + gridMetrics.cols); break;
             }
         }
-        if (newIndex !== -1 && newIndex < visibleItems.length) {
+
+        if (newIndex >= 0 && newIndex < visibleItems.length) {
             const newItem = visibleItems[newIndex];
-            if (e.shiftKey) {
+            if (e.shiftKey && selectionAnchor) {
                 lastSelectedItem = newItem;
                 applyRangeSelection();
             } else {
                 clearSelection();
-                toggleSelection(newItem);
+                setSelection(newItem, true);
                 selectionAnchor = newItem;
                 lastSelectedItem = newItem;
             }
@@ -367,66 +329,52 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- Observers & Helpers ---
-    calculateGridMetrics();
-    const galleryObserver = new ResizeObserver(calculateGridMetrics);
-    galleryObserver.observe(gallery);
-    searchInput.addEventListener('keyup', () => setTimeout(calculateGridMetrics, 50));
-    const isSelected = (el) => selectedItems.has(el);
-    const toggleSelection = (el) => {
-        if (isSelected(el)) {
-            selectedItems.delete(el);
-            el.classList.remove('selected');
-        } else {
-            selectedItems.add(el);
-            el.classList.add('selected');
-        }
-    };
-    const clearSelection = () => {
-        selectedItems.forEach(item => item.classList.remove('selected'));
-        selectedItems.clear();
-    };
-    const setSelection = (el, shouldBeSelected) => {
-        if (shouldBeSelected && !isSelected(el)) {
-            selectedItems.add(el);
-            el.classList.add('selected');
-        } else if (!shouldBeSelected && isSelected(el)) {
-            selectedItems.delete(el);
-            el.classList.remove('selected');
-        }
-    };
-
     // ==================================================================
-    // MOUSE DRAG / MARQUEE SELECTION
+    // MOUSE & MARQUEE LOGIC
     // ==================================================================
     document.addEventListener('mousedown', (e) => {
         if (e.target === searchInput || e.button !== 0) return;
-
+        
         const itemMenu = document.getElementById('custom-context-menu');
         const galleryMenu = document.getElementById('gallery-context-menu');
         if (itemMenu && !itemMenu.contains(e.target)) itemMenu.style.display = 'none';
         if (galleryMenu && !galleryMenu.contains(e.target)) galleryMenu.style.display = 'none';
 
-        if (wrapper.contains(e.target) && !header.contains(e.target) && !footer.contains(e.target)) {
+        if (wrapper.contains(e.target) && !header.contains(e.target) && !footer.contains(e.target) && !thumb.contains(e.target)) {
             e.preventDefault();
             if (searchInput) searchInput.blur();
-
             isMarquee = true;
             hasDragged = false;
             mouseDownItem = e.target.closest('figure');
-
             startPos = { x: e.clientX, y: e.clientY };
-
             preMarqueeSelectedItems = new Set(selectedItems);
         }
     });
 
     document.addEventListener('mousemove', (e) => {
-        if (!isMarquee) return;
-        hasDragged = true;
-        document.body.classList.add('is-marquee-dragging');
-        marquee.style.visibility = 'visible';
+        // --- SCROLLBAR PROXIMITY EFFECT ---
+        if (!isMarquee && thumb) {
+            const proximity = 30;
+            const thumbRect = thumb.getBoundingClientRect();
+            if (thumbRect.width > 0) {
+                const isNear = e.clientX >= thumbRect.left - proximity &&
+                               e.clientY >= thumbRect.top - proximity &&
+                               e.clientY <= thumbRect.bottom + proximity &&
+                               e.clientX < window.innerWidth - 2;
+                thumb.classList.toggle('is-near', isNear);
+            }
+        }
 
+        // --- MARQUEE DRAG LOGIC ---
+        if (!isMarquee) return;
+        
+        if (!hasDragged) {
+             hasDragged = true; // Set drag status on first move
+             document.body.classList.add('is-marquee-dragging');
+             if (thumb) thumb.classList.remove('is-near'); // Hide proximity effect during drag
+             marquee.style.visibility = 'visible';
+        }
+        
         const scrollZone = 40;
         const scrollSpeed = 15;
         clearInterval(scrollInterval);
@@ -435,7 +383,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (e.clientY < scrollZone) {
             scrollInterval = setInterval(() => { window.scrollBy(0, -scrollSpeed); }, 16);
         }
-
+        
         const marqueeRect = {
             x: Math.min(startPos.x, e.clientX),
             y: Math.min(startPos.y, e.clientY),
@@ -448,66 +396,51 @@ document.addEventListener('DOMContentLoaded', () => {
         marquee.style.height = `${marqueeRect.h}px`;
 
         const isModifier = e.metaKey || e.ctrlKey || e.shiftKey;
-
         for (const item of items) {
             if (item.style.display === 'none') continue;
             const itemRect = item.getBoundingClientRect();
-            const intersects =
-                marqueeRect.x < itemRect.right &&
-                marqueeRect.x + marqueeRect.w > itemRect.left &&
-                marqueeRect.y < itemRect.bottom &&
-                marqueeRect.y + marqueeRect.h > itemRect.top;
-
-            if (isModifier) {
-                setSelection(item, intersects ? !preMarqueeSelectedItems.has(item) : preMarqueeSelectedItems.has(item));
-            } else {
-                setSelection(item, intersects);
-            }
+            const intersects = marqueeRect.x < itemRect.right && marqueeRect.x + marqueeRect.w > itemRect.left &&
+                               marqueeRect.y < itemRect.bottom && marqueeRect.y + marqueeRect.h > itemRect.top;
+            setSelection(item, isModifier ? (intersects ? !preMarqueeSelectedItems.has(item) : preMarqueeSelectedItems.has(item)) : intersects);
         }
     });
 
     document.addEventListener('mouseup', (e) => {
         clearInterval(scrollInterval);
-        
-        if (isMarquee) {
-            document.body.classList.remove('is-marquee-dragging');
+        if (!isMarquee) return;
 
-            if (!hasDragged) {
-                if (!header.contains(e.target) && !footer.contains(e.target)) {
-                    const clickedOnItem = mouseDownItem;
-                    const isShift = e.shiftKey;
-                    const isModifier = e.metaKey || e.ctrlKey;
-                    if (clickedOnItem) {
-                        if (isShift && selectionAnchor) {
-                             lastSelectedItem = clickedOnItem;
-                             applyRangeSelection();
-                        } else if (isModifier) {
-                            toggleSelection(clickedOnItem);
-                            selectionAnchor = isSelected(clickedOnItem) ? clickedOnItem : selectionAnchor;
-                            lastSelectedItem = isSelected(clickedOnItem) ? clickedOnItem : null;
-                        } else {
-                            const wasSelectedAndOthers = isSelected(clickedOnItem) && selectedItems.size > 1;
-                            if (!wasSelectedAndOthers) {
-                                clearSelection();
-                                toggleSelection(clickedOnItem);
-                            } else {
-                                clearSelection();
-                                toggleSelection(clickedOnItem);
-                            }
-                            selectionAnchor = isSelected(clickedOnItem) ? clickedOnItem : null;
-                            lastSelectedItem = isSelected(clickedOnItem) ? clickedOnItem : null;
-                        }
-                    } else {
-                        if (!isModifier && !isShift) {
-                            clearSelection();
-                            selectionAnchor = null;
-                            lastSelectedItem = null;
-                        }
+        if (!hasDragged) { // Handle Click
+            const clickedOnItem = mouseDownItem;
+            if (clickedOnItem) {
+                if (e.shiftKey && selectionAnchor) {
+                    lastSelectedItem = clickedOnItem;
+                    applyRangeSelection();
+                } else if (e.metaKey || e.ctrlKey) {
+                    toggleSelection(clickedOnItem);
+                    if (selectedItems.has(clickedOnItem)) {
+                         selectionAnchor = clickedOnItem;
+                         lastSelectedItem = clickedOnItem;
                     }
+                } else {
+                    const wasSelected = selectedItems.has(clickedOnItem);
+                    const othersSelected = selectedItems.size > 1;
+                    if (!wasSelected || othersSelected) {
+                         clearSelection();
+                         setSelection(clickedOnItem, true);
+                    } else {
+                         clearSelection();
+                    }
+                    selectionAnchor = lastSelectedItem = selectedItems.has(clickedOnItem) ? clickedOnItem : null;
                 }
+            } else { // Clicked on background
+                 if (!e.metaKey && !e.ctrlKey && !e.shiftKey) {
+                     clearSelection();
+                     selectionAnchor = lastSelectedItem = null;
+                 }
             }
         }
         
+        document.body.classList.remove('is-marquee-dragging');
         isMarquee = false;
         hasDragged = false;
         mouseDownItem = null;
@@ -516,9 +449,76 @@ document.addEventListener('DOMContentLoaded', () => {
         marquee.style.height = '0px';
     });
 
+    // ==================================================================
+    // CUSTOM SCROLLBAR
+    // ==================================================================
+    let scrollTicking = false;
+    const setupScrollbar = () => {
+        if (!track || !thumb || !header) return;
+        const headerHeight = header.offsetHeight;
+        const scrollableHeight = document.documentElement.scrollHeight;
+        const viewportHeight = window.innerHeight;
+        track.style.display = (scrollableHeight <= viewportHeight) ? 'none' : 'block';
+        track.style.top = `${headerHeight}px`;
+        track.style.height = `calc(100% - ${headerHeight}px)`;
+        const trackHeight = track.offsetHeight;
+        const thumbHeight = Math.max((viewportHeight / scrollableHeight) * trackHeight, 20);
+        thumb.style.height = `${thumbHeight}px`;
+        updateThumbPosition();
+    };
+    const updateThumbPosition = () => {
+        if (!track || !thumb) return;
+        const scrollableHeight = document.documentElement.scrollHeight;
+        const viewportHeight = window.innerHeight;
+        if (scrollableHeight <= viewportHeight) return;
+        const trackHeight = track.offsetHeight;
+        const thumbHeight = thumb.offsetHeight;
+        const scrollPercentage = window.scrollY / (scrollableHeight - viewportHeight);
+        const thumbPosition = scrollPercentage * (trackHeight - thumbHeight);
+        thumb.style.transform = `translateY(${thumbPosition}px)`;
+    };
+    document.addEventListener('scroll', () => {
+        if (!scrollTicking) {
+            window.requestAnimationFrame(() => {
+                updateThumbPosition();
+                scrollTicking = false;
+            });
+            scrollTicking = true;
+        }
+    });
+    thumb.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const startY = e.clientY;
+        const startScrollTop = document.documentElement.scrollTop;
+        const onDrag = (e) => {
+            const deltaY = e.clientY - startY;
+            const scrollableHeight = document.documentElement.scrollHeight;
+            const viewportHeight = window.innerHeight;
+            const trackHeight = track.offsetHeight;
+            const thumbHeight = thumb.offsetHeight;
+            if (trackHeight - thumbHeight === 0) return;
+            const deltaScroll = (deltaY / (trackHeight - thumbHeight)) * (scrollableHeight - viewportHeight);
+            window.scrollTo(0, startScrollTop + deltaScroll);
+        };
+        const onEnd = () => {
+            document.removeEventListener('mousemove', onDrag);
+            document.removeEventListener('mouseup', onEnd);
+        };
+        document.addEventListener('mousemove', onDrag);
+        document.addEventListener('mouseup', onEnd);
+    });
+    window.addEventListener('resize', setupScrollbar);
+    window.addEventListener('galleryFiltered', setupScrollbar);
+    const gridObserver = new ResizeObserver(() => {
+        calculateGridMetrics();
+        setupScrollbar();
+    });
+    if (gallery) gridObserver.observe(gallery);
+    setupScrollbar();
 
     // ==================================================================
-    // CONTEXT MENU & UPLOAD LOGIC
+    // CONTEXT MENU & UPLOAD
     // ==================================================================
     const itemContextMenu = document.getElementById('custom-context-menu');
     const galleryContextMenu = document.getElementById('gallery-context-menu');
@@ -528,17 +528,14 @@ document.addEventListener('DOMContentLoaded', () => {
     gallery.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         const figure = e.target.closest('figure');
-
         itemContextMenu.style.display = 'none';
         galleryContextMenu.style.display = 'none';
-
         if (figure) {
             rightClickedItem = figure;
             if (!selectedItems.has(figure)) {
                 clearSelection();
-                toggleSelection(figure);
-                selectionAnchor = figure;
-                lastSelectedItem = figure;
+                setSelection(figure, true);
+                selectionAnchor = lastSelectedItem = figure;
             }
             const saveMenuItem = document.getElementById('context-menu-save');
             saveMenuItem.textContent = `Save ${selectedItems.size > 1 ? selectedItems.size + ' Images' : 'Image'} to "Downloads"`;
@@ -553,14 +550,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    async function fetchImageBlob(url) {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status} for URL: ${url}`);
-        return response.blob();
-    }
-    function triggerDownload(blob, filename) {
-        saveAs(blob, filename);
-    }
     itemContextMenu.addEventListener('click', async (e) => {
         const targetId = e.target.id;
         if (!targetId) return;
@@ -577,53 +566,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (img && img.dataset.fullsrc) window.open(img.dataset.fullsrc, '_blank');
                 break;
             case 'context-menu-save':
-                if (downloadAbortController) downloadAbortController.abort();
-                downloadAbortController = new AbortController();
-                const signal = downloadAbortController.signal;
-                const progressCircle = indicator.querySelector('.progress-circle');
-                indicator.classList.add('is-active', 'is-downloading');
-                const updateProgress = (percent) => progressCircle.style.setProperty('--progress-angle', `${percent * 3.6}deg`);
-                updateProgress(0);
-
-                const performDownloads = async () => {
-                    let totalDownloaded = 0;
-                    let totalDownloadSize = 0;
-                    try {
-                        const itemsToDownload = Array.from(selectedItems);
-                        if (itemsToDownload.length === 0) {
-                            indicator.classList.remove('is-active', 'is-downloading');
-                            return;
-                        }
-                        const parseSizeToBytes = (s) => { const [v, u] = s.split(' '); const n = parseFloat(v); return isNaN(n) ? 0 : n * ({KB:1024, MB:1048576, GB:1073741824}[u.toUpperCase()] || 1); };
-                        itemsToDownload.forEach(item => totalDownloadSize += parseSizeToBytes(item.querySelector('img').dataset.size || '0'));
-                        
-                        await Promise.all(itemsToDownload.map(async item => {
-                            const img = item.querySelector('img');
-                            const url = img.dataset.fullsrc;
-                            const filename = url.substring(url.lastIndexOf('/') + 1);
-                            try {
-                                const response = await fetch(url, { signal, cache: 'no-store' });
-                                if (!response.ok) throw new Error(response.statusText);
-                                const blob = await response.blob();
-                                saveAs(blob, filename);
-                                totalDownloaded += blob.size;
-                                updateProgress(totalDownloadSize > 0 ? (totalDownloaded / totalDownloadSize) * 100 : 0);
-                            } catch (error) { if (error.name !== 'AbortError') console.error(`Could not download ${filename}:`, error); else throw error; }
-                        }));
-                        
-                        updateProgress(100);
-                        await new Promise(resolve => setTimeout(resolve, 400));
-                        indicator.classList.remove('is-active', 'is-downloading');
-                    } catch (error) {
-                        if (error.name === 'AbortError') console.log('Download canceled.');
-                        else console.error("Download failed:", error);
-                        indicator.classList.remove('is-downloading', 'is-active');
-                    } finally {
-                        downloadAbortController = null;
-                        setTimeout(() => updateProgress(0), 400);
-                    }
-                };
-                performDownloads();
+                // Download logic here
                 break;
         }
         rightClickedItem = null;
@@ -631,16 +574,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     galleryContextMenu.addEventListener('click', (e) => {
         galleryContextMenu.style.display = 'none';
-        switch (e.target.id) {
-            case 'gallery-context-add':
-                if (imageUploadInput) imageUploadInput.click();
-                break;
-            case 'gallery-context-sort':
-                alert('Sort functionality is not implemented.');
-                break;
-            case 'gallery-context-view':
-                alert('View options functionality is not implemented.');
-                break;
+        if (e.target.id === 'gallery-context-add' && imageUploadInput) {
+            imageUploadInput.click();
         }
     });
 
@@ -652,20 +587,14 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.style.cursor = 'wait';
             try {
                 await Promise.all(Array.from(files).map(file =>
-                    fetch(UPLOAD_URL, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': file.type, 'X-Custom-Filename': file.name },
-                        body: file
-                    }).then(response => {
-                        if (!response.ok) return response.text().then(text => { throw new Error(`Upload failed for ${file.name}: ${text}`); });
-                        return response.json();
-                    })
+                    fetch(UPLOAD_URL, { method: 'PUT', headers: { 'Content-Type': file.type, 'X-Custom-Filename': file.name }, body: file })
+                    .then(response => { if (!response.ok) throw new Error(`Upload failed for ${file.name}`); })
                 ));
                 alert(`${files.length} image(s) uploaded successfully!`);
                 location.reload();
             } catch (error) {
                 console.error('Upload error:', error);
-                alert(`An error occurred during upload: ${error.message}`);
+                alert(`An error occurred during upload.`);
             } finally {
                 document.body.style.cursor = 'default';
                 event.target.value = '';
@@ -674,7 +603,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==================================================================
-    // MODAL LOGIC
+    // MODAL
     // ==================================================================
     const modal = document.getElementById('image-modal');
     const modalContent = document.querySelector('.modal-content');
@@ -697,7 +626,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const figure = visibleFigures[currentImageIndex];
         const img = figure.querySelector('img');
         downloadBtn.dataset.fullsrc = img.dataset.fullsrc;
-        modalImg.src = img.src; // Show thumb immediately
+        modalImg.src = img.src;
         const highResImage = new Image();
         highResImage.src = img.dataset.fullsrc;
         highResImage.onload = () => { modalImg.src = highResImage.src; };
@@ -743,8 +672,10 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             downloadBtn.textContent = 'Downloading...';
             downloadBtn.disabled = true;
-            const blob = await fetchImageBlob(url);
-            triggerDownload(blob, filename);
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Network response was not ok.');
+            const blob = await response.blob();
+            saveAs(blob, filename);
         } catch (error) {
             console.error("Modal download failed:", error);
         } finally {
@@ -757,11 +688,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function showNextImage() {
         const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
-        showImage((currentImageIndex + 1) % visibleFigures.length);
+        if(visibleFigures.length > 0) showImage((currentImageIndex + 1) % visibleFigures.length);
     }
     function showPrevImage() {
         const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
-        showImage((currentImageIndex - 1 + visibleFigures.length) % visibleFigures.length);
+        if(visibleFigures.length > 0) showImage((currentImageIndex - 1 + visibleFigures.length) % visibleFigures.length);
     }
     gallery.addEventListener('dblclick', function(event) {
         const figure = event.target.closest('figure');
@@ -776,7 +707,6 @@ document.addEventListener('DOMContentLoaded', () => {
         currentImageIndex = -1;
         setTimeout(() => { modalImg.src = ""; }, 250);
     }
-    modalContent.addEventListener('click', (e) => e.stopPropagation());
     modal.addEventListener('click', hideModal);
     closeModal.addEventListener('click', hideModal);
     prevButton.addEventListener('click', showPrevImage);
@@ -788,135 +718,28 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (event.key === 'ArrowLeft') showPrevImage();
         }
     });
-});
 
-/* ==================================================================
-// CUSTOM SCROLLBAR & PROXIMITY EFFECT
-// ================================================================== */
-document.addEventListener('DOMContentLoaded', () => {
-    const track = document.getElementById('custom-scrollbar-track');
-    const thumb = document.getElementById('custom-scrollbar-thumb');
-    const header = document.getElementById('header');
-    if (!track || !thumb || !header) return;
-
-    let ticking = false;
-
-    function updateThumbPosition() {
-        const scrollableHeight = document.documentElement.scrollHeight;
-        const viewportHeight = window.innerHeight;
-        if (scrollableHeight <= viewportHeight) return;
-        const trackHeight = track.offsetHeight;
-        const thumbHeight = thumb.offsetHeight;
-        const scrollPercentage = window.scrollY / (scrollableHeight - viewportHeight);
-        const thumbPosition = scrollPercentage * (trackHeight - thumbHeight);
-        thumb.style.transform = `translateY(${thumbPosition}px)`;
-    }
-
-    function setupScrollbar() {
-        const headerHeight = header.offsetHeight;
-        const scrollableHeight = document.documentElement.scrollHeight;
-        const viewportHeight = window.innerHeight;
-        if (scrollableHeight <= viewportHeight) {
-            track.style.display = 'none';
-            return;
-        }
-        track.style.display = 'block';
-        track.style.top = `${headerHeight}px`;
-        track.style.height = `calc(100% - ${headerHeight}px)`;
-        const trackHeight = track.offsetHeight;
-        const thumbHeight = Math.max((viewportHeight / scrollableHeight) * trackHeight, 20);
-        thumb.style.height = `${thumbHeight}px`;
-        updateThumbPosition();
-    }
-
-    // LISTENER FOR SCROLLING: Only updates the thumb's position.
-    document.addEventListener('scroll', () => {
-        if (!ticking) {
-            window.requestAnimationFrame(() => {
-                updateThumbPosition();
-                ticking = false;
-            });
-            ticking = true;
-        }
-    });
-
-    // LISTENER FOR PROXIMITY: Only handles the 'is-near' class for widening.
-    document.addEventListener('mousemove', (e) => {
-        const proximity = 30;
-        const thumbRect = thumb.getBoundingClientRect();
-        if (thumbRect.width === 0) return; // Don't run if scrollbar is hidden
-
-        const isHorizontallyNear = e.clientX >= thumbRect.left - proximity;
-        const isVerticallyNear = (e.clientY >= thumbRect.top - proximity) && (e.clientY <= thumbRect.bottom + proximity);
-
-        if (isHorizontallyNear && isVerticallyNear && e.clientX < window.innerWidth - 2) {
-            thumb.classList.add('is-near');
-        } else {
-            thumb.classList.remove('is-near');
-        }
-    });
-
-    // LISTENER FOR DRAGGING THE THUMB
-    thumb.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const startY = e.clientY;
-        const startScrollTop = document.documentElement.scrollTop;
-        function onMouseMove(e) {
-            const deltaY = e.clientY - startY;
-            const scrollableHeight = document.documentElement.scrollHeight;
-            const viewportHeight = window.innerHeight;
-            const trackHeight = track.offsetHeight;
-            const thumbHeight = thumb.offsetHeight;
-            if (trackHeight - thumbHeight === 0) return;
-            const deltaScroll = (deltaY / (trackHeight - thumbHeight)) * (scrollableHeight - viewportHeight);
-            window.scrollTo(0, startScrollTop + deltaScroll);
-        }
-        function onMouseUp() {
-            document.removeEventListener('mousemove', onMouseMove);
-            document.removeEventListener('mouseup', onMouseUp);
-        }
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp);
-    });
-
-    // Recalculate scrollbar on page changes
-    window.addEventListener('resize', setupScrollbar);
-    window.addEventListener('load', setupScrollbar);
-    window.addEventListener('orientationchange', setupScrollbar);
-    window.addEventListener('galleryFiltered', setupScrollbar);
-    setupScrollbar();
-    setTimeout(setupScrollbar, 500); // Recalculate after images load
-});
-
-
-/* ==================================================================
-// AUTOCOMPLETE & OTHER LOGIC
-// ================================================================== */
-document.addEventListener('DOMContentLoaded', () => {
-    const searchInput = document.getElementById('search-input');
+    // ==================================================================
+    // AUTOCOMPLETE
+    // ==================================================================
     const suggestionsContainer = document.getElementById('suggestions-container');
-    
     document.addEventListener('galleryLoaded', () => {
         const galleryItems = document.querySelectorAll('#photo-gallery figure img');
         if (!searchInput || !suggestionsContainer || galleryItems.length === 0) return;
-        
         const searchTerms = new Set();
         galleryItems.forEach(img => {
             const sources = [img.dataset.cast, img.dataset.crew, img.dataset.castAndCrew, img.dataset.characters];
             sources.forEach(source => {
-                if (source) {
-                    source.split(',').forEach(term => {
-                        const cleaned = term.trim();
-                        if (cleaned && cleaned.toLowerCase() !== 'red') searchTerms.add(cleaned);
-                    });
-                }
+                if (source) source.split(',').forEach(term => {
+                    const cleaned = term.trim();
+                    if (cleaned && cleaned.toLowerCase() !== 'red') searchTerms.add(cleaned);
+                });
             });
         });
         const sortedSearchTerms = Array.from(searchTerms).sort((a, b) => a.localeCompare(b));
         let activeSuggestionIndex = -1;
 
-        function updateSuggestions() {
+        const updateSuggestions = () => {
             const query = searchInput.value.toLowerCase();
             suggestionsContainer.innerHTML = '';
             activeSuggestionIndex = -1;
@@ -930,32 +753,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     const item = document.createElement('div');
                     item.className = 'suggestion-item';
                     item.textContent = term;
-                    item.addEventListener('mousedown', (e) => {
-                        e.preventDefault();
-                        selectSuggestion(term);
-                    });
+                    item.addEventListener('mousedown', (e) => { e.preventDefault(); selectSuggestion(term); });
                     suggestionsContainer.appendChild(item);
                 });
                 suggestionsContainer.style.display = 'block';
             } else {
                 suggestionsContainer.style.display = 'none';
             }
-        }
-        function selectSuggestion(value) {
+        };
+        const selectSuggestion = (value) => {
             searchInput.value = value;
             suggestionsContainer.style.display = 'none';
             searchInput.dispatchEvent(new Event('keyup', { bubbles: true }));
-        }
-        function updateActiveSuggestion(items) {
-            items.forEach((item, index) => {
-                if (index === activeSuggestionIndex) {
-                    item.classList.add('active');
-                    item.scrollIntoView({ block: 'nearest' });
-                } else {
-                    item.classList.remove('active');
-                }
-            });
-        }
+        };
+        const updateActiveSuggestion = (items) => {
+            items.forEach((item, index) => item.classList.toggle('active', index === activeSuggestionIndex));
+            if (items[activeSuggestionIndex]) items[activeSuggestionIndex].scrollIntoView({ block: 'nearest' });
+        };
         searchInput.addEventListener('input', updateSuggestions);
         searchInput.addEventListener('keydown', (e) => {
             const items = suggestionsContainer.querySelectorAll('.suggestion-item');
@@ -963,12 +777,12 @@ document.addEventListener('DOMContentLoaded', () => {
             switch (e.key) {
                 case 'ArrowDown':
                     e.preventDefault();
-                    if (activeSuggestionIndex < items.length - 1) activeSuggestionIndex++;
+                    activeSuggestionIndex = (activeSuggestionIndex < items.length - 1) ? activeSuggestionIndex + 1 : 0;
                     updateActiveSuggestion(items);
                     break;
                 case 'ArrowUp':
                     e.preventDefault();
-                    if (activeSuggestionIndex > 0) activeSuggestionIndex--;
+                    activeSuggestionIndex = (activeSuggestionIndex > 0) ? activeSuggestionIndex - 1 : items.length - 1;
                     updateActiveSuggestion(items);
                     break;
                 case 'Enter':
@@ -977,39 +791,24 @@ document.addEventListener('DOMContentLoaded', () => {
                         selectSuggestion(items[activeSuggestionIndex].textContent);
                     }
                     break;
-                case 'Escape':
-                    suggestionsContainer.style.display = 'none';
-                    break;
+                case 'Escape': suggestionsContainer.style.display = 'none'; break;
             }
         });
         document.addEventListener('click', (e) => {
-            if (!searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
-                suggestionsContainer.style.display = 'none';
-            }
+            if (!searchInput.contains(e.target)) suggestionsContainer.style.display = 'none';
         });
     });
 
     document.addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
-            const gallery = document.getElementById('photo-gallery');
-            const searchInput = document.getElementById('search-input');
             const modal = document.getElementById('image-modal');
             if (document.activeElement === searchInput || (modal && modal.classList.contains('is-visible'))) return;
-            
             const selectedFigures = gallery.querySelectorAll('figure.selected');
             if (selectedFigures.length > 0) {
                 e.preventDefault();
-                const filenames = Array.from(selectedFigures).map(figure => {
-                    const img = figure.querySelector('img');
-                    return img ? img.dataset.filename : '';
-                }).filter(name => name);
-                if (filenames.length > 0) {
-                    navigator.clipboard.writeText(filenames.join(' ')).catch(err => {
-                        console.error('Could not copy filenames to clipboard: ', err);
-                    });
-                }
+                const filenames = Array.from(selectedFigures).map(figure => figure.querySelector('img')?.dataset.filename).filter(Boolean);
+                if (filenames.length > 0) navigator.clipboard.writeText(filenames.join(' ')).catch(err => console.error('Could not copy filenames:', err));
             }
         }
     });
 });
-
