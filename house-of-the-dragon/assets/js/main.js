@@ -907,7 +907,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const saveMenuItem = document.getElementById('context-menu-save');
             if (selectedItems.size > 1) {
-                saveMenuItem.textContent = `Save ${selectedItems.size} Images as .zip`;
+                saveMenuItem.textContent = `Save ${selectedItems.size} Images to "Downloads"`;
             } else {
                 saveMenuItem.textContent = 'Save Image to "Downloads"';
             }
@@ -1740,3 +1740,4 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
+
