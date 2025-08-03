@@ -987,11 +987,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 indicator.classList.remove('is-complete');
                 indicator.classList.add('is-active', 'is-downloading');
 
+                // Helper function to parse size strings like "5.8 MB" into bytes
                 const parseSizeToBytes = (sizeStr) => {
                     if (!sizeStr) return 0;
                     const [value, unit] = sizeStr.split(' ');
                     const num = parseFloat(value);
                     if (isNaN(num)) return 0;
+
                     switch (unit.toUpperCase()) {
                         case 'KB': return num * 1024;
                         case 'MB': return num * 1024 * 1024;
@@ -1000,15 +1002,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 };
 
-                let lastPercent = -1;
                 const updateProgress = (percent) => {
-                    const p = Math.floor(percent);
-                    if (p > lastPercent) { // Only update the UI on whole percentage changes
-                        lastPercent = p;
-                        progressCircle.style.background = `conic-gradient(var(--ancient-gold, #c7a465) ${p}%, rgba(255,255,255,0.2) 0%)`;
-                    }
+                    progressCircle.style.background = `radial-gradient(white 60%, transparent 61%), conic-gradient(#fff ${percent}%, rgba(255,255,255,0.2) 0%)`;
                 };
                 
+                // Reset progress to 0 at the start
                 updateProgress(0);
 
                 const performDownloads = async () => {
@@ -1022,11 +1020,13 @@ document.addEventListener('DOMContentLoaded', () => {
                              return;
                         }
 
+                        // 1. Calculate the total size of all selected files
                         itemsToDownload.forEach(item => {
                             const img = item.querySelector('img');
                             totalDownloadSize += parseSizeToBytes(img.dataset.size);
                         });
 
+                        // Helper function to process items in concurrent batches
                         const processInBatches = async (items, batchSize, processFn) => {
                             let position = 0;
                             while (position < items.length) {
@@ -1037,6 +1037,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         };
 
+                        // 2. Process downloads in parallel batches
                         await processInBatches(itemsToDownload, 6, async (item) => {
                             const img = item.querySelector('img');
                             const url = img.dataset.fullsrc;
@@ -1046,25 +1047,17 @@ document.addEventListener('DOMContentLoaded', () => {
                                 const response = await fetch(url, { signal });
                                 if (!response.ok) {
                                     console.error(`Failed to fetch ${filename}: ${response.statusText}`);
+                                    // If a file fails, subtract its size from the total so the percentage remains accurate
                                     totalDownloadSize -= parseSizeToBytes(img.dataset.size);
                                     return;
                                 }
-                                
-                                // Read the download stream chunk by chunk for smooth progress
-                                const reader = response.body.getReader();
-                                const chunks = [];
-                                while (true) {
-                                    const { done, value } = await reader.read();
-                                    if (done) break;
-                                    
-                                    chunks.push(value);
-                                    totalDownloaded += value.length;
-                                    const percent = totalDownloadSize > 0 ? (totalDownloaded / totalDownloadSize) * 100 : 0;
-                                    updateProgress(percent);
-                                }
-
-                                const blob = new Blob(chunks);
+                                const blob = await response.blob();
                                 saveAs(blob, filename);
+
+                                // 3. Update progress after each successful download
+                                totalDownloaded += blob.size;
+                                const percent = totalDownloadSize > 0 ? (totalDownloaded / totalDownloadSize) * 100 : 0;
+                                updateProgress(percent);
 
                             } catch (error) {
                                 if (error.name !== 'AbortError') {
@@ -1075,7 +1068,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         });
 
-                        updateProgress(100); // Ensure it finishes at 100%
                         indicator.classList.remove('is-downloading');
                         indicator.classList.add('is-complete');
 
@@ -1091,6 +1083,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         setTimeout(() => {
                             indicator.classList.remove('is-active', 'is-complete');
                             downloadAbortController = null;
+                            // Reset progress to 0 for the next time
                             setTimeout(() => updateProgress(0), 300);
                         }, 3000);
                     }
