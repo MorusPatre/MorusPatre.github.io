@@ -975,9 +975,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             }
             case 'context-menu-save': {
-                const saveMenuItem = document.getElementById('context-menu-save');
-                const originalButtonText = saveMenuItem.textContent;
-
                 if (downloadAbortController) {
                     downloadAbortController.abort();
                 }
@@ -989,76 +986,56 @@ document.addEventListener('DOMContentLoaded', () => {
                 indicator.classList.remove('is-complete');
                 indicator.classList.add('is-active', 'is-downloading');
 
-                // Main download function now wrapped to be called by the batching logic
-                case 'context-menu-save': {
-                    const saveMenuItem = document.getElementById('context-menu-save');
-                    const originalButtonText = saveMenuItem.textContent;
+                const performDownloads = async () => {
+                    try {
+                        const itemsToDownload = Array.from(selectedItems);
+                        if (itemsToDownload.length === 0) return;
 
-                    if (downloadAbortController) {
-                        downloadAbortController.abort();
-                    }
-                    
-                    downloadAbortController = new AbortController();
-                    const signal = downloadAbortController.signal;
+                        for (const item of itemsToDownload) {
+                            if (signal.aborted) throw new Error('AbortError');
 
-                    const indicator = document.getElementById('download-indicator');
-                    indicator.classList.remove('is-complete');
-                    indicator.classList.add('is-active', 'is-downloading');
+                            const img = item.querySelector('img');
+                            const url = img.dataset.fullsrc;
+                            const filename = url.substring(url.lastIndexOf('/') + 1);
 
-                    const performDownloads = async () => {
-                        try {
-                            const itemsToDownload = Array.from(selectedItems);
-                            if (itemsToDownload.length === 0) return;
-
-                            // Loop through each selected item and download it individually
-                            for (const item of itemsToDownload) {
-                                // If a cancellation was requested, stop the loop
-                                if (signal.aborted) throw new Error('AbortError');
-
-                                const img = item.querySelector('img');
-                                const url = img.dataset.fullsrc;
-                                const filename = url.substring(url.lastIndexOf('/') + 1);
-
-                                try {
-                                    const response = await fetch(url, { signal });
-                                    if (!response.ok) {
-                                        console.error(`Failed to fetch ${filename}: ${response.statusText}`);
-                                        continue; // Skip to the next file on failure
-                                    }
-                                    const blob = await response.blob();
-                                    saveAs(blob, filename);
-                                } catch (error) {
-                                    // If a single fetch fails, log it but don't stop the whole process
-                                    if (error.name !== 'AbortError') {
-                                         console.error(`Could not download ${filename}:`, error);
-                                    } else {
-                                        // Re-throw the abort error to be caught by the outer catch
-                                        throw error;
-                                    }
+                            try {
+                                const response = await fetch(url, { signal });
+                                if (!response.ok) {
+                                    console.error(`Failed to fetch ${filename}: ${response.statusText}`);
+                                    continue;
+                                }
+                                const blob = await response.blob();
+                                saveAs(blob, filename);
+                            } catch (error) {
+                                if (error.name !== 'AbortError') {
+                                        console.error(`Could not download ${filename}:`, error);
+                                } else {
+                                    throw error;
                                 }
                             }
-
-                            indicator.classList.remove('is-downloading');
-                            indicator.classList.add('is-complete');
-
-                        } catch (error) {
-                            if (error.name === 'AbortError') {
-                                console.log('Download canceled by user.');
-                            } else {
-                                console.error("Download failed:", error);
-                                alert(`An error occurred during the download: ${error.message}`);
-                            }
-                            indicator.classList.remove('is-downloading', 'is-active');
-                        } finally {
-                            setTimeout(() => {
-                                indicator.classList.remove('is-active', 'is-complete');
-                                downloadAbortController = null;
-                            }, 3000);
                         }
-                    };
 
-                    performDownloads();
-                    break;
+                        indicator.classList.remove('is-downloading');
+                        indicator.classList.add('is-complete');
+
+                    } catch (error) {
+                        if (error.name === 'AbortError') {
+                            console.log('Download canceled by user.');
+                        } else {
+                            console.error("Download failed:", error);
+                            alert(`An error occurred during the download: ${error.message}`);
+                        }
+                        indicator.classList.remove('is-downloading', 'is-active');
+                    } finally {
+                        setTimeout(() => {
+                            indicator.classList.remove('is-active', 'is-complete');
+                            downloadAbortController = null;
+                        }, 3000);
+                    }
+                };
+
+                performDownloads();
+                break;
             }
         }
         rightClickedItem = null;
