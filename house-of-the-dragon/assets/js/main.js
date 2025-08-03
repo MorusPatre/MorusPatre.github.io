@@ -969,7 +969,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 saveMenuItem.textContent = 'Preparing...';
 
                 try {
-                    // --- If MORE THAN ONE item is selected, use the server-side ZIP method ---
                     if (selectedItems.size > 1) {
                         const filenames = Array.from(selectedItems).map(item => {
                             const img = item.querySelector('img');
@@ -996,8 +995,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         // Get the filename from the server's 'Content-Disposition' response header
                         const disposition = response.headers.get('Content-Disposition');
-                        let filename = 'download.zip'; // Provide a fallback filename
+                        let filename = 'download.zip'; // Fallback filename
                         if (disposition && disposition.indexOf('attachment') !== -1) {
+                            // THIS REGEX CORRECTLY LOOKS FOR QUOTES
                             const filenameRegex = /filename="([^"]+)"/;
                             const matches = filenameRegex.exec(disposition);
                             if (matches != null && matches[1]) {
@@ -1008,7 +1008,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         saveAs(zipBlob, filename);
 
                     } else if (selectedItems.size === 1) {
-                        // --- If ONLY ONE item is selected, download it directly ---
                         const item = Array.from(selectedItems)[0];
                         const img = item.querySelector('img');
                         const url = img.dataset.fullsrc;
