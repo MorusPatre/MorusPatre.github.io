@@ -2145,7 +2145,7 @@ html, body {
     color: #fff;
     font-size: 20px; /* Changed from 24px */
     line-height: 1;
-    cursor: pointer;
+    cursor: native;
     opacity: 0;
     transform: scale(0.8);
 }
