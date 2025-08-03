@@ -811,6 +811,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const thumbPosition = scrollPercentage * (trackHeight - thumbHeight);
         thumb.style.transform = `translateY(${thumbPosition}px)`;
     }
+
     function setupScrollbar() {
         const headerHeight = header.offsetHeight;
         const scrollableHeight = document.documentElement.scrollHeight;
@@ -827,24 +828,35 @@ document.addEventListener('DOMContentLoaded', () => {
         thumb.style.height = `${thumbHeight}px`;
         updateThumbPosition();
     }
+
+    // LISTENER FOR SCROLLING: Only updates the thumb's position.
     document.addEventListener('scroll', () => {
         if (!ticking) {
             window.requestAnimationFrame(() => {
                 updateThumbPosition();
-                const proximity = 30;
-                const thumbRect = thumb.getBoundingClientRect();
-                const isHorizontallyNear = window.event.clientX >= thumbRect.left - proximity;
-                const isVerticallyNear = (window.event.clientY >= thumbRect.top - proximity) && (window.event.clientY <= thumbRect.bottom + proximity);
-                if (isHorizontallyNear && isVerticallyNear && window.event.clientX < window.innerWidth - 2) {
-                     thumb.classList.add('is-near');
-                } else {
-                     thumb.classList.remove('is-near');
-                }
                 ticking = false;
             });
             ticking = true;
         }
     });
+
+    // LISTENER FOR PROXIMITY: Only handles the 'is-near' class for widening.
+    document.addEventListener('mousemove', (e) => {
+        const proximity = 30;
+        const thumbRect = thumb.getBoundingClientRect();
+        if (thumbRect.width === 0) return; // Don't run if scrollbar is hidden
+
+        const isHorizontallyNear = e.clientX >= thumbRect.left - proximity;
+        const isVerticallyNear = (e.clientY >= thumbRect.top - proximity) && (e.clientY <= thumbRect.bottom + proximity);
+
+        if (isHorizontallyNear && isVerticallyNear && e.clientX < window.innerWidth - 2) {
+            thumb.classList.add('is-near');
+        } else {
+            thumb.classList.remove('is-near');
+        }
+    });
+
+    // LISTENER FOR DRAGGING THE THUMB
     thumb.addEventListener('mousedown', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -868,12 +880,13 @@ document.addEventListener('DOMContentLoaded', () => {
         document.addEventListener('mouseup', onMouseUp);
     });
 
+    // Recalculate scrollbar on page changes
     window.addEventListener('resize', setupScrollbar);
     window.addEventListener('load', setupScrollbar);
     window.addEventListener('orientationchange', setupScrollbar);
     window.addEventListener('galleryFiltered', setupScrollbar);
     setupScrollbar();
-    setTimeout(setupScrollbar, 500);
+    setTimeout(setupScrollbar, 500); // Recalculate after images load
 });
 
 
@@ -999,3 +1012,4 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
