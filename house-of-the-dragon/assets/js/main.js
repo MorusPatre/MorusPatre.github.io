@@ -978,83 +978,85 @@ document.addEventListener('DOMContentLoaded', () => {
                 const saveMenuItem = document.getElementById('context-menu-save');
                 const originalButtonText = saveMenuItem.textContent;
 
-                // Abort any previous download
                 if (downloadAbortController) {
                     downloadAbortController.abort();
                 }
                 
-                // Create a new controller for this download
                 downloadAbortController = new AbortController();
+                const signal = downloadAbortController.signal;
 
+                const indicator = document.getElementById('download-indicator');
                 indicator.classList.remove('is-complete');
                 indicator.classList.add('is-active', 'is-downloading');
 
-                try {
-                    if (selectedItems.size > 1) {
-                        const filenames = Array.from(selectedItems).map(item => {
+                // Main download function now wrapped to be called by the batching logic
+                const performDownload = async () => {
+                    try {
+                        const allFilenames = Array.from(selectedItems).map(item => {
                             const img = item.querySelector('img');
                             const fullSrc = img ? img.dataset.fullsrc : null;
                             if (!fullSrc) return null;
                             return fullSrc.substring(fullSrc.lastIndexOf('/') + 1);
                         }).filter(name => name);
 
-                        if (filenames.length === 0) throw new Error("No valid files selected.");
+                        if (allFilenames.length === 0) throw new Error("No valid files selected.");
 
                         const galleryId = document.getElementById('photo-gallery').dataset.galleryId;
+                        const batchSize = 200; // Download in chunks of 200
+                        let part = 1;
 
-                        const response = await fetch('https://b2-asset-bundler.witcherarchive.workers.dev', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ gallery: galleryId, files: filenames }),
-                            signal: downloadAbortController.signal
-                        });
+                        for (let i = 0; i < allFilenames.length; i += batchSize) {
+                            if (signal.aborted) throw new Error('AbortError');
+                            
+                            const batch = allFilenames.slice(i, i + batchSize);
+                            
+                            const response = await fetch('https://b2-asset-bundler.witcherarchive.workers.dev', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ gallery: galleryId, files: batch }),
+                                signal: signal
+                            });
 
-                        if (!response.ok) throw new Error(`Server could not create zip: ${await response.text()}`);
-                        
-                        const zipBlob = await response.blob();
-                        const disposition = response.headers.get('Content-Disposition');
-                        let filename = 'download.zip';
-                        if (disposition && disposition.indexOf('attachment') !== -1) {
-                            const filenameRegex = /filename="([^"]+)"/;
-                            const matches = filenameRegex.exec(disposition);
-                            if (matches != null && matches[1]) filename = matches[1];
+                            if (!response.ok) throw new Error(`Server could not create zip (Part ${part}): ${await response.text()}`);
+                            
+                            const zipBlob = await response.blob();
+                            const disposition = response.headers.get('Content-Disposition');
+                            let filename = `download_part_${part}.zip`; // Fallback filename for this part
+                            if (disposition && disposition.indexOf('attachment') !== -1) {
+                                const filenameRegex = /filename="([^"]+)"/;
+                                const matches = filenameRegex.exec(disposition);
+                                if (matches != null && matches[1]) filename = matches[1];
+                            }
+                            
+                            // For multiple parts, we add a part number to the filename
+                            if (allFilenames.length > batchSize) {
+                               filename = filename.replace('.zip', `_Part-${part}.zip`);
+                            }
+
+                            saveAs(zipBlob, filename);
+                            part++;
                         }
-                        saveAs(zipBlob, filename);
 
-                    } else if (selectedItems.size === 1) {
-                        const item = Array.from(selectedItems)[0];
-                        const img = item.querySelector('img');
-                        const url = img.dataset.fullsrc;
-                        const filename = url.substring(url.lastIndexOf('/') + 1);
+                        indicator.classList.remove('is-downloading');
+                        indicator.classList.add('is-complete');
 
-                        const response = await fetch(url, { signal: downloadAbortController.signal });
-                        if (!response.ok) throw new Error(`Failed to fetch image: ${response.statusText}`);
-                        
-                        const blob = await response.blob();
-                        saveAs(blob, filename);
+                    } catch (error) {
+                        if (error.name === 'AbortError') {
+                            console.log('Download canceled by user.');
+                        } else {
+                            console.error("Download failed:", error);
+                            alert(`An error occurred during the download: ${error.message}`);
+                        }
+                        indicator.classList.remove('is-downloading', 'is-active');
+                    } finally {
+                        setTimeout(() => {
+                            indicator.classList.remove('is-active', 'is-complete');
+                            downloadAbortController = null;
+                        }, 3000);
                     }
+                };
 
-                    // Show completion tick on success
-                    indicator.classList.remove('is-downloading');
-                    indicator.classList.add('is-complete');
-
-                } catch (error) {
-                    if (error.name === 'AbortError') {
-                        console.log('Download canceled by user.');
-                    } else {
-                        console.error("Download failed:", error);
-                        alert(`An error occurred during the download: ${error.message}`);
-                    }
-                    // Hide indicator on failure or cancellation
-                    indicator.classList.remove('is-downloading', 'is-active');
-
-                } finally {
-                    // After 3 seconds, hide the completion tick
-                    setTimeout(() => {
-                        indicator.classList.remove('is-active', 'is-complete');
-                        downloadAbortController = null;
-                    }, 3000);
-                }
+                performDownload(); // Execute the download
                 break;
             }
         }
