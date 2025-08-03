@@ -1064,7 +1064,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         updateProgress(100);
 
                         // Wait for 800ms to allow the user to see the completed state.
-                        await new Promise(resolve => setTimeout(resolve, 800));
+                        await new Promise(resolve => setTimeout(resolve, 600));
                         
                         // Now, hide the indicator.
                         indicator.classList.remove('is-active', 'is-downloading');
