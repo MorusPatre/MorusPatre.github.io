@@ -408,6 +408,16 @@ document.addEventListener('DOMContentLoaded', () => {
     let hasDragged = false;
     let mouseDownItem = null;
     let downloadAbortController = null;
+    
+    const indicator = document.getElementById('download-indicator');
+    const cancelBtn = indicator.querySelector('.cancel-icon');
+
+    // Attach a single, permanent listener to the cancel button
+    cancelBtn.addEventListener('click', () => {
+        if (downloadAbortController) {
+            downloadAbortController.abort();
+        }
+    });
 
     /*
     ==================================================================
@@ -967,23 +977,14 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'context-menu-save': {
                 const saveMenuItem = document.getElementById('context-menu-save');
                 const originalButtonText = saveMenuItem.textContent;
-                const indicator = document.getElementById('download-indicator');
-                const cancelBtn = indicator.querySelector('.cancel-icon');
 
-                // Abort any previous download if one is in progress
+                // Abort any previous download
                 if (downloadAbortController) {
                     downloadAbortController.abort();
                 }
                 
-                // Create a new AbortController for this download
+                // Create a new controller for this download
                 downloadAbortController = new AbortController();
-
-                const cancelDownload = () => {
-                    if (downloadAbortController) {
-                        downloadAbortController.abort();
-                    }
-                };
-                cancelBtn.addEventListener('click', cancelDownload, { once: true });
 
                 indicator.classList.remove('is-complete');
                 indicator.classList.add('is-active', 'is-downloading');
@@ -1005,7 +1006,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ gallery: galleryId, files: filenames }),
-                            signal: downloadAbortController.signal // <-- Cancellation signal
+                            signal: downloadAbortController.signal
                         });
 
                         if (!response.ok) throw new Error(`Server could not create zip: ${await response.text()}`);
@@ -1026,7 +1027,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const url = img.dataset.fullsrc;
                         const filename = url.substring(url.lastIndexOf('/') + 1);
 
-                        const response = await fetch(url, { signal: downloadAbortController.signal }); // <-- Cancellation signal
+                        const response = await fetch(url, { signal: downloadAbortController.signal });
                         if (!response.ok) throw new Error(`Failed to fetch image: ${response.statusText}`);
                         
                         const blob = await response.blob();
@@ -1044,14 +1045,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         console.error("Download failed:", error);
                         alert(`An error occurred during the download: ${error.message}`);
                     }
-                    // Hide indicator on failure/cancellation
+                    // Hide indicator on failure or cancellation
                     indicator.classList.remove('is-downloading', 'is-active');
 
                 } finally {
                     // After 3 seconds, hide the completion tick
                     setTimeout(() => {
                         indicator.classList.remove('is-active', 'is-complete');
-                        cancelBtn.removeEventListener('click', cancelDownload);
                         downloadAbortController = null;
                     }, 3000);
                 }
