@@ -709,9 +709,44 @@ document.addEventListener('DOMContentLoaded', () => {
         preMarqueeSelectedItems = new Set(selectedItems);
     });
 
+    // --- MouseDown Listener (REVISED) ---
+    wrapper.addEventListener('mousedown', (e) => {
+        // MODIFIED: If click starts in search bar, exit to allow native text selection.
+        if (e.target === searchInput) {
+            return;
+        }
+
+        // MODIFIED: Check if the event target is within the header or footer
+        if (e.button !== 0 || header.contains(e.target) || footer.contains(e.target)) {
+            isMarquee = false; // Ensure marquee selection is not initiated if starting in header/footer
+            return;
+        }
+
+        if(gallery.contains(e.target) || e.target === gallery) {
+            e.preventDefault();
+            if (searchInput) searchInput.blur(); // MODIFIED: Use variable and check for existence
+        }
+
+        hasDragged = false;
+        isMarquee = true;
+        mouseDownItem = e.target.closest('figure');
+
+        const galleryRect = gallery.getBoundingClientRect();
+        const scrollY = window.scrollY || window.pageYOffset;
+        const scrollX = window.scrollX || window.pageXOffset;
+
+        // **THIS IS THE KEY FIX**:
+        // Calculate startPos relative to the document, not just the viewport.
+        startPos = {
+            x: (e.clientX - galleryRect.left) + scrollX,
+            y: (e.clientY - galleryRect.top) + scrollY,
+        };
+
+        preMarqueeSelectedItems = new Set(selectedItems);
+    });
+
     // --- MouseMove Listener (REVISED) ---
-    // This listener now includes custom auto-scroll logic.
-    let scrollInterval = null; // To hold our scroll timer
+    let scrollInterval = null;
 
     document.addEventListener('mousemove', (e) => {
         if (!isMarquee) return;
@@ -722,29 +757,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
         marquee.style.visibility = 'visible';
 
-        const galleryRect = gallery.getBoundingClientRect();
         const viewportHeight = window.innerHeight;
-        const scrollZone = 40; // The pixel distance from the edge to trigger a scroll
-        const scrollSpeed = 15; // How many pixels to scroll per frame
+        const scrollZone = 40;
+        const scrollSpeed = 15;
 
-        // Stop any existing scroll interval
+        // Stop and restart scroll interval based on cursor position
         clearInterval(scrollInterval);
-
-        // --- NEW: Auto-scroll logic ---
         if (e.clientY > viewportHeight - scrollZone) {
-            // Scroll down
             scrollInterval = setInterval(() => { window.scrollBy(0, scrollSpeed); }, 16);
         } else if (e.clientY < scrollZone) {
-            // Scroll up
             scrollInterval = setInterval(() => { window.scrollBy(0, -scrollSpeed); }, 16);
         }
-        // --- END: Auto-scroll logic ---
 
-
-        // Calculate mouse position relative to the gallery, accounting for scroll
-        // This ensures the marquee rectangle is drawn correctly even while the page is scrolling.
+        const galleryRect = gallery.getBoundingClientRect();
         const scrollY = window.scrollY || window.pageYOffset;
-        let currentX = e.clientX - galleryRect.left;
+        const scrollX = window.scrollX || window.pageXOffset;
+
+        // **THIS IS THE KEY FIX**:
+        // Calculate current position relative to the document as well.
+        let currentX = (e.clientX - galleryRect.left) + scrollX;
         let currentY = (e.clientY - galleryRect.top) + scrollY;
 
         const marqueeRect = {
@@ -754,7 +785,6 @@ document.addEventListener('DOMContentLoaded', () => {
             h: Math.abs(startPos.y - currentY)
         };
 
-        // Update marquee position and size on the page
         marquee.style.left = `${marqueeRect.x}px`;
         marquee.style.top = `${marqueeRect.y}px`;
         marquee.style.width = `${marqueeRect.w}px`;
@@ -762,8 +792,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const isModifier = e.metaKey || e.ctrlKey || e.shiftKey;
 
-        // The logic for selecting items remains largely the same, but it uses the
-        // newly calculated marqueeRect which is now aware of the page's scroll position.
         for (const item of items) {
             if (item.style.display === 'none') continue;
 
