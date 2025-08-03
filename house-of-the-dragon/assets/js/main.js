@@ -984,7 +984,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const indicator = document.getElementById('download-indicator');
                 const progressCircle = indicator.querySelector('.progress-circle');
-                indicator.classList.remove('is-complete');
                 indicator.classList.add('is-active', 'is-downloading');
 
                 const parseSizeToBytes = (sizeStr) => {
@@ -1060,7 +1059,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         });
                         
-                        // On success, simply hide the indicator instead of showing the tick
+                        // On success, simply hide the indicator
                         indicator.classList.remove('is-active', 'is-downloading');
 
                     } catch (error) {
