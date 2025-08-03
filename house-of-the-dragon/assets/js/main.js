@@ -1000,9 +1000,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 };
 
-                // THIS IS THE MODIFIED HELPER FUNCTION
                 const updateProgress = (percent) => {
-                    // We now set the --progress-angle custom property (1% = 3.6 degrees)
                     progressCircle.style.setProperty('--progress-angle', `${percent * 3.6}deg`);
                 };
                 
@@ -1062,9 +1060,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         });
                         
-                        updateProgress(100);
-                        indicator.classList.remove('is-downloading');
-                        indicator.classList.add('is-complete');
+                        // On success, simply hide the indicator
+                        indicator.classList.remove('is-active', 'is-downloading');
 
                     } catch (error) {
                         if (error.name === 'AbortError') {
@@ -1075,11 +1072,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                         indicator.classList.remove('is-downloading', 'is-active');
                     } finally {
-                        setTimeout(() => {
-                            indicator.classList.remove('is-active', 'is-complete');
-                            downloadAbortController = null;
-                            setTimeout(() => updateProgress(0), 400);
-                        }, 3000);
+                        // Clean up for the next download without the 3-second delay
+                        downloadAbortController = null;
+                        // Reset progress after a short delay
+                        setTimeout(() => updateProgress(0), 400);
                     }
                 };
 
