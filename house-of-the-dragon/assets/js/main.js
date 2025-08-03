@@ -997,11 +997,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         const disposition = response.headers.get('Content-Disposition');
                         let filename = 'download.zip'; // Fallback filename
                         if (disposition && disposition.indexOf('attachment') !== -1) {
-                            // THIS REGEX CORRECTLY LOOKS FOR QUOTES
-                            const filenameRegex = /filename="([^"]+)"/;
+                            // THIS IS THE CORRECTED REGEX:
+                            const filenameRegex = /filename=([^;]+)/;
                             const matches = filenameRegex.exec(disposition);
                             if (matches != null && matches[1]) {
-                                filename = matches[1];
+                                // Also remove any potential quotes and trim whitespace
+                                filename = matches[1].replace(/"/g, '').trim();
                             }
                         }
 
