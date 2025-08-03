@@ -1060,7 +1060,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         });
                         
-                        // On success, simply hide the indicator
+                        // On success, simply hide the indicator instead of showing the tick
                         indicator.classList.remove('is-active', 'is-downloading');
 
                     } catch (error) {
@@ -1072,7 +1072,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                         indicator.classList.remove('is-downloading', 'is-active');
                     } finally {
-                        // Clean up for the next download without the 3-second delay
+                        // Clean up for the next download
                         downloadAbortController = null;
                         // Reset progress after a short delay
                         setTimeout(() => updateProgress(0), 400);
