@@ -1059,16 +1059,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         });
                         
-                        // MODIFICATION START
-                        // Explicitly set progress to 100% to fill the ring.
-                        updateProgress(100);
-
-                        // Wait for 800ms to allow the user to see the completed state.
-                        await new Promise(resolve => setTimeout(resolve, 800));
-                        
-                        // Now, hide the indicator.
+                        // On success, simply hide the indicator
                         indicator.classList.remove('is-active', 'is-downloading');
-                        // MODIFICATION END
 
                     } catch (error) {
                         if (error.name === 'AbortError') {
