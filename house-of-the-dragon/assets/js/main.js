@@ -709,10 +709,7 @@ document.addEventListener('DOMContentLoaded', () => {
         preMarqueeSelectedItems = new Set(selectedItems);
     });
 
-    // --- MouseMove Listener (REVISED) ---
-    // This listener now includes custom auto-scroll logic.
-    let scrollInterval = null; // To hold our scroll timer
-
+    // --- MouseMove Listener ---
     document.addEventListener('mousemove', (e) => {
         if (!isMarquee) return;
 
@@ -723,29 +720,10 @@ document.addEventListener('DOMContentLoaded', () => {
         marquee.style.visibility = 'visible';
 
         const galleryRect = gallery.getBoundingClientRect();
-        const viewportHeight = window.innerHeight;
-        const scrollZone = 40; // The pixel distance from the edge to trigger a scroll
-        const scrollSpeed = 15; // How many pixels to scroll per frame
-
-        // Stop any existing scroll interval
-        clearInterval(scrollInterval);
-
-        // --- NEW: Auto-scroll logic ---
-        if (e.clientY > viewportHeight - scrollZone) {
-            // Scroll down
-            scrollInterval = setInterval(() => { window.scrollBy(0, scrollSpeed); }, 16);
-        } else if (e.clientY < scrollZone) {
-            // Scroll up
-            scrollInterval = setInterval(() => { window.scrollBy(0, -scrollSpeed); }, 16);
-        }
-        // --- END: Auto-scroll logic ---
-
-
-        // Calculate mouse position relative to the gallery, accounting for scroll
-        // This ensures the marquee rectangle is drawn correctly even while the page is scrolling.
-        const scrollY = window.scrollY || window.pageYOffset;
-        let currentX = e.clientX - galleryRect.left;
-        let currentY = (e.clientY - galleryRect.top) + scrollY;
+        let rawX = e.clientX - galleryRect.left;
+        let rawY = e.clientY - galleryRect.top;
+        let currentX = Math.max(0, Math.min(rawX, galleryRect.width));
+        let currentY = rawY;
 
         const marqueeRect = {
             x: Math.min(startPos.x, currentX),
@@ -754,7 +732,6 @@ document.addEventListener('DOMContentLoaded', () => {
             h: Math.abs(startPos.y - currentY)
         };
 
-        // Update marquee position and size on the page
         marquee.style.left = `${marqueeRect.x}px`;
         marquee.style.top = `${marqueeRect.y}px`;
         marquee.style.width = `${marqueeRect.w}px`;
@@ -762,23 +739,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const isModifier = e.metaKey || e.ctrlKey || e.shiftKey;
 
-        // The logic for selecting items remains largely the same, but it uses the
-        // newly calculated marqueeRect which is now aware of the page's scroll position.
         for (const item of items) {
             if (item.style.display === 'none') continue;
 
-            const itemRect = {
-                left: item.offsetLeft,
-                top: item.offsetTop,
-                right: item.offsetLeft + item.offsetWidth,
-                bottom: item.offsetTop + item.offsetHeight
+            const itemRect = item.getBoundingClientRect();
+            const relativeItemRect = {
+                left: itemRect.left - galleryRect.left,
+                top: itemRect.top - galleryRect.top,
+                right: itemRect.right - galleryRect.left,
+                bottom: itemRect.bottom - galleryRect.top
             };
 
             const intersects =
-                marqueeRect.x < itemRect.right &&
-                marqueeRect.x + marqueeRect.w > itemRect.left &&
-                marqueeRect.y < itemRect.bottom &&
-                marqueeRect.y + marqueeRect.h > itemRect.top;
+            marqueeRect.x < relativeItemRect.right &&
+            marqueeRect.x + marqueeRect.w > relativeItemRect.left &&
+            marqueeRect.y < relativeItemRect.bottom &&
+            marqueeRect.y + marqueeRect.h > relativeItemRect.top;
 
             if (isModifier) {
                 if (intersects) {
@@ -796,7 +772,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * UPDATED endDragAction function
      */
     const endDragAction = (e) => {
-        clearInterval(scrollInterval);
         document.body.classList.remove('is-marquee-dragging');
         if (!isMarquee) return;
 
@@ -932,7 +907,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const saveMenuItem = document.getElementById('context-menu-save');
             if (selectedItems.size > 1) {
-                saveMenuItem.textContent = `Save ${selectedItems.size} Images to "Downloads"`;
+                saveMenuItem.textContent = `Save ${selectedItems.size} Images as .zip`;
             } else {
                 saveMenuItem.textContent = 'Save Image to "Downloads"';
             }
@@ -1062,7 +1037,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             const filename = url.substring(url.lastIndexOf('/') + 1);
 
                             try {
-                                const response = await fetch(url, { signal, cache: 'no-store' });
+                                const response = await fetch(url, { signal });
                                 if (!response.ok) {
                                     console.error(`Failed to fetch ${filename}: ${response.statusText}`);
                                     totalDownloadSize -= parseSizeToBytes(img.dataset.size);
