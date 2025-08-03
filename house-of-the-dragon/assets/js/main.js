@@ -510,6 +510,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     window.addEventListener('resize', setupScrollbar);
     window.addEventListener('galleryFiltered', setupScrollbar);
+    window.addEventListener('galleryLoaded', setupScrollbar);
     const gridObserver = new ResizeObserver(() => {
         calculateGridMetrics();
         setupScrollbar();
@@ -812,3 +813,4 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
