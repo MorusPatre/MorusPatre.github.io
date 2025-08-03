@@ -990,74 +990,75 @@ document.addEventListener('DOMContentLoaded', () => {
                 indicator.classList.add('is-active', 'is-downloading');
 
                 // Main download function now wrapped to be called by the batching logic
-                const performDownload = async () => {
-                    try {
-                        const allFilenames = Array.from(selectedItems).map(item => {
-                            const img = item.querySelector('img');
-                            const fullSrc = img ? img.dataset.fullsrc : null;
-                            if (!fullSrc) return null;
-                            return fullSrc.substring(fullSrc.lastIndexOf('/') + 1);
-                        }).filter(name => name);
+                case 'context-menu-save': {
+                    const saveMenuItem = document.getElementById('context-menu-save');
+                    const originalButtonText = saveMenuItem.textContent;
 
-                        if (allFilenames.length === 0) throw new Error("No valid files selected.");
-
-                        const galleryId = document.getElementById('photo-gallery').dataset.galleryId;
-                        const batchSize = 40; // Download in chunks of 40 (safely below the 50 limit)
-                        let part = 1;
-
-                        for (let i = 0; i < allFilenames.length; i += batchSize) {
-                            if (signal.aborted) throw new Error('AbortError');
-                            
-                            const batch = allFilenames.slice(i, i + batchSize);
-                            
-                            const response = await fetch('https://b2-asset-bundler.witcherarchive.workers.dev', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ gallery: galleryId, files: batch }),
-                                signal: signal
-                            });
-
-                            if (!response.ok) throw new Error(`Server could not create zip (Part ${part}): ${await response.text()}`);
-                            
-                            const zipBlob = await response.blob();
-                            const disposition = response.headers.get('Content-Disposition');
-                            let filename = `download_part_${part}.zip`; // Fallback filename for this part
-                            if (disposition && disposition.indexOf('attachment') !== -1) {
-                                const filenameRegex = /filename="([^"]+)"/;
-                                const matches = filenameRegex.exec(disposition);
-                                if (matches != null && matches[1]) filename = matches[1];
-                            }
-                            
-                            // For multiple parts, we add a part number to the filename
-                            if (allFilenames.length > batchSize) {
-                               filename = filename.replace('.zip', `_Part-${part}.zip`);
-                            }
-
-                            saveAs(zipBlob, filename);
-                            part++;
-                        }
-
-                        indicator.classList.remove('is-downloading');
-                        indicator.classList.add('is-complete');
-
-                    } catch (error) {
-                        if (error.name === 'AbortError') {
-                            console.log('Download canceled by user.');
-                        } else {
-                            console.error("Download failed:", error);
-                            alert(`An error occurred during the download: ${error.message}`);
-                        }
-                        indicator.classList.remove('is-downloading', 'is-active');
-                    } finally {
-                        setTimeout(() => {
-                            indicator.classList.remove('is-active', 'is-complete');
-                            downloadAbortController = null;
-                        }, 3000);
+                    if (downloadAbortController) {
+                        downloadAbortController.abort();
                     }
-                };
+                    
+                    downloadAbortController = new AbortController();
+                    const signal = downloadAbortController.signal;
 
-                performDownload(); // Execute the download
-                break;
+                    const indicator = document.getElementById('download-indicator');
+                    indicator.classList.remove('is-complete');
+                    indicator.classList.add('is-active', 'is-downloading');
+
+                    const performDownloads = async () => {
+                        try {
+                            const itemsToDownload = Array.from(selectedItems);
+                            if (itemsToDownload.length === 0) return;
+
+                            // Loop through each selected item and download it individually
+                            for (const item of itemsToDownload) {
+                                // If a cancellation was requested, stop the loop
+                                if (signal.aborted) throw new Error('AbortError');
+
+                                const img = item.querySelector('img');
+                                const url = img.dataset.fullsrc;
+                                const filename = url.substring(url.lastIndexOf('/') + 1);
+
+                                try {
+                                    const response = await fetch(url, { signal });
+                                    if (!response.ok) {
+                                        console.error(`Failed to fetch ${filename}: ${response.statusText}`);
+                                        continue; // Skip to the next file on failure
+                                    }
+                                    const blob = await response.blob();
+                                    saveAs(blob, filename);
+                                } catch (error) {
+                                    // If a single fetch fails, log it but don't stop the whole process
+                                    if (error.name !== 'AbortError') {
+                                         console.error(`Could not download ${filename}:`, error);
+                                    } else {
+                                        // Re-throw the abort error to be caught by the outer catch
+                                        throw error;
+                                    }
+                                }
+                            }
+
+                            indicator.classList.remove('is-downloading');
+                            indicator.classList.add('is-complete');
+
+                        } catch (error) {
+                            if (error.name === 'AbortError') {
+                                console.log('Download canceled by user.');
+                            } else {
+                                console.error("Download failed:", error);
+                                alert(`An error occurred during the download: ${error.message}`);
+                            }
+                            indicator.classList.remove('is-downloading', 'is-active');
+                        } finally {
+                            setTimeout(() => {
+                                indicator.classList.remove('is-active', 'is-complete');
+                                downloadAbortController = null;
+                            }, 3000);
+                        }
+                    };
+
+                    performDownloads();
+                    break;
             }
         }
         rightClickedItem = null;
