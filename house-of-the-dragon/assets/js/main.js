@@ -796,6 +796,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * UPDATED endDragAction function
      */
     const endDragAction = (e) => {
+        clearInterval(scrollInterval);
         document.body.classList.remove('is-marquee-dragging');
         if (!isMarquee) return;
 
