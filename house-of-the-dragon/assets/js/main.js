@@ -1037,7 +1037,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             const filename = url.substring(url.lastIndexOf('/') + 1);
 
                             try {
-                                const response = await fetch(url, { signal });
+                                const response = await fetch(url, { signal, cache: 'no-store' });
                                 if (!response.ok) {
                                     console.error(`Failed to fetch ${filename}: ${response.statusText}`);
                                     totalDownloadSize -= parseSizeToBytes(img.dataset.size);
@@ -1740,4 +1740,5 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
+
 
