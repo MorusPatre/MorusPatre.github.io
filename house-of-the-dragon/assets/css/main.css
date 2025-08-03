@@ -2117,12 +2117,11 @@ html, body {
 
 /* --- Downloading State (New Progress Bar) --- */
 #download-indicator .progress-circle {
-    /* This creates a solid, pie-chart style fill */
-    background: conic-gradient(var(--ancient-gold, #c7a465) 0%, rgba(255,255,255,0.2) 0%);
+    /* Base style for the circle */
+    background: radial-gradient(white 60%, transparent 61%),
+                conic-gradient(#fff 0%, rgba(255,255,255,0.2) 0%);
     opacity: 0;
     pointer-events: none;
-    /* This makes the gradient change appear smooth */
-    transition: background 0.1s linear;
 }
 
 #download-indicator.is-downloading .progress-circle {
