@@ -2112,24 +2112,20 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: opacity 0.2s ease, transform 0.2s ease;
+    transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s ease;
 }
 
-/* --- Downloading State --- */
+/* --- Downloading State (New Progress Bar) --- */
 #download-indicator .progress-circle {
-    border: 3px solid rgba(255, 255, 255, 0.2);
-    border-top-color: #fff;
-    animation: spin 1s linear infinite;
+    /* Base style for the circle */
+    background: radial-gradient(white 60%, transparent 61%),
+                conic-gradient(#fff 0%, rgba(255,255,255,0.2) 0%);
     opacity: 0;
     pointer-events: none;
 }
 
 #download-indicator.is-downloading .progress-circle {
     opacity: 1;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
 }
 
 /* --- Cancel (Hover) State --- */
@@ -2154,8 +2150,7 @@ html, body {
 
 /* --- Completion State --- */
 #download-indicator .complete-icon {
-    /* --ancient-gold: #c7a465; */
-    --ancient-gold: #DAA520;
+    --ancient-gold: #c7a465;
     background-color: var(--ancient-gold);
     color: #111;
     font-size: 18px;
