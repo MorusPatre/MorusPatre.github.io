@@ -1063,8 +1063,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         // Explicitly set progress to 100% to fill the ring.
                         updateProgress(100);
 
-                        // Wait for 400ms to allow the user to see the completed state.
-                        await new Promise(resolve => setTimeout(resolve, 400));
+                        // Wait for 800ms to allow the user to see the completed state.
+                        await new Promise(resolve => setTimeout(resolve, 800));
                         
                         // Now, hide the indicator.
                         indicator.classList.remove('is-active', 'is-downloading');
