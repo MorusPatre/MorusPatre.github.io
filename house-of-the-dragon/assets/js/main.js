@@ -407,17 +407,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let hasDragged = false;
     let mouseDownItem = null;
-    let downloadAbortController = null;
-    
-    const indicator = document.getElementById('download-indicator');
-    const cancelBtn = indicator.querySelector('.cancel-icon');
-
-    // Attach a single, permanent listener to the cancel button
-    cancelBtn.addEventListener('click', () => {
-        if (downloadAbortController) {
-            downloadAbortController.abort();
-        }
-    });
 
     /*
     ==================================================================
@@ -977,17 +966,7 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'context-menu-save': {
                 const saveMenuItem = document.getElementById('context-menu-save');
                 const originalButtonText = saveMenuItem.textContent;
-
-                // Abort any previous download
-                if (downloadAbortController) {
-                    downloadAbortController.abort();
-                }
-                
-                // Create a new controller for this download
-                downloadAbortController = new AbortController();
-
-                indicator.classList.remove('is-complete');
-                indicator.classList.add('is-active', 'is-downloading');
+                saveMenuItem.textContent = 'Preparing...';
 
                 try {
                     if (selectedItems.size > 1) {
@@ -1005,20 +984,27 @@ document.addEventListener('DOMContentLoaded', () => {
                         const response = await fetch('https://b2-asset-bundler.witcherarchive.workers.dev', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ gallery: galleryId, files: filenames }),
-                            signal: downloadAbortController.signal
+                            body: JSON.stringify({ gallery: galleryId, files: filenames })
                         });
 
-                        if (!response.ok) throw new Error(`Server could not create zip: ${await response.text()}`);
+                        if (!response.ok) {
+                            throw new Error(`Server could not create zip: ${await response.text()}`);
+                        }
                         
                         const zipBlob = await response.blob();
+
+                        // Get the filename from the server's 'Content-Disposition' response header
                         const disposition = response.headers.get('Content-Disposition');
-                        let filename = 'download.zip';
+                        let filename = 'download.zip'; // Fallback filename
                         if (disposition && disposition.indexOf('attachment') !== -1) {
+                            // THIS REGEX CORRECTLY LOOKS FOR QUOTES
                             const filenameRegex = /filename="([^"]+)"/;
                             const matches = filenameRegex.exec(disposition);
-                            if (matches != null && matches[1]) filename = matches[1];
+                            if (matches != null && matches[1]) {
+                                filename = matches[1];
+                            }
                         }
+
                         saveAs(zipBlob, filename);
 
                     } else if (selectedItems.size === 1) {
@@ -1027,33 +1013,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         const url = img.dataset.fullsrc;
                         const filename = url.substring(url.lastIndexOf('/') + 1);
 
-                        const response = await fetch(url, { signal: downloadAbortController.signal });
-                        if (!response.ok) throw new Error(`Failed to fetch image: ${response.statusText}`);
-                        
+                        const response = await fetch(url);
+                        if (!response.ok) {
+                            throw new Error(`Failed to fetch image: ${response.statusText}`);
+                        }
                         const blob = await response.blob();
+                        
                         saveAs(blob, filename);
                     }
-
-                    // Show completion tick on success
-                    indicator.classList.remove('is-downloading');
-                    indicator.classList.add('is-complete');
-
                 } catch (error) {
-                    if (error.name === 'AbortError') {
-                        console.log('Download canceled by user.');
-                    } else {
-                        console.error("Download failed:", error);
-                        alert(`An error occurred during the download: ${error.message}`);
-                    }
-                    // Hide indicator on failure or cancellation
-                    indicator.classList.remove('is-downloading', 'is-active');
-
+                    console.error("Download failed:", error);
+                    alert(`An error occurred during the download: ${error.message}`);
                 } finally {
-                    // After 3 seconds, hide the completion tick
-                    setTimeout(() => {
-                        indicator.classList.remove('is-active', 'is-complete');
-                        downloadAbortController = null;
-                    }, 3000);
+                    saveMenuItem.textContent = originalButtonText;
                 }
                 break;
             }
