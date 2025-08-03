@@ -980,9 +980,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         if (filenames.length === 0) throw new Error("No valid files selected.");
 
-                        // Get the current gallery's ID from the HTML data attribute
                         const galleryId = document.getElementById('photo-gallery').dataset.galleryId;
 
+                        const response = await fetch('https://b2-asset-bundler.witcherarchive.workers.dev', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ gallery: galleryId, files: filenames })
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`Server could not create zip: ${await response.text()}`);
+                        }
+                        
                         const zipBlob = await response.blob();
 
                         // Get the filename from the server's 'Content-Disposition' response header
@@ -998,37 +1007,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         saveAs(zipBlob, filename);
 
-                        if (!response.ok) {
-                            throw new Error(`Server could not create zip: ${await response.text()}`);
-                        }
-                        
-                        const zipBlob = await response.blob();
-                        const date = new Date().toISOString().split('T')[0];
-                        const dynamicFilename = `HOTD-Selection_${selectedItems.size}-images_${date}.zip`;
-                        saveAs(zipBlob, dynamicFilename);
-
                     } else if (selectedItems.size === 1) {
-                        // --- NEW, CORRECTED SINGLE FILE LOGIC ---
+                        // --- If ONLY ONE item is selected, download it directly ---
                         const item = Array.from(selectedItems)[0];
                         const img = item.querySelector('img');
                         const url = img.dataset.fullsrc;
                         const filename = url.substring(url.lastIndexOf('/') + 1);
 
-                        // Fetch the image data directly
                         const response = await fetch(url);
                         if (!response.ok) {
                             throw new Error(`Failed to fetch image: ${response.statusText}`);
                         }
                         const blob = await response.blob();
-
-                        // Use FileSaver.js to save the single file
+                        
                         saveAs(blob, filename);
                     }
                 } catch (error) {
                     console.error("Download failed:", error);
                     alert(`An error occurred during the download: ${error.message}`);
                 } finally {
-                    // Restore button text
                     saveMenuItem.textContent = originalButtonText;
                 }
                 break;
