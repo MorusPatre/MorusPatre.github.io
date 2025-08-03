@@ -983,29 +983,28 @@ document.addEventListener('DOMContentLoaded', () => {
                         // Get the current gallery's ID from the HTML data attribute
                         const galleryId = document.getElementById('photo-gallery').dataset.galleryId;
 
-                        const response = await fetch('https://b2-asset-bundler.witcherarchive.workers.dev', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ gallery: galleryId, files: filenames })
-                        });
+                        const zipBlob = await response.blob();
+
+                        // Get the filename from the server's 'Content-Disposition' response header
+                        const disposition = response.headers.get('Content-Disposition');
+                        let filename = 'download.zip'; // Provide a fallback filename
+                        if (disposition && disposition.indexOf('attachment') !== -1) {
+                            const filenameRegex = /filename="([^"]+)"/;
+                            const matches = filenameRegex.exec(disposition);
+                            if (matches != null && matches[1]) {
+                                filename = matches[1];
+                            }
+                        }
+
+                        saveAs(zipBlob, filename);
 
                         if (!response.ok) {
                             throw new Error(`Server could not create zip: ${await response.text()}`);
                         }
                         
                         const zipBlob = await response.blob();
-
-                        // Map the gallery ID to a clean name, just like in the worker
-                        const nameMap = {
-                          'house-of-the-dragon': 'HOTD',
-                          'the-witcher': 'The Witcher'
-                        };
-                        const galleryId = document.getElementById('photo-gallery').dataset.galleryId;
-                        const cleanName = nameMap[galleryId] || galleryId;
-
-                        // Build the new, correct filename
-                        const dynamicFilename = `${cleanName} - ${selectedItems.size} selected assets.zip`;
-
+                        const date = new Date().toISOString().split('T')[0];
+                        const dynamicFilename = `HOTD-Selection_${selectedItems.size}-images_${date}.zip`;
                         saveAs(zipBlob, dynamicFilename);
 
                     } else if (selectedItems.size === 1) {
