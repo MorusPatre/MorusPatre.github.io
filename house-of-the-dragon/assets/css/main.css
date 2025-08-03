@@ -2085,6 +2085,13 @@ html, body {
 
 /* --- Download Progress Indicator --- */
 
+/* This tells the browser how to smoothly animate our custom property */
+@property --progress-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
 #download-indicator {
     position: absolute;
     right: 20px;
@@ -2112,17 +2119,20 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s ease;
+    transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
-/* --- Downloading State (New Progress Bar) --- */
+/* --- Downloading State (New Smooth Ring) --- */
 #download-indicator .progress-circle {
-    /* This creates a solid, pie-chart style fill */
-    background: conic-gradient(var(--ancient-gold, #c7a465) 0%, rgba(255,255,255,0.2) 0%);
+    --ancient-gold: #c7a465;
+    /* 1. The conic-gradient creates the progress fill using our variable */
+    /* 2. The radial-gradient uses the page background color to create the "hole" in the middle */
+    background: radial-gradient(#1f1b18 60%, transparent 61%),
+                conic-gradient(var(--ancient-gold) var(--progress-angle), rgba(255,255,255,0.2) 0deg);
     opacity: 0;
     pointer-events: none;
-    /* ADD THIS LINE for the smooth animation */
-    transition: background 0.4s ease-in-out;
+    /* 3. This animates the --progress-angle variable smoothly */
+    transition: --progress-angle 0.4s ease-in-out;
 }
 
 #download-indicator.is-downloading .progress-circle {
