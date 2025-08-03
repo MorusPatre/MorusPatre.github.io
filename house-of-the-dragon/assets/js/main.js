@@ -907,7 +907,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const saveMenuItem = document.getElementById('context-menu-save');
             if (selectedItems.size > 1) {
-                saveMenuItem.textContent = `Save ${selectedItems.size} Images as .zip`;
+                saveMenuItem.textContent = `Save ${selectedItems.size} Images to "Downloads"`;
             } else {
                 saveMenuItem.textContent = 'Save Image to "Downloads"';
             }
@@ -1037,7 +1037,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             const filename = url.substring(url.lastIndexOf('/') + 1);
 
                             try {
-                                const response = await fetch(url, { signal });
+                                const response = await fetch(url, { signal, cache: 'no-store' });
                                 if (!response.ok) {
                                     console.error(`Failed to fetch ${filename}: ${response.statusText}`);
                                     totalDownloadSize -= parseSizeToBytes(img.dataset.size);
