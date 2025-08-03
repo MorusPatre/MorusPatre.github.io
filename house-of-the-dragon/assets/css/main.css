@@ -2097,8 +2097,8 @@ html, body {
     right: 20px;
     top: 50%;
     transform: translateY(-50%);
-    width: 28px;
-    height: 28px;
+    width: 22px; /* Changed from 28px */
+    height: 22px; /* Changed from 28px */
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s ease, visibility 0.3s ease;
@@ -2143,7 +2143,7 @@ html, body {
 #download-indicator .cancel-icon {
     background-color: #111;
     color: #fff;
-    font-size: 24px;
+    font-size: 20px; /* Changed from 24px */
     line-height: 1;
     cursor: pointer;
     opacity: 0;
@@ -2164,7 +2164,7 @@ html, body {
     --ancient-gold: #c7a465;
     background-color: var(--ancient-gold);
     color: #111;
-    font-size: 18px;
+    font-size: 14px; /* Changed from 18px */
     font-weight: bold;
     opacity: 0;
     transform: scale(0.8);
