@@ -980,11 +980,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         if (filenames.length === 0) throw new Error("No valid files selected.");
 
-                        const response = await fetch('https://b2-asset-bundler.witcherarchive.workers.dev', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ files: filenames })
-                        });
+                        // Get the current gallery's ID from the HTML data attribute
+                        const galleryId = document.getElementById('photo-gallery').dataset.galleryId;
+
+                        const zipBlob = await response.blob();
+
+                        // Get the filename from the server's 'Content-Disposition' response header
+                        const disposition = response.headers.get('Content-Disposition');
+                        let filename = 'download.zip'; // Provide a fallback filename
+                        if (disposition && disposition.indexOf('attachment') !== -1) {
+                            const filenameRegex = /filename="([^"]+)"/;
+                            const matches = filenameRegex.exec(disposition);
+                            if (matches != null && matches[1]) {
+                                filename = matches[1];
+                            }
+                        }
+
+                        saveAs(zipBlob, filename);
 
                         if (!response.ok) {
                             throw new Error(`Server could not create zip: ${await response.text()}`);
