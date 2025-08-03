@@ -986,14 +986,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 indicator.classList.remove('is-complete');
                 indicator.classList.add('is-active', 'is-downloading');
 
+                // Helper function to process items in concurrent batches
+                const processInBatches = async (items, batchSize, processFn) => {
+                    let position = 0;
+                    while (position < items.length) {
+                        if (signal.aborted) throw new Error('AbortError');
+                        const itemsForBatch = items.slice(position, position + batchSize);
+                        await Promise.all(itemsForBatch.map(item => processFn(item)));
+                        position += batchSize;
+                    }
+                };
+
                 const performDownloads = async () => {
                     try {
                         const itemsToDownload = Array.from(selectedItems);
                         if (itemsToDownload.length === 0) return;
 
-                        for (const item of itemsToDownload) {
-                            if (signal.aborted) throw new Error('AbortError');
-
+                        // Process downloads in parallel batches of 6 (a good browser limit)
+                        await processInBatches(itemsToDownload, 6, async (item) => {
                             const img = item.querySelector('img');
                             const url = img.dataset.fullsrc;
                             const filename = url.substring(url.lastIndexOf('/') + 1);
@@ -1002,18 +1012,19 @@ document.addEventListener('DOMContentLoaded', () => {
                                 const response = await fetch(url, { signal });
                                 if (!response.ok) {
                                     console.error(`Failed to fetch ${filename}: ${response.statusText}`);
-                                    continue;
+                                    return; // Skip this file, but continue the batch
                                 }
                                 const blob = await response.blob();
                                 saveAs(blob, filename);
                             } catch (error) {
                                 if (error.name !== 'AbortError') {
-                                        console.error(`Could not download ${filename}:`, error);
+                                    console.error(`Could not download ${filename}:`, error);
                                 } else {
+                                    // Re-throw to stop the entire batching process
                                     throw error;
                                 }
                             }
-                        }
+                        });
 
                         indicator.classList.remove('is-downloading');
                         indicator.classList.add('is-complete');
