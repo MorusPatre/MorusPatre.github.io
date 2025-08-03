@@ -2158,20 +2158,3 @@ html, body {
     opacity: 1;
     transform: scale(1);
 }
-
-/* --- Completion State --- */
-#download-indicator .complete-icon {
-    --ancient-gold: #c7a465;
-    background-color: var(--ancient-gold);
-    color: #111;
-    font-size: 14px;
-    font-weight: bold;
-    opacity: 0;
-    transform: scale(0.8);
-    pointer-events: none; /* Add this line */
-}
-
-#download-indicator.is-complete .complete-icon {
-    opacity: 1;
-    transform: scale(1);
-}
