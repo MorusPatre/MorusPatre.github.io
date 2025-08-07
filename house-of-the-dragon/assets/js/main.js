@@ -412,6 +412,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const indicator = document.getElementById('download-indicator');
     const cancelBtn = indicator.querySelector('.cancel-icon');
 
+    // --- NEW: Auto-scroll state variables ---
+    let isAutoScrolling = false;
+    let scrollSpeedY = 0;
+    let lastClientX = 0;
+    let lastClientY = 0;
+    let lastClientModifierKey = false;
+
+
     // Attach a single, permanent listener to the cancel button
     cancelBtn.addEventListener('click', () => {
         if (downloadAbortController) {
@@ -677,6 +685,79 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     };
+    
+    // --- NEW: Refactored Marquee and Auto-Scroll Functions ---
+
+    /**
+     * This function encapsulates the logic for updating the marquee rectangle
+     * and applying selection to the items within it.
+     * @param {number} clientX - The cursor's X position relative to the viewport.
+     * @param {number} clientY - The cursor's Y position relative to the viewport.
+     * @param {boolean} isModifier - Whether a modifier key (Shift, Ctrl, Meta) is pressed.
+     */
+    function updateMarqueeAndSelection(clientX, clientY, isModifier) {
+        marquee.style.visibility = 'visible';
+    
+        const galleryRect = gallery.getBoundingClientRect();
+        let rawX = clientX - galleryRect.left;
+        let rawY = clientY - galleryRect.top;
+    
+        const marqueeRect = {
+            x: Math.min(startPos.x, rawX),
+            y: Math.min(startPos.y, rawY),
+            w: Math.abs(startPos.x - rawX),
+            h: Math.abs(startPos.y - rawY)
+        };
+    
+        marquee.style.left = `${marqueeRect.x}px`;
+        marquee.style.top = `${marqueeRect.y}px`;
+        marquee.style.width = `${marqueeRect.w}px`;
+        marquee.style.height = `${marqueeRect.h}px`;
+    
+        for (const item of items) {
+            if (item.style.display === 'none') continue;
+    
+            const itemRect = item.getBoundingClientRect();
+            const relativeItemRect = {
+                left: itemRect.left - galleryRect.left,
+                top: itemRect.top - galleryRect.top,
+                right: itemRect.right - galleryRect.left,
+                bottom: itemRect.bottom - galleryRect.top
+            };
+    
+            const intersects =
+                marqueeRect.x < relativeItemRect.right &&
+                marqueeRect.x + marqueeRect.w > relativeItemRect.left &&
+                marqueeRect.y < relativeItemRect.bottom &&
+                marqueeRect.y + marqueeRect.h > relativeItemRect.top;
+    
+            if (isModifier) {
+                setSelection(item, intersects ? !preMarqueeSelectedItems.has(item) : preMarqueeSelectedItems.has(item));
+            } else {
+                setSelection(item, intersects);
+            }
+        }
+    }
+    
+    /**
+     * This function creates a smooth scrolling loop when the user's cursor
+     * is in the auto-scroll zone at the top or bottom of the viewport.
+     */
+    function autoScrollLoop() {
+        if (!isMarquee) {
+            isAutoScrolling = false;
+            return;
+        }
+    
+        window.scrollBy(0, scrollSpeedY);
+        // Update the marquee using the last known cursor position
+        updateMarqueeAndSelection(lastClientX, lastClientY, lastClientModifierKey);
+    
+        if (isAutoScrolling) {
+            requestAnimationFrame(autoScrollLoop);
+        }
+    }
+
 
     // --- MouseDown Listener ---
     wrapper.addEventListener('mousedown', (e) => {
@@ -712,59 +793,47 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- MouseMove Listener ---
     document.addEventListener('mousemove', (e) => {
         if (!isMarquee) return;
-
+    
         e.preventDefault();
         hasDragged = true;
         document.body.classList.add('is-marquee-dragging');
-
-        marquee.style.visibility = 'visible';
-
-        const galleryRect = gallery.getBoundingClientRect();
-        let rawX = e.clientX - galleryRect.left;
-        let rawY = e.clientY - galleryRect.top;
-        let currentX = Math.max(0, Math.min(rawX, galleryRect.width));
-        let currentY = rawY;
-
-        const marqueeRect = {
-            x: Math.min(startPos.x, currentX),
-            y: Math.min(startPos.y, currentY),
-            w: Math.abs(startPos.x - currentX),
-            h: Math.abs(startPos.y - currentY)
-        };
-
-        marquee.style.left = `${marqueeRect.x}px`;
-        marquee.style.top = `${marqueeRect.y}px`;
-        marquee.style.width = `${marqueeRect.w}px`;
-        marquee.style.height = `${marqueeRect.h}px`;
-
-        const isModifier = e.metaKey || e.ctrlKey || e.shiftKey;
-
-        for (const item of items) {
-            if (item.style.display === 'none') continue;
-
-            const itemRect = item.getBoundingClientRect();
-            const relativeItemRect = {
-                left: itemRect.left - galleryRect.left,
-                top: itemRect.top - galleryRect.top,
-                right: itemRect.right - galleryRect.left,
-                bottom: itemRect.bottom - galleryRect.top
-            };
-
-            const intersects =
-            marqueeRect.x < relativeItemRect.right &&
-            marqueeRect.x + marqueeRect.w > relativeItemRect.left &&
-            marqueeRect.y < relativeItemRect.bottom &&
-            marqueeRect.y + marqueeRect.h > relativeItemRect.top;
-
-            if (isModifier) {
-                if (intersects) {
-                    setSelection(item, !preMarqueeSelectedItems.has(item));
-                } else {
-                    setSelection(item, preMarqueeSelectedItems.has(item));
-                }
-            } else {
-                setSelection(item, intersects);
-            }
+    
+        // Store last known cursor position and modifier key status for the autoscroll loop
+        lastClientX = e.clientX;
+        lastClientY = e.clientY;
+        lastClientModifierKey = e.metaKey || e.ctrlKey || e.shiftKey;
+    
+        // Update the marquee and selection based on the current mouse move
+        updateMarqueeAndSelection(e.clientX, e.clientY, lastClientModifierKey);
+        
+        // --- NEW: Auto-scroll Logic ---
+        const viewportHeight = window.innerHeight;
+        const scrollThreshold = 60; // The zone at the top/bottom of the screen that triggers scrolling
+        const maxScrollSpeed = 30;  // The maximum scroll speed in pixels per frame
+    
+        // Check if cursor is in the bottom scroll zone
+        if (e.clientY > viewportHeight - scrollThreshold) {
+            const overshoot = e.clientY - (viewportHeight - scrollThreshold);
+            scrollSpeedY = (overshoot / scrollThreshold) * maxScrollSpeed;
+        } 
+        // Check if cursor is in the top scroll zone
+        else if (e.clientY < scrollThreshold) {
+            const overshoot = scrollThreshold - e.clientY;
+            scrollSpeedY = -((overshoot / scrollThreshold) * maxScrollSpeed); // Negative value to scroll up
+        } 
+        // Cursor is in the neutral zone
+        else {
+            scrollSpeedY = 0;
+        }
+    
+        // Manage the animation loop
+        if (scrollSpeedY !== 0 && !isAutoScrolling) {
+            // If we've entered a scroll zone and aren't already scrolling, start the loop.
+            isAutoScrolling = true;
+            autoScrollLoop();
+        } else if (scrollSpeedY === 0) {
+            // If we've moved into the neutral zone, stop the loop.
+            isAutoScrolling = false;
         }
     });
 
@@ -772,6 +841,10 @@ document.addEventListener('DOMContentLoaded', () => {
      * UPDATED endDragAction function
      */
     const endDragAction = (e) => {
+        // --- NEW: Stop any active auto-scrolling ---
+        isAutoScrolling = false;
+        scrollSpeedY = 0;
+
         document.body.classList.remove('is-marquee-dragging');
         if (!isMarquee) return;
 
