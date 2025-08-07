@@ -2083,67 +2083,6 @@ html, body {
     background: rgba(255, 255, 255, 0.5);
 }
 
-/* Token chips inside search bar */
-#tokens-container {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    margin-right: 0.5rem;
-    max-width: 40%;
-    vertical-align: middle;
-    flex-wrap: wrap;
-}
-
-.token {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.25rem 0.5rem;
-    border-radius: 12px;
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.08);
-    color: #fff;
-    font-size: 0.65rem;
-    cursor: grab;
-    user-select: none;
-    -webkit-user-drag: element;
-}
-
-.token:active { cursor: grabbing; }
-
-.token .remove {
-    display: inline-block;
-    width: 14px;
-    height: 14px;
-    line-height: 14px;
-    text-align: center;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.06);
-    font-size: 0.65rem;
-    opacity: 0.8;
-    margin-left: 6px;
-    cursor: pointer;
-    user-select: none;
-}
-
-.token.selected {
-    box-shadow: 0 0 0 2px rgba(255, 184, 130, 0.12);
-    background: rgba(255,184,130,0.07);
-    border-color: rgba(255,184,130,0.25);
-    color: #ffefdd;
-}
-
-/* Make sure tokens don't break the header layout */
-#search-container form {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-}
-#search-input {
-    flex: 1 1 auto;
-    min-width: 12rem;
-}
-
 /* --- Download Progress Indicator --- */
 
 /* This tells the browser how to smoothly animate our custom property */
