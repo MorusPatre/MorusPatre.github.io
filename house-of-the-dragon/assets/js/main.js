@@ -1732,3 +1732,266 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
+
+ // TOKENIZED SUGGESTIONS - Add at end of main.js or in a new file included after main.js
+ document.addEventListener('DOMContentLoaded', () => {
+   const searchInput = document.getElementById('search-input');
+   const suggestionsContainer = document.getElementById('suggestions-container');
+   let tokensContainer = document.getElementById('tokens-container');
+
+   // If HTML didn't include tokens container, create it.
+   if (!tokensContainer) {
+     tokensContainer = document.createElement('div');
+     tokensContainer.id = 'tokens-container';
+     const form = searchInput.closest('form');
+     form.insertBefore(tokensContainer, searchInput);
+   }
+
+   // We'll collect suggestion candidates from gallery images once the gallery is loaded.
+   let suggestionCandidates = []; // array of strings (e.g. "Milly Alcock", "Emily Carey", filenames...)
+   function buildCandidatesFromGallery() {
+     const gallery = document.getElementById('photo-gallery');
+     if (!gallery) return;
+     const imgs = Array.from(gallery.querySelectorAll('img'));
+     const set = new Set();
+
+     imgs.forEach(img => {
+       // prefer explicit data attributes if present
+       const cast = img.dataset.cast || '';
+       const characters = img.dataset.characters || '';
+       const search = img.dataset.search || '';
+       const alt = img.alt || '';
+
+       // split 'cast' or 'characters' by commas and add each name
+       [cast, characters, search, alt].forEach(text => {
+         if (!text) return;
+         // split on commas and slashes and also preserve full strings
+         text.split(/[,\/\|]+/).forEach(part => {
+           const s = part.trim();
+           if (s.length > 1) set.add(s);
+         });
+       });
+     });
+
+     // Convert to array sorted by length and alphabetical for nicer suggestions
+     suggestionCandidates = Array.from(set).filter(Boolean).sort((a,b) => {
+       if (a.length !== b.length) return a.length - b.length;
+       return a.localeCompare(b);
+     });
+   }
+
+   // Build once galleryLoaded event fires (gallery-loader.js dispatches it).
+   document.addEventListener('galleryLoaded', () => {
+     buildCandidatesFromGallery();
+   });
+
+   // Also try building immediately if gallery is already present
+   buildCandidatesFromGallery();
+
+   // Helper: show suggestions for current input
+   function showSuggestions(query) {
+     suggestionsContainer.innerHTML = '';
+     if (!query || !query.trim()) {
+       suggestionsContainer.style.display = 'none';
+       return;
+     }
+     const parts = query.toLowerCase().trim().split(/\s+/).filter(Boolean);
+
+     // Match ANY token: so "Milly Carey" will produce results with either 'milly' OR 'carey'
+     const matches = suggestionCandidates.filter(s => {
+       const lower = s.toLowerCase();
+       return parts.some(p => lower.indexOf(p) !== -1);
+     }).slice(0, 30); // limit results
+
+     if (matches.length === 0) {
+       suggestionsContainer.style.display = 'none';
+       return;
+     }
+
+     matches.forEach(match => {
+       const item = document.createElement('div');
+       item.className = 'suggestion-item';
+       item.textContent = match;
+       item.tabIndex = 0;
+       // clicking a suggestion inserts a token
+       item.addEventListener('click', () => {
+         insertToken(match);
+         clearSuggestions();
+         searchInput.focus();
+       });
+       item.addEventListener('keydown', (e) => {
+         if (e.key === 'Enter') {
+           insertToken(match);
+           clearSuggestions();
+           searchInput.focus();
+         }
+       });
+       suggestionsContainer.appendChild(item);
+     });
+     suggestionsContainer.style.display = 'block';
+   }
+
+   function clearSuggestions() {
+     suggestionsContainer.innerHTML = '';
+     suggestionsContainer.style.display = 'none';
+   }
+
+   // Create and insert a token (chip)
+   function insertToken(text) {
+     // Avoid duplicates (optional) - remove comment to enable
+     // if (Array.from(tokensContainer.querySelectorAll('.token')).some(t => t.dataset.value === text)) return;
+
+     const token = document.createElement('span');
+     token.className = 'token';
+     token.draggable = true;
+     token.tabIndex = 0;
+     token.dataset.value = text;
+     token.textContent = text;
+
+     // Add remove '×' clickable button
+     const rem = document.createElement('span');
+     rem.className = 'remove';
+     rem.innerHTML = '&times;';
+     rem.title = 'Remove';
+     rem.addEventListener('click', (e) => {
+       e.stopPropagation();
+       token.remove();
+     });
+
+     token.appendChild(rem);
+
+     // click toggles selection
+     token.addEventListener('click', (e) => {
+       e.stopPropagation();
+       clearAllTokenSelections();
+       token.classList.toggle('selected');
+       token.focus();
+     });
+
+     // keyboard: delete removes token
+     token.addEventListener('keydown', (e) => {
+       if (e.key === 'Backspace' || e.key === 'Delete') {
+         e.preventDefault();
+         token.remove();
+         searchInput.focus();
+       }
+     });
+
+     // dragstart: expose plain text of token
+     token.addEventListener('dragstart', (e) => {
+       const textData = token.dataset.value || token.textContent;
+       // Put text/plain for dropping into other windows/inputs
+       e.dataTransfer.setData('text/plain', textData);
+       e.dataTransfer.effectAllowed = 'copyMove';
+       // Optional: set a drag image
+       try {
+         const dragCanvas = document.createElement('canvas');
+         dragCanvas.width = 1; dragCanvas.height = 1;
+         e.dataTransfer.setDragImage(dragCanvas, 0, 0);
+       } catch (err) { /* ignore */ }
+     });
+
+     // remove selection style when losing focus
+     token.addEventListener('blur', () => {
+       token.classList.remove('selected');
+     });
+
+     tokensContainer.appendChild(token);
+   }
+
+   function clearAllTokenSelections() {
+     tokensContainer.querySelectorAll('.token.selected').forEach(t => t.classList.remove('selected'));
+   }
+
+   // KEYBOARD: Backspace behavior when input is empty
+   searchInput.addEventListener('keydown', (e) => {
+     if (e.key === 'Backspace') {
+       const val = (searchInput.value || '').trim();
+       if (!val) {
+         const tokens = tokensContainer.querySelectorAll('.token');
+         if (!tokens.length) return;
+         const last = tokens[tokens.length - 1];
+         if (!last.classList.contains('selected')) {
+           // select last token (first press)
+           e.preventDefault();
+           clearAllTokenSelections();
+           last.classList.add('selected');
+           last.focus();
+         } else {
+           // already selected -> remove
+           e.preventDefault();
+           last.remove();
+         }
+       }
+     }
+     // ESC clears suggestions
+     if (e.key === 'Escape') {
+       clearSuggestions();
+     }
+   });
+
+   // If the user starts typing after selecting/having tokens, keep suggesting
+   searchInput.addEventListener('input', (e) => {
+     const q = e.target.value;
+     showSuggestions(q);
+     // always clear token selection when typing
+     clearAllTokenSelections();
+   });
+
+   // Clicking outside hides suggestions and clears selection
+   document.addEventListener('click', (e) => {
+     if (!e.composedPath().includes(suggestionsContainer) &&
+         !e.composedPath().includes(searchInput)) {
+       clearSuggestions();
+     }
+     if (!e.composedPath().includes(tokensContainer)) {
+       clearAllTokenSelections();
+     }
+   });
+
+   // Accessibility: allow keyboard up/down to navigate suggestions
+   searchInput.addEventListener('keydown', (e) => {
+     if (suggestionsContainer.style.display === 'block') {
+       const items = Array.from(suggestionsContainer.querySelectorAll('.suggestion-item'));
+       if (!items.length) return;
+       let idx = items.findIndex(it => it.classList.contains('active'));
+       if (e.key === 'ArrowDown') {
+         e.preventDefault();
+         if (idx >= 0) items[idx].classList.remove('active');
+         idx = Math.min(items.length - 1, idx + 1);
+         items[idx].classList.add('active');
+         items[idx].focus();
+       } else if (e.key === 'ArrowUp') {
+         e.preventDefault();
+         if (idx >= 0) items[idx].classList.remove('active');
+         idx = Math.max(0, idx - 1);
+         items[idx].classList.add('active');
+         items[idx].focus();
+       } else if (e.key === 'Enter') {
+         // if an item is active, trigger it
+         const active = items.find(it => it.classList.contains('active'));
+         if (active) {
+           e.preventDefault();
+           active.click();
+         } else {
+           // if no active suggestion, optionally insert current text as token
+           // (uncomment to enable)
+           // insertToken(searchInput.value.trim());
+           // searchInput.value = '';
+           // clearSuggestions();
+         }
+       }
+     }
+   });
+
+   // Optional: provide a function that returns the full search query including tokens
+   // (join tokens + input). Use this when submitting searches.
+   window.getTokenizedSearchQuery = function() {
+     const tokens = Array.from(tokensContainer.querySelectorAll('.token')).map(t => t.dataset.value || t.textContent);
+     const trailing = searchInput.value.trim();
+     return tokens.concat(trailing ? [trailing] : []).join(' ');
+   };
+
+   // Clean up suggestions on page hide (single-page nav)
+   window.addEventListener('beforeunload', clearSuggestions);
+ });
