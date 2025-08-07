@@ -412,7 +412,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const indicator = document.getElementById('download-indicator');
     const cancelBtn = indicator.querySelector('.cancel-icon');
 
-    // --- NEW: Auto-scroll state variables ---
+    // --- Auto-scroll state variables ---
     let isAutoScrolling = false;
     let scrollSpeedY = 0;
     let lastClientX = 0;
@@ -686,7 +686,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    // --- NEW: Refactored Marquee and Auto-Scroll Functions ---
+    // --- Refactored Marquee and Auto-Scroll Functions ---
 
     /**
      * This function encapsulates the logic for updating the marquee rectangle
@@ -761,20 +761,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- MouseDown Listener ---
     wrapper.addEventListener('mousedown', (e) => {
-        // MODIFIED: If click starts in search bar, exit to allow native text selection.
         if (e.target === searchInput) {
             return;
         }
 
-        // MODIFIED: Check if the event target is within the header or footer
         if (e.button !== 0 || header.contains(e.target) || footer.contains(e.target)) {
-            isMarquee = false; // Ensure marquee selection is not initiated if starting in header/footer
+            isMarquee = false; 
             return;
         }
 
         if(gallery.contains(e.target) || e.target === gallery) {
             e.preventDefault();
-            if (searchInput) searchInput.blur(); // MODIFIED: Use variable and check for existence
+            if (searchInput) searchInput.blur();
         }
 
         hasDragged = false;
@@ -790,7 +788,7 @@ document.addEventListener('DOMContentLoaded', () => {
         preMarqueeSelectedItems = new Set(selectedItems);
     });
 
-    // --- REFINED MouseMove Listener ---
+    // --- UPDATED MouseMove Listener with refined scroll speed ---
     document.addEventListener('mousemove', (e) => {
         if (!isMarquee) return;
     
@@ -805,15 +803,20 @@ document.addEventListener('DOMContentLoaded', () => {
     
         // Determine scroll speed based on cursor position
         const viewportHeight = window.innerHeight;
-        const scrollThreshold = 60; // The zone at the top/bottom of the screen
-        const maxScrollSpeed = 30;  // Max scroll speed in pixels per frame
+        const scrollThreshold = 60; 
+        const minScrollSpeed = 2;   // The minimum speed to ensure scrolling feels responsive
+        const maxScrollSpeed = 30;  // The fastest the page will scroll
     
         if (e.clientY > viewportHeight - scrollThreshold) {
+            // Cursor is in the bottom scroll zone
             const overshoot = e.clientY - (viewportHeight - scrollThreshold);
-            scrollSpeedY = (overshoot / scrollThreshold) * maxScrollSpeed;
+            const speedRatio = overshoot / scrollThreshold;
+            scrollSpeedY = minScrollSpeed + (speedRatio * (maxScrollSpeed - minScrollSpeed));
         } else if (e.clientY < scrollThreshold) {
+            // Cursor is in the top scroll zone
             const overshoot = scrollThreshold - e.clientY;
-            scrollSpeedY = -((overshoot / scrollThreshold) * maxScrollSpeed);
+            const speedRatio = overshoot / scrollThreshold;
+            scrollSpeedY = -(minScrollSpeed + (speedRatio * (maxScrollSpeed - minScrollSpeed)));
         } else {
             scrollSpeedY = 0;
         }
@@ -838,7 +841,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * UPDATED endDragAction function
      */
     const endDragAction = (e) => {
-        // --- NEW: Stop any active auto-scrolling ---
+        // --- Stop any active auto-scrolling ---
         isAutoScrolling = false;
         scrollSpeedY = 0;
 
@@ -852,7 +855,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const clickedOnItem = mouseDownItem;
 
             if (clickedOnItem) {
-                // MODIFIED: Shift+Click now acts like Ctrl+Click
                 if (isShift || isModifier) {
                     toggleSelection(clickedOnItem);
                     if (isSelected(clickedOnItem)) {
@@ -860,7 +862,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         lastSelectedItem = clickedOnItem;
                     }
                 } else {
-                    // MODIFIED: A single click on a lone selected item now deselects it
                     if (!isSelected(clickedOnItem) || selectedItems.size > 1) {
                         clearSelection();
                         toggleSelection(clickedOnItem);
@@ -1129,16 +1130,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         });
                         
-                        // MODIFICATION START
-                        // Explicitly set progress to 100% to fill the ring.
                         updateProgress(100);
 
-                        // Wait for 800ms to allow the user to see the completed state.
                         await new Promise(resolve => setTimeout(resolve, 400));
                         
-                        // Now, hide the indicator.
                         indicator.classList.remove('is-active', 'is-downloading');
-                        // MODIFICATION END
 
                     } catch (error) {
                         if (error.name === 'AbortError') {
@@ -1149,9 +1145,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                         indicator.classList.remove('is-downloading', 'is-active');
                     } finally {
-                        // Clean up for the next download
                         downloadAbortController = null;
-                        // Reset progress after a short delay
                         setTimeout(() => updateProgress(0), 400);
                     }
                 };
@@ -1169,7 +1163,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         switch (targetId) {
             case 'gallery-context-add':
-                // Programmatically click the hidden file input
                 if (imageUploadInput) {
                     imageUploadInput.click();
                 }
@@ -1183,21 +1176,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    // Add event listener for when files are selected for upload
     if (imageUploadInput) {
         imageUploadInput.addEventListener('change', async (event) => {
             const files = event.target.files;
             if (!files.length) {
-                return; // Exit if no files were selected
+                return;
             }
     
-            // URL of your Cloudflare Worker
             const UPLOAD_URL = 'https://r2-upload-presigner.witcherarchive.workers.dev';
             const uploadPromises = [];
     
-            document.body.style.cursor = 'wait'; // Show waiting cursor
+            document.body.style.cursor = 'wait';
     
-            // Loop through each selected file
             for (const file of files) {
                 const uploadTask = fetch(UPLOAD_URL, {
                     method: 'PUT',
@@ -1209,7 +1199,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 })
                 .then(response => {
                     if (!response.ok) {
-                        // If any upload fails, throw an error to be caught later
                         return response.text().then(text => { 
                             throw new Error(`Failed to upload ${file.name}: ${text}`); 
                         });
@@ -1221,15 +1210,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
     
             try {
-                // Wait for all upload promises to resolve
                 await Promise.all(uploadPromises);
                 alert(`${files.length} image(s) uploaded successfully!`);
-                location.reload(); // Reload the page once all uploads are complete
+                location.reload(); 
             } catch (error) {
                 console.error('An error occurred during one of the uploads:', error);
                 alert(`An error occurred during upload: ${error.message}`);
             } finally {
-                // Reset cursor and input value
                 document.body.style.cursor = 'default';
                 event.target.value = '';
             }
@@ -1238,7 +1225,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /*
     ==================================================================
-    // START: MODAL LOGIC (SECTION WITH CHANGES)
+    // START: MODAL LOGIC
     ==================================================================
     */
     const modal = document.getElementById('image-modal');
@@ -1254,7 +1241,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const infoPanel = document.querySelector('.modal-info-panel');
     let currentImageIndex = -1;
 
-    // A map to get the correct display label for each data key.
     const KEY_TO_LABEL_MAP = {
         season: 'Season',
         episode: 'Episode',
@@ -1264,7 +1250,6 @@ document.addEventListener('DOMContentLoaded', () => {
         characters: 'Characters'
     };
 
-    // The order in which to display the primary data fields.
     const primaryKeys = ['season', 'episode', 'cast', 'crew', 'castAndCrew', 'characters'];
 
 
@@ -1289,12 +1274,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const figure = visibleFigures[currentImageIndex];
         const img = figure.querySelector('img');
 
-        downloadBtn.dataset.fullsrc = img.dataset.fullsrc; // Always store the high-res URL
+        downloadBtn.dataset.fullsrc = img.dataset.fullsrc; 
 
-        // Immediately display the low-resolution thumbnail.
         modalImg.src = img.src;
 
-        // Load the high-res version in the background.
         const highResImage = new Image();
         highResImage.src = img.dataset.fullsrc;
         highResImage.onload = function() {
@@ -1349,8 +1332,7 @@ document.addEventListener('DOMContentLoaded', () => {
         event.preventDefault();
         event.stopPropagation();
 
-        const url = event.currentTarget.dataset.fullsrc; // Use the stored high-res URL
-        // Get filename, with a fallback for missing names
+        const url = event.currentTarget.dataset.fullsrc; 
         const filename = modalFilename.textContent || url.split('/').pop();
 
         if (!url || !filename) {
@@ -1361,11 +1343,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const buttonText = downloadBtn.textContent;
         try {
-            // Provide visual feedback to the user
             downloadBtn.textContent = 'Downloading...';
             downloadBtn.disabled = true;
 
-            // Fetch the image blob and trigger the download
             const blob = await fetchImageBlob(url);
             triggerDownload(blob, filename);
 
@@ -1373,7 +1353,6 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("Modal download failed:", error);
             alert("An error occurred while trying to download the image.");
         } finally {
-            // Restore the button to its original state after a moment
             setTimeout(() => {
                 downloadBtn.textContent = buttonText;
                 downloadBtn.disabled = false;
@@ -1503,15 +1482,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let ticking = false;
 
-    // This function now only updates the thumb's position.
-    // We use transform for smoother, GPU-accelerated animation.
     function updateThumbPosition() {
         const scrollableHeight = document.documentElement.scrollHeight;
         const viewportHeight = window.innerHeight;
         const trackHeight = track.offsetHeight;
         const thumbHeight = thumb.offsetHeight;
 
-        // Prevent division by zero if content is smaller than viewport
         if (scrollableHeight <= viewportHeight) return;
 
         const scrollPercentage = window.scrollY / (scrollableHeight - viewportHeight);
@@ -1520,13 +1496,11 @@ document.addEventListener('DOMContentLoaded', () => {
         thumb.style.transform = `translateY(${thumbPosition}px)`;
     }
 
-    // This function sets up the scrollbar dimensions and is called less frequently.
     function setupScrollbar() {
         const headerHeight = header.offsetHeight;
         const scrollableHeight = document.documentElement.scrollHeight;
         const viewportHeight = window.innerHeight;
 
-        // Hide or show track based on whether scrolling is needed
         if (scrollableHeight <= viewportHeight) {
             track.style.display = 'none';
             return;
@@ -1537,15 +1511,12 @@ document.addEventListener('DOMContentLoaded', () => {
         track.style.height = `calc(100% - ${headerHeight}px)`;
 
         const trackHeight = track.offsetHeight;
-        const thumbHeight = Math.max((viewportHeight / scrollableHeight) * trackHeight, 20); // 20px min height
+        const thumbHeight = Math.max((viewportHeight / scrollableHeight) * trackHeight, 20);
         thumb.style.height = `${thumbHeight}px`;
 
-        // Run a position update immediately
         updateThumbPosition();
     }
 
-    // On scroll, request an animation frame to update the thumb.
-    // The 'ticking' flag ensures we don't have multiple animation frames queued.
     document.addEventListener('scroll', () => {
         if (!ticking) {
             window.requestAnimationFrame(() => {
@@ -1556,8 +1527,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // The logic for dragging the thumb doesn't need to change.
-    // Calling window.scrollTo() will trigger our optimized scroll listener above.
     thumb.addEventListener('mousedown', (e) => {
         e.preventDefault();
         const startY = e.clientY;
@@ -1570,7 +1539,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const trackHeight = track.offsetHeight;
             const thumbHeight = thumb.offsetHeight;
 
-            // Prevent division by zero
             if (trackHeight - thumbHeight === 0) return;
 
             const deltaScroll = (deltaY / (trackHeight - thumbHeight)) * (scrollableHeight - viewportHeight);
@@ -1586,15 +1554,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.addEventListener('mouseup', onMouseUp);
     });
 
-    // Recalculate everything on resize, load, or orientation change
     window.addEventListener('resize', setupScrollbar);
     window.addEventListener('load', setupScrollbar);
     window.addEventListener('orientationchange', setupScrollbar);
     window.addEventListener('galleryFiltered', setupScrollbar);
 
-    // Initial setup
     setupScrollbar();
-    // A small timeout helps ensure all content (like images) has loaded and affected the page height
     setTimeout(setupScrollbar, 500);
 });
 
@@ -1607,31 +1572,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const thumb = document.getElementById('custom-scrollbar-thumb');
     if (!thumb) return;
 
-    const proximity = 30; // How close in pixels the mouse needs to be to trigger the effect
-    let ticking = false; // A flag to optimize performance
+    const proximity = 30;
+    let ticking = false;
 
     document.addEventListener('mousemove', (e) => {
-        // Use requestAnimationFrame to avoid running this code too often
         if (!ticking) {
             window.requestAnimationFrame(() => {
                 const thumbRect = thumb.getBoundingClientRect();
 
-                // Check if the mouse is horizontally within range (from the left of the thumb)
                 const isHorizontallyNear = e.clientX >= thumbRect.left - proximity;
-
-                // Check if the mouse is vertically within range (above or below the thumb)
                 const isVerticallyNear = (e.clientY >= thumbRect.top - proximity) && (e.clientY <= thumbRect.bottom + proximity);
 
-                // If the mouse is near and not at the very edge of the window, add the class
                 if (isHorizontallyNear && isVerticallyNear && e.clientX < window.innerWidth - 2) {
                     thumb.classList.add('is-near');
                 } else {
                     thumb.classList.remove('is-near');
                 }
 
-                ticking = false; // Reset the flag
+                ticking = false;
             });
-            ticking = true; // Set the flag
+            ticking = true;
         }
     });
 });
@@ -1650,14 +1610,12 @@ document.addEventListener('galleryLoaded', () => {
         return;
     }
 
-    // Build a unique, sorted list of searchable terms from the JSON data.
     const searchTerms = new Set();
     galleryItems.forEach(img => {
-        // MODIFICATION: Check for the new data attributes: cast, crew, and castAndCrew.
         const peopleSources = [img.dataset.cast, img.dataset.crew, img.dataset.castAndCrew];
 
         peopleSources.forEach(source => {
-            if (source) { // Check if the source (e.g., img.dataset.cast) exists
+            if (source) {
                 source.split(',').forEach(term => {
                     const cleaned = term.trim();
                     if (cleaned && cleaned.toLowerCase() !== 'red') searchTerms.add(cleaned);
@@ -1676,7 +1634,6 @@ document.addEventListener('galleryLoaded', () => {
 
     let activeSuggestionIndex = -1;
 
-    // Updates and displays the suggestion list based on user input.
     function updateSuggestions() {
         const query = searchInput.value.toLowerCase();
         suggestionsContainer.innerHTML = '';
@@ -1694,7 +1651,6 @@ document.addEventListener('galleryLoaded', () => {
                 const item = document.createElement('div');
                 item.className = 'suggestion-item';
                 item.textContent = term;
-                // Use 'mousedown' to prevent the input's 'blur' event from hiding the suggestions before the click registers.
                 item.addEventListener('mousedown', (e) => {
                     e.preventDefault();
                     selectSuggestion(term);
@@ -1707,15 +1663,12 @@ document.addEventListener('galleryLoaded', () => {
         }
     }
 
-    // Handles the selection of a suggestion from the list.
     function selectSuggestion(value) {
         searchInput.value = value;
         suggestionsContainer.style.display = 'none';
-        // Manually trigger the original 'keyup' event to perform the search.
         searchInput.dispatchEvent(new Event('keyup', { bubbles: true }));
     }
 
-    // Manages the 'active' class for keyboard navigation.
     function updateActiveSuggestion(items) {
         items.forEach((item, index) => {
             if (index === activeSuggestionIndex) {
@@ -1727,12 +1680,8 @@ document.addEventListener('galleryLoaded', () => {
         });
     }
 
-    // --- Event Listeners ---
-
-    // Update suggestions on every input change.
     searchInput.addEventListener('input', updateSuggestions);
 
-    // Handle keyboard navigation (arrows, Enter, Escape).
     searchInput.addEventListener('keydown', (e) => {
         const items = suggestionsContainer.querySelectorAll('.suggestion-item');
         if (items.length === 0) return;
@@ -1764,7 +1713,6 @@ document.addEventListener('galleryLoaded', () => {
         }
     });
 
-    // Hide the suggestions when clicking anywhere else on the page.
     document.addEventListener('click', (e) => {
         if (!searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
             suggestionsContainer.style.display = 'none';
@@ -1779,7 +1727,6 @@ document.addEventListener('keydown', (e) => {
         const searchInput = document.getElementById('search-input');
         const modal = document.getElementById('image-modal');
 
-        // Ignore if the user is focused on the search input or if the modal is visible
         if (document.activeElement === searchInput || (modal && modal.classList.contains('is-visible'))) {
             return;
         }
@@ -1787,20 +1734,16 @@ document.addEventListener('keydown', (e) => {
         const selectedFigures = gallery.querySelectorAll('figure.selected');
 
         if (selectedFigures.length > 0) {
-            // Prevent the browser's default copy behavior
             e.preventDefault();
 
-            // Create an array of filenames from the selected figures
             const filenames = Array.from(selectedFigures).map(figure => {
                 const img = figure.querySelector('img');
                 return img ? img.dataset.filename : '';
-            }).filter(name => name); // Filter out any empty or undefined names
+            }).filter(name => name); 
 
             if (filenames.length > 0) {
-                // Join the filenames with a single space for pasting into the search bar
                 const textToCopy = filenames.join(' ');
 
-                // Use the modern Clipboard API to write the text
                 navigator.clipboard.writeText(textToCopy).then(() => {
                     console.log(`${filenames.length} filenames copied to clipboard.`);
                 }).catch(err => {
