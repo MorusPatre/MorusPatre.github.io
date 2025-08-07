@@ -689,11 +689,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Refactored Marquee and Auto-Scroll Functions ---
 
     /**
-     * This function encapsulates the logic for updating the marquee rectangle
-     * and applying selection to the items within it.
-     * @param {number} clientX - The cursor's X position relative to the viewport.
-     * @param {number} clientY - The cursor's Y position relative to the viewport.
-     * @param {boolean} isModifier - Whether a modifier key (Shift, Ctrl, Meta) is pressed.
+     * UPDATED to enforce integer calculations to prevent compounding errors.
      */
     function updateMarqueeAndSelection(clientX, clientY, isModifier) {
         marquee.style.visibility = 'visible';
@@ -702,11 +698,12 @@ document.addEventListener('DOMContentLoaded', () => {
         let rawX = clientX - galleryRect.left;
         let rawY = clientY - galleryRect.top;
     
+        // ** THE FIX **: Round all marquee calculations to the nearest whole pixel.
         const marqueeRect = {
-            x: Math.min(startPos.x, rawX),
-            y: Math.min(startPos.y, rawY),
-            w: Math.abs(startPos.x - rawX),
-            h: Math.abs(startPos.y - rawY)
+            x: Math.round(Math.min(startPos.x, rawX)),
+            y: Math.round(Math.min(startPos.y, rawY)),
+            w: Math.round(Math.abs(startPos.x - rawX)),
+            h: Math.round(Math.abs(startPos.y - rawY))
         };
     
         marquee.style.left = `${marqueeRect.x}px`;
@@ -749,8 +746,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
     
-        window.scrollBy(0, scrollSpeedY);
-        // Update the marquee using the last known cursor position
+        // ** THE FIX **: Ensure we only scroll by whole pixels.
+        window.scrollBy(0, Math.round(scrollSpeedY));
         updateMarqueeAndSelection(lastClientX, lastClientY, lastClientModifierKey);
     
         requestAnimationFrame(autoScrollLoop);
@@ -786,39 +783,29 @@ document.addEventListener('DOMContentLoaded', () => {
         preMarqueeSelectedItems = new Set(selectedItems);
     });
 
-    // --- FINAL MouseMove Listener ---
+    // --- MouseMove Listener ---
     document.addEventListener('mousemove', (e) => {
         if (!isMarquee) return;
-    
-        // ** THE FIX **
-        // We REMOVE e.preventDefault() here to stop the browser's logical cursor
-        // from desynchronizing during programmatic scrolling. The CSS `user-select: none`
-        // rule will still prevent unwanted text selection.
         
         hasDragged = true;
         document.body.classList.add('is-marquee-dragging');
     
-        // Store the latest cursor position for the loop
         lastClientX = e.clientX;
         lastClientY = e.clientY;
         lastClientModifierKey = e.metaKey || e.ctrlKey || e.shiftKey;
         
-        // Always update the marquee on every mouse move for maximum responsiveness
         updateMarqueeAndSelection(e.clientX, e.clientY, lastClientModifierKey);
 
-        // Determine scroll speed based on cursor position
         const viewportHeight = window.innerHeight;
         const scrollThreshold = 60; 
         const minScrollSpeed = 2;
         const maxScrollSpeed = 30;
     
         if (e.clientY > viewportHeight - scrollThreshold) {
-            // Cursor is in the bottom scroll zone
             const overshoot = e.clientY - (viewportHeight - scrollThreshold);
             const speedRatio = overshoot / scrollThreshold;
             scrollSpeedY = minScrollSpeed + (speedRatio * (maxScrollSpeed - minScrollSpeed));
         } else if (e.clientY < scrollThreshold) {
-            // Cursor is in the top scroll zone
             const overshoot = scrollThreshold - e.clientY;
             const speedRatio = overshoot / scrollThreshold;
             scrollSpeedY = -(minScrollSpeed + (speedRatio * (maxScrollSpeed - minScrollSpeed)));
@@ -826,7 +813,6 @@ document.addEventListener('DOMContentLoaded', () => {
             scrollSpeedY = 0;
         }
     
-        // Manage the animation loop
         if (scrollSpeedY !== 0 && !isAutoScrolling) {
             isAutoScrolling = true;
             autoScrollLoop();
@@ -839,7 +825,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * UPDATED endDragAction function
      */
     const endDragAction = (e) => {
-        // --- Stop any active auto-scrolling ---
         isAutoScrolling = false;
         scrollSpeedY = 0;
 
@@ -847,7 +832,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isMarquee) return;
 
         if (!hasDragged) {
-            // Logic for a simple click (no drag)
             const isShift = e.shiftKey;
             const isModifier = e.metaKey || e.ctrlKey;
             const clickedOnItem = mouseDownItem;
@@ -872,7 +856,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             } else {
-                // Click was on the gallery background
                 if (!isModifier && !isShift) {
                     clearSelection();
                     selectionAnchor = null;
@@ -880,7 +863,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         } else {
-            // Logic after a marquee drag
             const itemUnderMouse = e.target.closest('figure');
 
             if (mouseDownItem) {
@@ -899,7 +881,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Cleanup marquee state
         isMarquee = false;
         hasDragged = false;
         mouseDownItem = null;
