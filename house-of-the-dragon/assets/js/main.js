@@ -786,11 +786,15 @@ document.addEventListener('DOMContentLoaded', () => {
         preMarqueeSelectedItems = new Set(selectedItems);
     });
 
-    // --- FINAL MouseMove Listener with aggressive updates ---
+    // --- FINAL MouseMove Listener ---
     document.addEventListener('mousemove', (e) => {
         if (!isMarquee) return;
     
-        e.preventDefault();
+        // ** THE FIX **
+        // We REMOVE e.preventDefault() here to stop the browser's logical cursor
+        // from desynchronizing during programmatic scrolling. The CSS `user-select: none`
+        // rule will still prevent unwanted text selection.
+        
         hasDragged = true;
         document.body.classList.add('is-marquee-dragging');
     
