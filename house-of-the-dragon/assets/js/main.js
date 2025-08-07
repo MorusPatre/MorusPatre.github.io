@@ -790,7 +790,7 @@ document.addEventListener('DOMContentLoaded', () => {
         preMarqueeSelectedItems = new Set(selectedItems);
     });
 
-    // --- MouseMove Listener ---
+    // --- REFINED MouseMove Listener ---
     document.addEventListener('mousemove', (e) => {
         if (!isMarquee) return;
     
@@ -798,42 +798,39 @@ document.addEventListener('DOMContentLoaded', () => {
         hasDragged = true;
         document.body.classList.add('is-marquee-dragging');
     
-        // Store last known cursor position and modifier key status for the autoscroll loop
+        // Store the latest cursor position for the loop
         lastClientX = e.clientX;
         lastClientY = e.clientY;
         lastClientModifierKey = e.metaKey || e.ctrlKey || e.shiftKey;
     
-        // Update the marquee and selection based on the current mouse move
-        updateMarqueeAndSelection(e.clientX, e.clientY, lastClientModifierKey);
-        
-        // --- NEW: Auto-scroll Logic ---
+        // Determine scroll speed based on cursor position
         const viewportHeight = window.innerHeight;
-        const scrollThreshold = 60; // The zone at the top/bottom of the screen that triggers scrolling
-        const maxScrollSpeed = 30;  // The maximum scroll speed in pixels per frame
+        const scrollThreshold = 60; // The zone at the top/bottom of the screen
+        const maxScrollSpeed = 30;  // Max scroll speed in pixels per frame
     
-        // Check if cursor is in the bottom scroll zone
         if (e.clientY > viewportHeight - scrollThreshold) {
             const overshoot = e.clientY - (viewportHeight - scrollThreshold);
             scrollSpeedY = (overshoot / scrollThreshold) * maxScrollSpeed;
-        } 
-        // Check if cursor is in the top scroll zone
-        else if (e.clientY < scrollThreshold) {
+        } else if (e.clientY < scrollThreshold) {
             const overshoot = scrollThreshold - e.clientY;
-            scrollSpeedY = -((overshoot / scrollThreshold) * maxScrollSpeed); // Negative value to scroll up
-        } 
-        // Cursor is in the neutral zone
-        else {
+            scrollSpeedY = -((overshoot / scrollThreshold) * maxScrollSpeed);
+        } else {
             scrollSpeedY = 0;
         }
     
-        // Manage the animation loop
-        if (scrollSpeedY !== 0 && !isAutoScrolling) {
-            // If we've entered a scroll zone and aren't already scrolling, start the loop.
-            isAutoScrolling = true;
-            autoScrollLoop();
-        } else if (scrollSpeedY === 0) {
-            // If we've moved into the neutral zone, stop the loop.
+        // Manage the animation loop and marquee updates
+        if (scrollSpeedY !== 0) {
+            if (!isAutoScrolling) {
+                // If we've entered a scroll zone and aren't already scrolling, start the loop.
+                isAutoScrolling = true;
+                autoScrollLoop();
+            }
+        } else {
+            // We are not in a scroll zone, so stop the loop.
             isAutoScrolling = false;
+            
+            // Since the loop isn't running, we must update the marquee directly on mouse move.
+            updateMarqueeAndSelection(e.clientX, e.clientY, lastClientModifierKey);
         }
     });
 
