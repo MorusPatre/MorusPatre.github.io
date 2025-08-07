@@ -744,7 +744,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * is in the auto-scroll zone at the top or bottom of the viewport.
      */
     function autoScrollLoop() {
-        if (!isMarquee) {
+        if (!isMarquee || !isAutoScrolling) {
             isAutoScrolling = false;
             return;
         }
@@ -753,9 +753,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update the marquee using the last known cursor position
         updateMarqueeAndSelection(lastClientX, lastClientY, lastClientModifierKey);
     
-        if (isAutoScrolling) {
-            requestAnimationFrame(autoScrollLoop);
-        }
+        requestAnimationFrame(autoScrollLoop);
     }
 
 
@@ -788,7 +786,7 @@ document.addEventListener('DOMContentLoaded', () => {
         preMarqueeSelectedItems = new Set(selectedItems);
     });
 
-    // --- UPDATED MouseMove Listener with refined scroll speed ---
+    // --- FINAL MouseMove Listener with aggressive updates ---
     document.addEventListener('mousemove', (e) => {
         if (!isMarquee) return;
     
@@ -800,12 +798,15 @@ document.addEventListener('DOMContentLoaded', () => {
         lastClientX = e.clientX;
         lastClientY = e.clientY;
         lastClientModifierKey = e.metaKey || e.ctrlKey || e.shiftKey;
-    
+        
+        // Always update the marquee on every mouse move for maximum responsiveness
+        updateMarqueeAndSelection(e.clientX, e.clientY, lastClientModifierKey);
+
         // Determine scroll speed based on cursor position
         const viewportHeight = window.innerHeight;
         const scrollThreshold = 60; 
-        const minScrollSpeed = 2;   // The minimum speed to ensure scrolling feels responsive
-        const maxScrollSpeed = 30;  // The fastest the page will scroll
+        const minScrollSpeed = 2;
+        const maxScrollSpeed = 30;
     
         if (e.clientY > viewportHeight - scrollThreshold) {
             // Cursor is in the bottom scroll zone
@@ -821,19 +822,12 @@ document.addEventListener('DOMContentLoaded', () => {
             scrollSpeedY = 0;
         }
     
-        // Manage the animation loop and marquee updates
-        if (scrollSpeedY !== 0) {
-            if (!isAutoScrolling) {
-                // If we've entered a scroll zone and aren't already scrolling, start the loop.
-                isAutoScrolling = true;
-                autoScrollLoop();
-            }
-        } else {
-            // We are not in a scroll zone, so stop the loop.
+        // Manage the animation loop
+        if (scrollSpeedY !== 0 && !isAutoScrolling) {
+            isAutoScrolling = true;
+            autoScrollLoop();
+        } else if (scrollSpeedY === 0) {
             isAutoScrolling = false;
-            
-            // Since the loop isn't running, we must update the marquee directly on mouse move.
-            updateMarqueeAndSelection(e.clientX, e.clientY, lastClientModifierKey);
         }
     });
 
