@@ -1268,11 +1268,12 @@ input, select, textarea {
     align-items: center;
     border-radius: 20px;
     background-color: rgba(255, 255, 255, 0.05);
-    padding: 2px 30px;
-    width: 17.225rem;
-    min-height: 24px; /* 1.5rem */
+    padding: 2px 30px 2px 30px; /* Top/Bottom, Right/Left */
+    width: 26.5em;
+    min-height: 24px;
     cursor: text;
     transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    font-size: 0.65rem; /* Add this line */
 }
 
 .search-wrapper:hover {
@@ -2249,10 +2250,11 @@ html, body {
     border-radius: 20px;
     background-color: rgba(255, 255, 255, 0.05);
     padding: 2px 30px 2px 30px; /* Top/Bottom, Right/Left */
-    width: 17.225rem;
+    width: 26.5em;
     min-height: 24px;
     cursor: text;
     transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    font-size: 0.65rem; /* Add this line */
 }
 
 .search-wrapper:hover {
