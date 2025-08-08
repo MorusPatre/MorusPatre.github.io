@@ -472,7 +472,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (pills.length > 0) {
             searchInput.placeholder = '';
         } else {
-            searchInput.placeholder = 'Search by filename, character, actor, etc...';
+            searchInput.placeholder = 'Search by filename, character, actor, episode, season etc...';
         }
 
         window.scrollTo(0, 0);
