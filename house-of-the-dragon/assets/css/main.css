@@ -1338,6 +1338,15 @@ input, select, textarea {
     flex-shrink: 0; /* Prevents pills from shrinking */
 }
 
+/* Input appearance when placed between pills */
+#search-wrapper .input-interstitial {
+    width: 20px; /* narrow default when between pills */
+    min-width: 2px;
+    padding: 0;
+    margin: 0 4px;
+    display: inline-block;
+}
+
 /* A pill's appearance when it is actively selected */
 .search-pill.selected {
     background-color: #5c5753;
