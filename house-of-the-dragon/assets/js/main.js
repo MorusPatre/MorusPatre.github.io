@@ -432,10 +432,12 @@ document.addEventListener('DOMContentLoaded', () => {
             // Move the searchInput to the correct position in the DOM
             if (insertBeforePill) {
                 searchWrapper.insertBefore(searchInput, insertBeforePill);
+                searchInput.classList.add('input-interstitial'); // <<< ADD THIS LINE
             } else {
                 // If no pill was found, it means the click was after all pills.
                 // The input should be at the end, so we append it.
                 searchWrapper.appendChild(searchInput);
+                searchInput.classList.remove('input-interstitial');
             }
 
             searchInput.focus();
