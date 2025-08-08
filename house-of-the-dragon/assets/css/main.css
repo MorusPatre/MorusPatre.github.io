@@ -2239,6 +2239,8 @@ html, body {
     transform: scale(1);
 }
 
+/* Paste this at the end of your main.css file */
+
 /* --- Pill Search --- */
 .search-wrapper {
     display: flex;
@@ -2246,9 +2248,9 @@ html, body {
     align-items: center;
     border-radius: 20px;
     background-color: rgba(255, 255, 255, 0.05);
-    padding: 2px 30px; /* Right padding for clear button, left for icon */
+    padding: 2px 30px 2px 30px; /* Top/Bottom, Right/Left */
     width: 26.5em;
-    min-height: 24px; /* Matches 1.5rem */
+    min-height: 24px;
     cursor: text;
     transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
@@ -2261,37 +2263,30 @@ html, body {
     background: rgba(255, 255, 255, 0.075);
     border: solid 1px #a3adaf;
     box-shadow: 0 0 0 0.5px #a3adaf;
-    padding: 1px 29px; /* Adjust padding to account for border */
+    padding: 1px 29px 1px 29px; /* Adjust padding to account for border */
 }
 
 /* The actual text input, made to blend in */
-#search-input {
+#search-wrapper #search-input {
     flex-grow: 1;
-    border: none !important;
-    background: transparent !important;
-    padding: 4px 0 !important;
-    margin: 0 !important;
-    outline: none !important;
-    color: #ffffff !important;
-    box-shadow: none !important;
-    border-radius: 0 !important;
-    height: auto !important;
-    width: auto !important;
+    border: none;
+    background: transparent;
+    padding: 4px 0;
+    margin: 0;
+    outline: none;
+    color: #ffffff;
+    height: auto;
+    width: auto;
     min-width: 120px;
-    line-height: 1.4 !important;
     font-size: 0.65rem;
-    text-align: left;
-    -webkit-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
+    line-height: 1.4;
 }
 
-/* The pill for selected search terms, now subtle by default */
 .search-pill {
     display: inline-flex;
     align-items: center;
-    background-color: transparent; /* MODIFIED: No background by default */
-    border: 1px solid transparent;  /* MODIFIED: No border by default */
+    background-color: #3f3a36;
+    border: 1px solid #5c5753;
     border-radius: 10px;
     padding: 2px 8px;
     margin: 2px 6px 2px 0;
@@ -2302,18 +2297,17 @@ html, body {
     transition: all 0.2s ease;
 }
 
-/* A pill becomes visible ONLY when it is selected */
 .search-pill.selected {
     background-color: #5c5753;
     border-color: #a3adaf;
     color: #fff;
+    box-shadow: 0 0 5px rgba(163, 173, 175, 0.5);
 }
 
 .search-pill-text {
     pointer-events: none;
 }
 
-/* The 'x' button to remove a pill */
 .remove-pill {
     margin-left: 6px;
     font-weight: bold;
@@ -2324,4 +2318,14 @@ html, body {
 
 .remove-pill:hover {
     color: #fff;
+}
+
+
+/* --- Replacement for original #search-input style --- */
+#search-input {
+    font-size: 0.65rem;
+    text-align: left;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
