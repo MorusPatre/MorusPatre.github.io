@@ -1647,10 +1647,16 @@ document.addEventListener('galleryLoaded', () => {
         pill.appendChild(pillText);
         pill.appendChild(removeBtn);
 
-        // Drag and Drop functionality
+        // Drag and Drop functionality for reordering
         pill.addEventListener('dragstart', (e) => {
-            e.dataTransfer.setData('text/plain', e.target.dataset.value);
-            e.dataTransfer.effectAllowed = 'copy';
+            e.stopPropagation();
+            pill.classList.add('is-dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        });
+
+        pill.addEventListener('dragend', (e) => {
+            e.stopPropagation();
+            pill.classList.remove('is-dragging');
         });
 
         // Click to select functionality
@@ -1666,6 +1672,45 @@ document.addEventListener('galleryLoaded', () => {
 
         return pill;
     }
+    
+    // Helper function to determine where to drop the pill
+    function getDragAfterElement(container, x) {
+        const draggableElements = [...container.querySelectorAll('.search-pill:not(.is-dragging)')];
+
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = x - box.left - box.width / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    searchWrapper.addEventListener('dragover', e => {
+        e.preventDefault(); // Necessary to allow dropping
+        const draggingPill = document.querySelector('.search-pill.is-dragging');
+        if (!draggingPill) return;
+
+        const afterElement = getDragAfterElement(searchWrapper, e.clientX);
+        const searchInput = document.getElementById('search-input');
+
+        if (afterElement == null) {
+            // If no element is found, we're at the end. Insert before the input field.
+            searchWrapper.insertBefore(draggingPill, searchInput);
+        } else {
+            // Otherwise, insert the dragging pill before the element we found.
+            searchWrapper.insertBefore(draggingPill, afterElement);
+        }
+    });
+
+    searchWrapper.addEventListener('drop', e => {
+        e.preventDefault();
+        // The pill has already been moved. This finalizes the action and re-runs the search.
+        runSearchFromPills();
+        searchInput.focus();
+    });
     
     // --- Autocomplete data setup ---
     const searchTerms = new Set();
