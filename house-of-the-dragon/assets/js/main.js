@@ -404,15 +404,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // NEW: Helper function to adjust the input field's style
     function updateSearchInputStyle() {
         // If the search input is the last element inside the wrapper,
-        // it should grow to fill the remaining space.
+        // it should grow and respect the original minimum width.
         if (searchWrapper.lastElementChild === searchInput) {
             searchInput.style.flexGrow = '1';
             searchInput.style.width = 'auto';
+            // Reset min-width to allow the stylesheet to take over
+            searchInput.style.minWidth = ''; 
         } else {
-            // Otherwise, if it's between pills, it should be a small,
-            // fixed width just large enough for the caret.
+            // Otherwise, if it's between pills, it must shrink.
+            // We override BOTH width and min-width to make it small.
             searchInput.style.flexGrow = '0';
             searchInput.style.width = '8px';
+            // Set min-width to 0 to override the 120px from the stylesheet
+            searchInput.style.minWidth = '0';
         }
     }
 
