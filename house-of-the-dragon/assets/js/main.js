@@ -401,9 +401,43 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchWrapper = document.getElementById('search-wrapper');
     const clearSearchBtn = document.getElementById('clear-search');
 
-    // Make the entire wrapper focus the input field when clicked
+    // Make the entire wrapper focus the input field when clicked,
+    // and position the input field based on the click location.
     if (searchWrapper) {
-        searchWrapper.addEventListener('click', () => {
+        searchWrapper.addEventListener('click', (e) => {
+            // If the click is on the input itself or a pill's remove button, do nothing.
+            if (e.target.id === 'search-input' || e.target.classList.contains('remove-pill')) {
+                return;
+            }
+
+            // If the click was on a pill, focus the main input.
+            if (e.target.classList.contains('search-pill') || e.target.classList.contains('search-pill-text')) {
+                 searchInput.focus();
+                 return;
+            }
+
+            const pills = Array.from(searchWrapper.querySelectorAll('.search-pill'));
+            let insertBeforePill = null;
+
+            // Find which pill to insert the input before
+            for (const pill of pills) {
+                const rect = pill.getBoundingClientRect();
+                // If the click is to the left of the pill's horizontal center
+                if (e.clientX < rect.left + rect.width / 2) {
+                    insertBeforePill = pill;
+                    break;
+                }
+            }
+
+            // Move the searchInput to the correct position in the DOM
+            if (insertBeforePill) {
+                searchWrapper.insertBefore(searchInput, insertBeforePill);
+            } else {
+                // If no pill was found, it means the click was after all pills.
+                // The input should be at the end, so we append it.
+                searchWrapper.appendChild(searchInput);
+            }
+
             searchInput.focus();
         });
     }
