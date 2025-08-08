@@ -1350,6 +1350,11 @@ input, select, textarea {
     pointer-events: none;
 }
 
+/* Provides visual feedback when a pill is being moved */
+.search-pill.is-dragging {
+    opacity: 0.5;
+}
+
 /* The 'x' button to remove a pill */
 .remove-pill {
     margin-left: 6px;
