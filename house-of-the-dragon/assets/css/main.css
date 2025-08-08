@@ -1263,17 +1263,17 @@ input, select, textarea {
 
 /* The main wrapper that looks like an input field */
 .search-wrapper {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    border-radius: 20px;
-    background-color: rgba(255, 255, 255, 0.05);
-    padding: 2px 30px 2px 30px; /* Top/Bottom, Right/Left */
-    width: 26.5em;
-    min-height: 24px;
-    cursor: text;
-    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-    font-size: 0.65rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    border-radius: 20px;
+    background-color: rgba(255, 255, 255, 0.05);
+    padding: 2px 12px 2px 30px;
+    width: 26.5em;
+    min-height: 24px;
+    cursor: text;
+    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, padding 0.2s ease-in-out;
+    font-size: 0.65rem;
 }
 
 .search-wrapper:hover {
