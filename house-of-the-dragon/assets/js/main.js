@@ -417,21 +417,6 @@ document.addEventListener('DOMContentLoaded', () => {
             searchWrapper.classList.remove('is-focused');
         });
     }
-    
-    // --- ADD this new event listener for the search wrapper ---
-    searchWrapper.addEventListener('dragover', e => {
-        e.preventDefault(); // This allows us to drop inside this element
-        const afterElement = getDragAfterElement(searchWrapper, e.clientX);
-        const draggable = document.querySelector('.dragging');
-        
-        if (draggable) { // Ensure we have a draggable element
-            if (afterElement == null) {
-                searchWrapper.insertBefore(draggable, searchInput);
-            } else {
-                searchWrapper.insertBefore(draggable, afterElement);
-            }
-        }
-    });
 
     function simplifySearchText(text) {
         if (!text) return "";
@@ -1662,13 +1647,10 @@ document.addEventListener('galleryLoaded', () => {
         pill.appendChild(pillText);
         pill.appendChild(removeBtn);
 
-        // --- MODIFIED Drag and Drop functionality ---
-        pill.addEventListener('dragstart', () => {
-            pill.classList.add('dragging');
-        });
-
-        pill.addEventListener('dragend', () => {
-            pill.classList.remove('dragging');
+        // Drag and Drop functionality
+        pill.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', e.target.dataset.value);
+            e.dataTransfer.effectAllowed = 'copy';
         });
 
         // Click to select functionality
@@ -1683,21 +1665,6 @@ document.addEventListener('galleryLoaded', () => {
         });
 
         return pill;
-    }
-    
-    // --- ADD THIS NEW HELPER FUNCTION ---
-    function getDragAfterElement(container, x) {
-        const draggableElements = [...container.querySelectorAll('.search-pill:not(.dragging)')];
-
-        return draggableElements.reduce((closest, child) => {
-            const box = child.getBoundingClientRect();
-            const offset = x - box.left - box.width / 2;
-            if (offset < 0 && offset > closest.offset) {
-                return { offset: offset, element: child };
-            } else {
-                return closest;
-            }
-        }, { offset: Number.NEGATIVE_INFINITY }).element;
     }
     
     // --- Autocomplete data setup ---
