@@ -1263,17 +1263,18 @@ input, select, textarea {
 
 /* The main wrapper that looks like an input field */
 .search-wrapper {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    border-radius: 20px;
-    background-color: rgba(255, 255, 255, 0.05);
-    padding: 2px 12px 2px 30px;
-    width: 26.5em;
-    min-height: 24px;
-    cursor: text;
-    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, padding 0.2s ease-in-out;
-    font-size: 0.65rem;
+    display: flex;
+    flex-wrap: nowrap; /* Prevents pills from wrapping to a new line */
+    align-items: center;
+    border-radius: 20px;
+    background-color: rgba(255, 255, 255, 0.05);
+    padding: 2px 12px 2px 30px;
+    width: 26.5em;
+    min-height: 24px;
+    cursor: text;
+    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, padding 0.2s ease-in-out;
+    font-size: 0.65rem;
+    overflow-x: auto; /* Enables horizontal scrolling when content overflows */
 }
 
 .search-wrapper:hover {
@@ -1313,8 +1314,8 @@ input, select, textarea {
 .search-pill {
     display: inline-flex;
     align-items: center;
-    background-color: transparent; /* No background by default */
-    border: 1px solid transparent;  /* No border by default */
+    background-color: transparent;
+    border: 1px solid transparent;
     border-radius: 10px;
     padding: 2px 8px;
     margin: 2px 6px 2px 0;
@@ -1323,6 +1324,7 @@ input, select, textarea {
     cursor: pointer;
     user-select: none;
     transition: all 0.2s ease;
+    flex-shrink: 0; /* Prevents pills from shrinking */
 }
 
 /* A pill becomes visible ONLY when it is selected */
