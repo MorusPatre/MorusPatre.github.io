@@ -400,8 +400,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     const searchWrapper = document.getElementById('search-wrapper');
     const clearSearchBtn = document.getElementById('clear-search');
+    
+    // NEW: Helper function to adjust the input field's style
+    function updateSearchInputStyle() {
+        // If the search input is the last element inside the wrapper,
+        // it should grow to fill the remaining space.
+        if (searchWrapper.lastElementChild === searchInput) {
+            searchInput.style.flexGrow = '1';
+            searchInput.style.width = 'auto';
+        } else {
+            // Otherwise, if it's between pills, it should be a small,
+            // fixed width just large enough for the caret.
+            searchInput.style.flexGrow = '0';
+            searchInput.style.width = '8px';
+        }
+    }
 
-    // Make the entire wrapper focus the input field when clicked
     // Make the entire wrapper focus the input field when clicked
     if (searchWrapper) {
         searchWrapper.addEventListener('click', (e) => {
@@ -411,21 +425,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 const pills = searchWrapper.querySelectorAll('.search-pill');
                 let referenceNode = null;
 
-                // Find which pill should be to the right of the caret.
                 for (const pill of pills) {
                     const pillRect = pill.getBoundingClientRect();
-                    // If the click is on the left half of a pill, we'll place
-                    // the caret before it.
                     if (e.clientX < pillRect.left + (pillRect.width / 2)) {
                         referenceNode = pill;
                         break;
                     }
                 }
-
-                // Move the input field to the correct position. If referenceNode
-                // is null (meaning the click was after all pills), the input
-                // will be correctly placed at the end.
+                
+                // Move the input field to the correct position
                 searchWrapper.insertBefore(searchInput, referenceNode);
+
+                // NEW: Update the input's style after moving it
+                updateSearchInputStyle();
             }
 
             // Always focus the input to make the caret visible.
@@ -513,6 +525,10 @@ document.addEventListener('DOMContentLoaded', () => {
         pills.forEach(pill => pill.remove());
         searchInput.value = '';
         runSearch(); // Update display and placeholder
+        
+        // NEW: Update the input's style after clearing pills
+        updateSearchInputStyle();
+        
         searchInput.focus();
     });
 
@@ -1667,6 +1683,9 @@ document.addEventListener('galleryLoaded', () => {
             e.stopPropagation();
             pill.remove();
             runSearchFromPills();
+
+            // NEW: Update the input's style after removing a pill
+            updateSearchInputStyle();
         });
 
         pill.appendChild(pillText);
