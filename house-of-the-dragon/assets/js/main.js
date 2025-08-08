@@ -396,187 +396,138 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('search-input');
     
     // =================================================================
-    // START: MODIFIED SEARCH AND AUTOCOMPLETE LOGIC
+    // START: ALL NEW SEARCH AND AUTOCOMPLETE LOGIC
     // =================================================================
     const searchWrapper = document.getElementById('search-wrapper');
     const clearSearchBtn = document.getElementById('clear-search');
-    
-    // NEW: Helper function to adjust the input field's style
+
+    // --- Helper function to adjust the input field's style ---
     function updateSearchInputStyle() {
-        // If the search input is the last element inside the wrapper,
-        // it should grow and respect the original minimum width.
-        if (searchWrapper.lastElementChild === searchInput) {
+        // When at the end, the input should be wide.
+        if (!searchInput.nextElementSibling) {
             searchInput.style.flexGrow = '1';
             searchInput.style.width = 'auto';
-            // Reset min-width to allow the stylesheet to take over
-            searchInput.style.minWidth = '';
-        } else {
-            // Otherwise, if it's between pills, it must shrink.
-            // We override BOTH width and min-width to make it small.
+            searchInput.style.minWidth = '120px';
+        } 
+        // When between pills, it should be narrow.
+        else {
             searchInput.style.flexGrow = '0';
-            searchInput.style.width = '8px';
-            // Set min-width to 0 to override the 120px from the stylesheet
-            searchInput.style.minWidth = '0';
+            // On reset, check if there's text to determine width, otherwise use minimum.
+            searchInput.style.width = searchInput.value ? `${sizer.offsetWidth + 2}px` : '8px';
+            searchInput.style.minWidth = '0px';
         }
     }
 
-    // =================================================================
-    // NEW: DYNAMIC INPUT SIZING LOGIC
-    // =================================================================
-    // Create a hidden "sizer" element to measure text width accurately.
+    // --- Sizer setup for dynamic input width ---
     const sizer = document.createElement('span');
     sizer.style.position = 'absolute';
     sizer.style.visibility = 'hidden';
     sizer.style.height = 'auto';
     sizer.style.width = 'auto';
-    sizer.style.whiteSpace = 'pre'; // Important for measuring spaces correctly
+    sizer.style.whiteSpace = 'pre';
 
-    // Copy font styles from the search input to the sizer.
     const inputStyles = window.getComputedStyle(searchInput);
     sizer.style.fontSize = inputStyles.fontSize;
     sizer.style.fontFamily = inputStyles.fontFamily;
     sizer.style.fontWeight = inputStyles.fontWeight;
     sizer.style.letterSpacing = inputStyles.letterSpacing;
     sizer.style.textTransform = inputStyles.textTransform;
-
     document.body.appendChild(sizer);
 
-    // Add an event listener that fires whenever the user types in the input.
+    // --- Event listener for typing in the input ---
     searchInput.addEventListener('input', () => {
-        // Only apply this dynamic sizing logic if the input is between pills
-        // (i.e., it doesn't have flex-grow set to 1).
+        // Only resize if it's not in the default "grow" state.
         if (searchInput.style.flexGrow === '0') {
-            // Put the input's text into our hidden sizer.
             sizer.textContent = searchInput.value;
-
-            // Calculate the new width. We use Math.max to ensure the input
-            // is at least 8px wide (for the caret) even when empty.
-            // We add 2px of padding for better aesthetics.
             const newWidth = Math.max(8, sizer.offsetWidth + 2);
+            searchInput.style.width = `${newWidth}px`;
             
-            // Apply the new calculated width to the input field.
-            searchInput.style.setProperty('width', `${newWidth}px`, 'important');
+            // Scroll the input into the center of the search bar as you type.
+            searchInput.scrollIntoView({ block: 'nearest', inline: 'center' });
         }
     });
 
-    // Make the entire wrapper focus the input field when clicked
-    if (searchWrapper) {
-        searchWrapper.addEventListener('click', (e) => {
-            // Only re-position the caret if the click was directly on the
-            // wrapper's background, not on an existing pill or the input itself.
-            if (e.target.id === 'search-wrapper') {
-                const pills = searchWrapper.querySelectorAll('.search-pill');
-                let referenceNode = null;
+    // --- Event listener for clicking in the wrapper ---
+    searchWrapper.addEventListener('click', (e) => {
+        // Only act if the click is on the background of the wrapper.
+        if (e.target.id === 'search-wrapper') {
+            let referenceNode = null;
+            const pills = searchWrapper.querySelectorAll('.search-pill');
 
-                for (const pill of pills) {
-                    const pillRect = pill.getBoundingClientRect();
-                    if (e.clientX < pillRect.left + (pillRect.width / 2)) {
-                        referenceNode = pill;
-                        break;
-                    }
+            for (const pill of pills) {
+                const pillRect = pill.getBoundingClientRect();
+                if (e.clientX < pillRect.left + (pillRect.width / 2)) {
+                    referenceNode = pill;
+                    break;
                 }
-                
-                // Move the input field to the correct position
-                searchWrapper.insertBefore(searchInput, referenceNode);
-
-                // Update the input's style after moving it
-                updateSearchInputStyle();
             }
+            
+            // Move the input field to the clicked position.
+            searchWrapper.insertBefore(searchInput, referenceNode);
+            
+            // If the input was moved, clear its text content.
+            if (searchInput.value) {
+                searchInput.value = '';
+            }
+            
+            updateSearchInputStyle();
+        }
+        searchInput.focus();
+    });
 
-            // Always focus the input to make the caret visible.
-            searchInput.focus();
-        });
-    }
-
-    // Add/remove focus class to the wrapper for styling
+    // --- Focus and Blur listeners ---
     if (searchInput) {
-        searchInput.addEventListener('focus', () => {
-            searchWrapper.classList.add('is-focused');
-        });
-        searchInput.addEventListener('blur', () => {
-            searchWrapper.classList.remove('is-focused');
-        });
-    }
-
-    function simplifySearchText(text) {
-        if (!text) return "";
-        return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        searchInput.addEventListener('focus', () => searchWrapper.classList.add('is-focused'));
+        searchInput.addEventListener('blur', () => searchWrapper.classList.remove('is-focused'));
     }
     
-    // This is the core function that filters the gallery
+    // --- Main Search Function (called by various events) ---
     function runSearch() {
-        // Build the query string from pills and the current input value
-        const pills = searchWrapper.querySelectorAll('.search-pill');
-        let pillQueries = [];
-        pills.forEach(pill => {
-            pillQueries.push(pill.dataset.value);
-        });
+        const pills = Array.from(searchWrapper.querySelectorAll('.search-pill'));
+        const pillQueries = pills.map(pill => pill.dataset.value);
         
-        const fullQueryText = pillQueries.join(' ') + ' ' + searchInput.value;
-        const simplifiedQuery = simplifySearchText(fullQueryText.toLowerCase());
+        // Build the query from pills and the current input value
+        const fullQueryText = [...pillQueries, searchInput.value].join(' ').trim();
+        const simplifiedQuery = fullQueryText.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-        // Show/hide clear button based on whether there's any query
-        if (fullQueryText.trim().length > 0) {
+        // Toggle clear button visibility
+        if (fullQueryText.length > 0) {
             clearSearchBtn.style.display = 'block';
             searchWrapper.style.paddingRight = '30px';
         } else {
             clearSearchBtn.style.display = 'none';
             searchWrapper.style.paddingRight = '';
         }
-        
-        const galleryItems = gallery.querySelectorAll('figure');
-        const phraseRegex = /\b(s\d+e\d+|season\s*\d+|episode\s*\d+|s\d+|e\d+)\b/g;
-        const phraseTerms = simplifiedQuery.match(phraseRegex) || [];
-        const remainingText = simplifiedQuery.replace(phraseRegex, '').trim();
-        const wordTerms = remainingText.split(' ').filter(term => term.length > 0);
-        const searchTerms = [...phraseTerms, ...wordTerms];
 
-        galleryItems.forEach(function(item) {
-            const img = item.querySelector('img');
-            if (!img || !img.dataset.search) {
-                item.style.display = 'none';
-                return;
-            }
+        const searchTerms = simplifiedQuery.split(' ').filter(term => term.length > 0);
+        const allFigures = gallery.querySelectorAll('figure');
 
-            const searchData = img.dataset.search.toLowerCase();
+        allFigures.forEach(figure => {
+            const img = figure.querySelector('img');
+            const searchData = (img?.dataset.search || "").toLowerCase();
             const isMatch = searchTerms.every(term => searchData.includes(term));
-
-            if (isMatch) {
-                item.style.display = 'flex';
-            } else {
-                item.style.display = 'none';
-            }
+            figure.style.display = isMatch ? 'flex' : 'none';
         });
 
-        // If there are pills, hide the placeholder
-        if (pills.length > 0) {
-            searchInput.placeholder = '';
-        } else {
-            searchInput.placeholder = 'Search by filename, actor, character, season, episode etc...';
-        }
-
-        window.scrollTo(0, 0);
+        // Update placeholder text
+        searchInput.placeholder = pills.length > 0 && !searchInput.value ? '' : 'Search by filename, actor, character, season, episode etc...';
         window.dispatchEvent(new CustomEvent('galleryFiltered'));
     }
-
-    // Original search input listener, now just calls runSearch
+    
+    // Add keyup listener to trigger search as user types
     searchInput.addEventListener('keyup', runSearch);
 
-    // Update clear button to remove pills too
+    // --- Clear Button Listener ---
     clearSearchBtn.addEventListener('click', function() {
-        const pills = searchWrapper.querySelectorAll('.search-pill');
-        pills.forEach(pill => pill.remove());
+        searchWrapper.querySelectorAll('.search-pill').forEach(pill => pill.remove());
         searchInput.value = '';
-        runSearch(); // Update display and placeholder
-        
-        // NEW: Update the input's style after clearing pills
+        runSearch();
         updateSearchInputStyle();
-        
         searchInput.focus();
     });
-
+    
     // =================================================================
-    // END: MODIFIED SEARCH AND AUTOCOMPLETE LOGIC
+    // END: ALL NEW SEARCH AND AUTOCOMPLETE LOGIC
     // =================================================================
 
 
@@ -1726,9 +1677,6 @@ document.addEventListener('galleryLoaded', () => {
             e.stopPropagation();
             pill.remove();
             runSearchFromPills();
-
-            // NEW: Update the input's style after removing a pill
-            updateSearchInputStyle();
         });
 
         pill.appendChild(pillText);
