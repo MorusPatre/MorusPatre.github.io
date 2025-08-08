@@ -1688,12 +1688,25 @@ document.addEventListener('galleryLoaded', () => {
         suggestionsContainer.innerHTML = '';
         activeSuggestionIndex = -1;
 
+        // --- NEW: Get the values of all pills that currently exist ---
+        const existingPills = searchWrapper.querySelectorAll('.search-pill');
+        const existingPillValues = new Set();
+        existingPills.forEach(pill => {
+            // Add the pill's value to a Set for quick lookups
+            existingPillValues.add(pill.dataset.value.toLowerCase());
+        });
+
         if (query.length === 0) {
             suggestionsContainer.style.display = 'none';
             return;
         }
 
-        const matches = sortedSearchTerms.filter(term => term.toLowerCase().startsWith(query)).slice(0, 7);
+        // --- MODIFIED: The filter now also checks if a term is already a pill ---
+        const matches = sortedSearchTerms.filter(term => {
+            const termLower = term.toLowerCase();
+            // A term is a match if it starts with the query AND is not already an active pill
+            return termLower.startsWith(query) && !existingPillValues.has(termLower);
+        }).slice(0, 7);
 
         if (matches.length > 0) {
             matches.forEach(term => {
@@ -1819,4 +1832,3 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
-
