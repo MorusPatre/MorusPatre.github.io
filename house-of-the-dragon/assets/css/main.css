@@ -1273,8 +1273,7 @@ input, select, textarea {
 /* The main wrapper that looks like an input field */
 .search-wrapper {
     display: flex;
-    /* This is the key trick: layout items from right-to-left */
-    flex-direction: row-reverse;
+    flex-wrap: nowrap;
     align-items: center;
     border-radius: 20px;
     background-color: rgba(255, 255, 255, 0.05);
@@ -1284,7 +1283,9 @@ input, select, textarea {
     cursor: text;
     transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
     font-size: 0.65rem;
-    overflow-x: auto; /* Enables horizontal scrolling */
+    overflow-x: auto;
+    /* NEW: Align items to the right to enable the "pushing" effect */
+    justify-content: flex-end;
 }
 
 .search-wrapper:hover {
@@ -1302,8 +1303,11 @@ input, select, textarea {
 
 /* The actual text input, styled to be invisible within the wrapper */
 #search-input {
-    flex-shrink: 0; /* Prevents the input from shrinking */
-    order: 1; /* This ensures the input field visually appears last */
+    /* Set a minimum width and allow it to shrink */
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 120px;
+    /* Other styles for appearance */
     border: none;
     background: transparent;
     padding: 4px 0 4px 1px;
@@ -1313,13 +1317,10 @@ input, select, textarea {
     box-shadow: none;
     border-radius: 0;
     height: auto;
-    width: 100%; /* Make it take up all available space by default */
-    min-width: 120px;
+    width: auto;
     line-height: 1.4;
     font-size: 0.65rem;
-    text-align: right; /* Text inside the input aligns to the right */
-    -webkit-user-select: text;
-    -ms-user-select: text;
+    text-align: left;
     user-select: text;
 }
 
