@@ -402,8 +402,33 @@ document.addEventListener('DOMContentLoaded', () => {
     const clearSearchBtn = document.getElementById('clear-search');
 
     // Make the entire wrapper focus the input field when clicked
+    // Make the entire wrapper focus the input field when clicked
     if (searchWrapper) {
-        searchWrapper.addEventListener('click', () => {
+        searchWrapper.addEventListener('click', (e) => {
+            // Only re-position the caret if the click was directly on the
+            // wrapper's background, not on an existing pill or the input itself.
+            if (e.target.id === 'search-wrapper') {
+                const pills = searchWrapper.querySelectorAll('.search-pill');
+                let referenceNode = null;
+
+                // Find which pill should be to the right of the caret.
+                for (const pill of pills) {
+                    const pillRect = pill.getBoundingClientRect();
+                    // If the click is on the left half of a pill, we'll place
+                    // the caret before it.
+                    if (e.clientX < pillRect.left + (pillRect.width / 2)) {
+                        referenceNode = pill;
+                        break;
+                    }
+                }
+
+                // Move the input field to the correct position. If referenceNode
+                // is null (meaning the click was after all pills), the input
+                // will be correctly placed at the end.
+                searchWrapper.insertBefore(searchInput, referenceNode);
+            }
+
+            // Always focus the input to make the caret visible.
             searchInput.focus();
         });
     }
