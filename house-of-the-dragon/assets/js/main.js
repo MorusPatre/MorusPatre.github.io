@@ -401,33 +401,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchWrapper = document.getElementById('search-wrapper');
     const clearSearchBtn = document.getElementById('clear-search');
 
-    // Allow placing the caret anywhere between pills
+    // Make the entire wrapper focus the input field when clicked
     if (searchWrapper) {
-        searchWrapper.addEventListener('click', (e) => {
-            // Don't interfere with clicks on the input itself or pill remove buttons
-            if (e.target === searchInput || e.target.classList.contains('remove-pill')) {
-                return;
-            }
-
-            const pills = Array.from(searchWrapper.querySelectorAll('.search-pill'));
-            let insertBeforePill = null;
-
-            for (const pill of pills) {
-                const rect = pill.getBoundingClientRect();
-                // If click is on left half of this pill, place input before it
-                if (e.clientX < rect.left + rect.width / 2) {
-                    insertBeforePill = pill;
-                    break;
-                }
-            }
-
-            if (insertBeforePill) {
-                searchWrapper.insertBefore(searchInput, insertBeforePill);
-            } else {
-                searchWrapper.appendChild(searchInput);
-            }
-
-            searchInput.classList.add('input-interstitial');
+        searchWrapper.addEventListener('click', () => {
             searchInput.focus();
         });
     }
@@ -1767,17 +1743,9 @@ document.addEventListener('galleryLoaded', () => {
     }
 
     searchInput.addEventListener('input', () => {
-        if (searchInput.value.length === 0) {
-            searchInput.style.width = '0px';
-        } else {
-            searchInput.style.width = '1px'; // reset
-            searchInput.style.width = (searchInput.scrollWidth + 2) + 'px';
-        }
-
         updateSuggestions();
         runSearchFromPills();
     });
-
 
     searchInput.addEventListener('keydown', (e) => {
         const items = suggestionsContainer.querySelectorAll('.suggestion-item');
