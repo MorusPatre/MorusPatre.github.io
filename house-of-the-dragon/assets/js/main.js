@@ -435,13 +435,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const fullQueryText = pillQueries.join(' ') + ' ' + searchInput.value;
         const simplifiedQuery = simplifySearchText(fullQueryText.toLowerCase());
 
-        // Show/hide clear button based on whether there's any query
+        // MODIFIED: Simplified the clear button logic
         if (fullQueryText.trim().length > 0) {
             clearSearchBtn.style.display = 'block';
-            searchWrapper.style.paddingRight = '30px';
         } else {
             clearSearchBtn.style.display = 'none';
-            searchWrapper.style.paddingRight = '30px'; // Keep padding consistent
         }
         
         const galleryItems = gallery.querySelectorAll('figure');
@@ -1619,7 +1617,7 @@ document.addEventListener('galleryLoaded', () => {
         });
 
         // Update placeholder based on pills
-        searchInput.placeholder = pills.length > 0 ? '' : 'Search by filename, character, actor, etc...';
+        searchInput.placeholder = pills.length > 0 ? '' : 'Search by filename, character, actor, episode, season etc...';
         
         window.dispatchEvent(new CustomEvent('galleryFiltered'));
     }
@@ -1819,42 +1817,3 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
-
-// NEW: Dynamically size search bar based on placeholder
-function autosizeSearchbar() {
-    const searchInput = document.getElementById('search-input');
-    const searchWrapper = document.getElementById('search-wrapper');
-    if (!searchInput || !searchWrapper) return;
-
-    const placeholderText = searchInput.getAttribute('placeholder');
-    if (!placeholderText) return;
-
-    const tempSpan = document.createElement('span');
-    document.body.appendChild(tempSpan);
-
-    const inputStyle = window.getComputedStyle(searchInput);
-    tempSpan.style.fontFamily = inputStyle.fontFamily;
-    tempSpan.style.fontSize = inputStyle.fontSize;
-    tempSpan.style.fontWeight = inputStyle.fontWeight;
-    tempSpan.style.letterSpacing = inputStyle.letterSpacing;
-    tempSpan.style.visibility = 'hidden';
-    tempSpan.style.position = 'absolute';
-    tempSpan.style.whiteSpace = 'pre'; // Important for accurate width
-
-    tempSpan.textContent = placeholderText;
-    const placeholderWidth = tempSpan.offsetWidth;
-
-    document.body.removeChild(tempSpan);
-
-    const wrapperStyle = window.getComputedStyle(searchWrapper);
-    const paddingLeft = parseFloat(wrapperStyle.paddingLeft);
-    const paddingRight = parseFloat(wrapperStyle.paddingRight);
-
-    // Total width is text width + left/right padding + a small buffer
-    const totalWidth = placeholderWidth + paddingLeft + paddingRight + 5; 
-
-    searchWrapper.style.width = `${totalWidth}px`;
-}
-
-// Run the autosize function after the page (and fonts) has fully loaded
-window.addEventListener('load', autosizeSearchbar);
