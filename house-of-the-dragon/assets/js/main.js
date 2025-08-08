@@ -451,6 +451,23 @@ document.addEventListener('DOMContentLoaded', () => {
             searchWrapper.classList.remove('is-focused');
         });
     }
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            // If the input is styled to be between pills, adjust its width based on content
+            if (searchInput.classList.contains('input-interstitial')) {
+                if (searchInput.value) {
+                    // Temporarily set width to auto to measure scrollWidth, then apply it
+                    searchInput.style.width = 'auto';
+                    // Add 2px for the cursor
+                    searchInput.style.width = `${searchInput.scrollWidth + 2}px`;
+                } else {
+                    // If empty, reset the width so the CSS class can shrink it
+                    searchInput.style.width = '';
+                }
+            }
+        });
+    }
 
     function simplifySearchText(text) {
         if (!text) return "";
