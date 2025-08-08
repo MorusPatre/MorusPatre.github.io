@@ -1294,7 +1294,9 @@ input, select, textarea {
     background: rgba(255, 255, 255, 0.075);
     border: solid 1px #a3adaf;
     box-shadow: 0 0 0 0.5px #a3adaf;
-    padding: 1px 29px; /* Adjust padding to account for border */
+    /* This padding (top, right, bottom, left) now matches the
+       unfocused state, minus 1px on each side for the border. */
+    padding: 1px 11px 1px 29px;
 }
 
 /* The actual text input, styled to be invisible within the wrapper */
