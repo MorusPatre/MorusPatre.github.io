@@ -435,11 +435,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const fullQueryText = pillQueries.join(' ') + ' ' + searchInput.value;
         const simplifiedQuery = simplifySearchText(fullQueryText.toLowerCase());
 
-        // MODIFIED: Simplified the clear button logic
+        // Show/hide clear button based on whether there's any query
         if (fullQueryText.trim().length > 0) {
             clearSearchBtn.style.display = 'block';
+            searchWrapper.style.paddingRight = '30px';
         } else {
             clearSearchBtn.style.display = 'none';
+            searchWrapper.style.paddingRight = '';
         }
         
         const galleryItems = gallery.querySelectorAll('figure');
@@ -470,7 +472,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (pills.length > 0) {
             searchInput.placeholder = '';
         } else {
-            searchInput.placeholder = 'Search by filename, character, actor, episode, season etc...';
+            searchInput.placeholder = 'Search by filename, character, actor, etc...';
         }
 
         window.scrollTo(0, 0);
@@ -1617,7 +1619,7 @@ document.addEventListener('galleryLoaded', () => {
         });
 
         // Update placeholder based on pills
-        searchInput.placeholder = pills.length > 0 ? '' : 'Search by filename, character, actor, episode, season etc...';
+        searchInput.placeholder = pills.length > 0 ? '' : 'Search by filename, character, actor, etc...';
         
         window.dispatchEvent(new CustomEvent('galleryFiltered'));
     }
