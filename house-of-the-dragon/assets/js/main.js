@@ -403,20 +403,61 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // NEW: Helper function to adjust the input field's style
     function updateSearchInputStyle() {
-        // If the search input is the last element, revert to stylesheet behavior.
+        // If the search input is the last element inside the wrapper,
+        // it should grow and respect the original minimum width.
         if (searchWrapper.lastElementChild === searchInput) {
             searchInput.style.flexGrow = '1';
-            searchInput.style.minWidth = ''; // Resets to stylesheet's 120px
-            // Remove our inline width property so the stylesheet's `width: auto !important` can take over again.
-            searchInput.style.removeProperty('width');
+            searchInput.style.width = 'auto';
+            // Reset min-width to allow the stylesheet to take over
+            searchInput.style.minWidth = '';
         } else {
-            // If the input is between pills, force it to be small.
+            // Otherwise, if it's between pills, it must shrink.
+            // We override BOTH width and min-width to make it small.
             searchInput.style.flexGrow = '0';
+            searchInput.style.width = '8px';
+            // Set min-width to 0 to override the 120px from the stylesheet
             searchInput.style.minWidth = '0';
-            // Use setProperty to apply "!important" and override the stylesheet rule.
-            searchInput.style.setProperty('width', '8px', 'important');
         }
     }
+
+    // =================================================================
+    // NEW: DYNAMIC INPUT SIZING LOGIC
+    // =================================================================
+    // Create a hidden "sizer" element to measure text width accurately.
+    const sizer = document.createElement('span');
+    sizer.style.position = 'absolute';
+    sizer.style.visibility = 'hidden';
+    sizer.style.height = 'auto';
+    sizer.style.width = 'auto';
+    sizer.style.whiteSpace = 'pre'; // Important for measuring spaces correctly
+
+    // Copy font styles from the search input to the sizer.
+    const inputStyles = window.getComputedStyle(searchInput);
+    sizer.style.fontSize = inputStyles.fontSize;
+    sizer.style.fontFamily = inputStyles.fontFamily;
+    sizer.style.fontWeight = inputStyles.fontWeight;
+    sizer.style.letterSpacing = inputStyles.letterSpacing;
+    sizer.style.textTransform = inputStyles.textTransform;
+
+    document.body.appendChild(sizer);
+
+    // Add an event listener that fires whenever the user types in the input.
+    searchInput.addEventListener('input', () => {
+        // Only apply this dynamic sizing logic if the input is between pills
+        // (i.e., it doesn't have flex-grow set to 1).
+        if (searchInput.style.flexGrow === '0') {
+            // Put the input's text into our hidden sizer.
+            sizer.textContent = searchInput.value;
+
+            // Calculate the new width. We use Math.max to ensure the input
+            // is at least 8px wide (for the caret) even when empty.
+            // We add 2px of padding for better aesthetics.
+            const newWidth = Math.max(8, sizer.offsetWidth + 2);
+            
+            // Apply the new calculated width to the input field.
+            searchInput.style.setProperty('width', `${newWidth}px`, 'important');
+        }
+    });
 
     // Make the entire wrapper focus the input field when clicked
     if (searchWrapper) {
@@ -438,7 +479,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Move the input field to the correct position
                 searchWrapper.insertBefore(searchInput, referenceNode);
 
-                // NEW: Update the input's style after moving it
+                // Update the input's style after moving it
                 updateSearchInputStyle();
             }
 
