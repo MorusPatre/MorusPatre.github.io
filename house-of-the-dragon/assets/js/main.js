@@ -1767,9 +1767,17 @@ document.addEventListener('galleryLoaded', () => {
     }
 
     searchInput.addEventListener('input', () => {
+        if (searchInput.value.length === 0) {
+            searchInput.style.width = '0px';
+        } else {
+            searchInput.style.width = '1px'; // reset
+            searchInput.style.width = (searchInput.scrollWidth + 2) + 'px';
+        }
+
         updateSuggestions();
         runSearchFromPills();
     });
+
 
     searchInput.addEventListener('keydown', (e) => {
         const items = suggestionsContainer.querySelectorAll('.suggestion-item');
