@@ -1273,7 +1273,7 @@ input, select, textarea {
 /* The main wrapper that looks like an input field */
 .search-wrapper {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: nowrap; /* Prevents wrapping */
     align-items: center;
     border-radius: 20px;
     background-color: rgba(255, 255, 255, 0.05);
@@ -1283,11 +1283,7 @@ input, select, textarea {
     cursor: text;
     transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
     font-size: 0.65rem;
-    overflow-x: auto;
-    /* Revert to default flex-direction */
-    flex-direction: row;
-    /* The key is here: align items to the left, and let the input push them */
-    justify-content: flex-start;
+    overflow-x: auto; /* Enables horizontal scrolling */
 }
 
 .search-wrapper:hover {
@@ -1305,25 +1301,24 @@ input, select, textarea {
 
 /* The actual text input, styled to be invisible within the wrapper */
 #search-input {
-    /* Set a minimum width and allow it to shrink */
     flex-grow: 1;
-    flex-shrink: 1;
+    border: none !important;
+    background: transparent !important;
+    padding: 4px 0 4px 1px !important;
+    margin: 0 !important;
+    outline: none !important;
+    color: #ffffff !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    height: auto !important;
+    width: auto !important;
     min-width: 120px;
-    /* Other styles for appearance */
-    border: none;
-    background: transparent;
-    padding: 4px 0 4px 1px;
-    margin: 0;
-    outline: none;
-    color: #ffffff;
-    box-shadow: none;
-    border-radius: 0;
-    height: auto;
-    width: auto;
-    line-height: 1.4;
+    line-height: 1.4 !important;
     font-size: 0.65rem;
     text-align: left;
-    user-select: text;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 /* The pill for selected search terms, with its default visible style */
