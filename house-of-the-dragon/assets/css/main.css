@@ -1299,6 +1299,22 @@ input, select, textarea {
     padding: 1px 11px 1px 29px;
 }
 
+/* Input appearance when placed between pills */
+#search-wrapper .input-interstitial {
+    width: auto;
+    min-width: 1px;
+    flex: 0 0 auto; /* Prevent stretching */
+    padding: 0;
+    margin: 0 2px;
+    display: inline-block;
+}
+
+/* General rule for all inputs inside the search wrapper */
+#search-wrapper input {
+    width: auto;
+    min-width: 2px;
+}
+
 /* The actual text input, styled to be invisible within the wrapper */
 #search-input {
     flex-grow: 1;
@@ -1337,22 +1353,6 @@ input, select, textarea {
     transition: all 0.2s ease;
     flex-shrink: 0; /* Prevents pills from shrinking */
 }
-
-/* Input appearance when placed between pills */
-#search-wrapper .input-interstitial {
-    width: auto;
-    min-width: 1px;
-    flex: 0 0 auto; /* Prevent it from stretching in flexbox */
-    padding: 0;
-    margin: 0 2px;
-    display: inline-block;
-}
-
-#search-wrapper input {
-    width: auto;
-    min-width: 2px;
-}
-
 
 /* A pill's appearance when it is actively selected */
 .search-pill.selected {
