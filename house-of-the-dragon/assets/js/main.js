@@ -394,6 +394,107 @@ document.addEventListener('DOMContentLoaded', () => {
     const footer = document.getElementById('footer');
     const gallery = document.getElementById('photo-gallery');
     const searchInput = document.getElementById('search-input');
+    
+    // =================================================================
+    // START: MODIFIED SEARCH AND AUTOCOMPLETE LOGIC
+    // =================================================================
+    const searchWrapper = document.getElementById('search-wrapper');
+    const clearSearchBtn = document.getElementById('clear-search');
+
+    // Make the entire wrapper focus the input field when clicked
+    if (searchWrapper) {
+        searchWrapper.addEventListener('click', () => {
+            searchInput.focus();
+        });
+    }
+
+    // Add/remove focus class to the wrapper for styling
+    if (searchInput) {
+        searchInput.addEventListener('focus', () => {
+            searchWrapper.classList.add('is-focused');
+        });
+        searchInput.addEventListener('blur', () => {
+            searchWrapper.classList.remove('is-focused');
+        });
+    }
+
+    function simplifySearchText(text) {
+        if (!text) return "";
+        return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    }
+    
+    // This is the core function that filters the gallery
+    function runSearch() {
+        // Build the query string from pills and the current input value
+        const pills = searchWrapper.querySelectorAll('.search-pill');
+        let pillQueries = [];
+        pills.forEach(pill => {
+            pillQueries.push(pill.dataset.value);
+        });
+        
+        const fullQueryText = pillQueries.join(' ') + ' ' + searchInput.value;
+        const simplifiedQuery = simplifySearchText(fullQueryText.toLowerCase());
+
+        // Show/hide clear button based on whether there's any query
+        if (fullQueryText.trim().length > 0) {
+            clearSearchBtn.style.display = 'block';
+            searchWrapper.style.paddingRight = '30px';
+        } else {
+            clearSearchBtn.style.display = 'none';
+            searchWrapper.style.paddingRight = '';
+        }
+        
+        const galleryItems = gallery.querySelectorAll('figure');
+        const phraseRegex = /\b(s\d+e\d+|season\s*\d+|episode\s*\d+|s\d+|e\d+)\b/g;
+        const phraseTerms = simplifiedQuery.match(phraseRegex) || [];
+        const remainingText = simplifiedQuery.replace(phraseRegex, '').trim();
+        const wordTerms = remainingText.split(' ').filter(term => term.length > 0);
+        const searchTerms = [...phraseTerms, ...wordTerms];
+
+        galleryItems.forEach(function(item) {
+            const img = item.querySelector('img');
+            if (!img || !img.dataset.search) {
+                item.style.display = 'none';
+                return;
+            }
+
+            const searchData = img.dataset.search.toLowerCase();
+            const isMatch = searchTerms.every(term => searchData.includes(term));
+
+            if (isMatch) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        // If there are pills, hide the placeholder
+        if (pills.length > 0) {
+            searchInput.placeholder = '';
+        } else {
+            searchInput.placeholder = 'Search by filename, character, actor, etc...';
+        }
+
+        window.scrollTo(0, 0);
+        window.dispatchEvent(new CustomEvent('galleryFiltered'));
+    }
+
+    // Original search input listener, now just calls runSearch
+    searchInput.addEventListener('keyup', runSearch);
+
+    // Update clear button to remove pills too
+    clearSearchBtn.addEventListener('click', function() {
+        const pills = searchWrapper.querySelectorAll('.search-pill');
+        pills.forEach(pill => pill.remove());
+        searchInput.value = '';
+        runSearch(); // Update display and placeholder
+        searchInput.focus();
+    });
+
+    // =================================================================
+    // END: MODIFIED SEARCH AND AUTOCOMPLETE LOGIC
+    // =================================================================
+
 
     if (!gallery || !wrapper) return;
 
@@ -425,75 +526,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (downloadAbortController) {
             downloadAbortController.abort();
         }
-    });
-
-    /*
-    ==================================================================
-    // START: SEARCH LOGIC (MOVED FROM INDEX.HTML)
-    ==================================================================
-    */
-    const clearSearchBtn = document.getElementById('clear-search');
-
-    function simplifySearchText(text) {
-        if (!text) return "";
-        return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    }
-
-    searchInput.addEventListener('keyup', function(event) {
-        if (searchInput.value.length > 0) {
-            clearSearchBtn.style.display = 'block';
-            searchInput.style.paddingRight = '30px';
-        } else {
-            clearSearchBtn.style.display = 'none';
-            searchInput.style.paddingRight = '';
-        }
-
-        const originalQuery = simplifySearchText(event.target.value.toLowerCase());
-        const galleryItems = gallery.querySelectorAll('figure');
-
-        // This regex looks for patterns like "season 1", "s1", "e2", "s1e2", etc.
-        const phraseRegex = /\b(s\d+e\d+|season\s*\d+|episode\s*\d+|s\d+|e\d+)\b/g;
-
-        // Pull out all the special phrases (e.g., ["season 1", "episode 2"])
-        const phraseTerms = originalQuery.match(phraseRegex) || [];
-
-        // Get the rest of the query by removing the phrases we just found
-        const remainingText = originalQuery.replace(phraseRegex, '').trim();
-
-        // Split the rest of the query into individual words
-        const wordTerms = remainingText.split(' ').filter(term => term.length > 0);
-
-        // Combine them into the final list of terms to search for
-        const searchTerms = [...phraseTerms, ...wordTerms];
-
-        galleryItems.forEach(function(item) {
-            const img = item.querySelector('img');
-            if (!img || !img.dataset.search) {
-                item.style.display = 'none';
-                return;
-            }
-
-            const searchData = img.dataset.search.toLowerCase();
-
-            // Check if ALL terms (both phrases and individual words) are present
-            const isMatch = searchTerms.every(term => searchData.includes(term));
-
-            if (isMatch) {
-                item.style.display = 'flex';
-            } else {
-                item.style.display = 'none';
-            }
-        });
-
-        window.scrollTo(0, 0);
-        window.dispatchEvent(new CustomEvent('galleryFiltered'));
-    });
-
-    clearSearchBtn.addEventListener('click', function() {
-        searchInput.value = '';
-        const keyupEvent = new Event('keyup', { bubbles: true });
-        searchInput.dispatchEvent(keyupEvent);
-        searchInput.focus();
     });
 
     /*
@@ -570,13 +602,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Event Listener for Keyboard Navigation ---
     document.addEventListener('keydown', (e) => {
-        // Ignore key events if the user is typing in the search bar
+        // MODIFIED: Also check for selected pills
         const activeEl = document.activeElement;
-        if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+        const isSearchActive = (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) || searchWrapper.querySelector('.search-pill.selected');
+        
+        if (isSearchActive) {
             return;
         }
 
-        // We only care about arrow keys
         if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
             return;
         }
@@ -589,7 +622,6 @@ document.addEventListener('DOMContentLoaded', () => {
         let currentIndex = lastSelectedItem ? visibleItems.indexOf(lastSelectedItem) : -1;
         let newIndex = -1;
 
-        // If nothing is selected, start from the first or last item.
         if (currentIndex === -1) {
              if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
                 newIndex = 0;
@@ -597,7 +629,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 newIndex = visibleItems.length -1;
             }
         } else {
-            // If an item IS selected, navigate from it.
             switch (e.key) {
                 case 'ArrowLeft':
                     newIndex = currentIndex - 1;
@@ -614,23 +645,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Check if the new index is valid
         if (newIndex >= 0 && newIndex < visibleItems.length) {
             const newItem = visibleItems[newIndex];
 
             if (e.shiftKey) {
-                // If Shift is pressed, extend the selection
-                lastSelectedItem = newItem; // Update the focus
+                lastSelectedItem = newItem;
                 applyRangeSelection();
             } else {
-                // This block handles arrow key presses WITHOUT the Shift key.
                 clearSelection();
                 toggleSelection(newItem);
-                selectionAnchor = newItem; // The new item is now the anchor
+                selectionAnchor = newItem;
                 lastSelectedItem = newItem;
             }
 
-            // Ensure the newly selected item is visible
             newItem.scrollIntoView({ block: 'nearest', inline: 'nearest' });
         }
     });
@@ -688,9 +715,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- Refactored Marquee and Auto-Scroll Functions ---
 
-    /**
-     * UPDATED to enforce integer calculations to prevent compounding errors.
-     */
     function updateMarqueeAndSelection(clientX, clientY, isModifier) {
         marquee.style.visibility = 'visible';
     
@@ -698,7 +722,6 @@ document.addEventListener('DOMContentLoaded', () => {
         let rawX = clientX - galleryRect.left;
         let rawY = clientY - galleryRect.top;
     
-        // ** THE FIX **: Round all marquee calculations to the nearest whole pixel.
         const marqueeRect = {
             x: Math.round(Math.min(startPos.x, rawX)),
             y: Math.round(Math.min(startPos.y, rawY)),
@@ -736,17 +759,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    /**
-     * This function creates a smooth scrolling loop when the user's cursor
-     * is in the auto-scroll zone at the top or bottom of the viewport.
-     */
     function autoScrollLoop() {
         if (!isMarquee || !isAutoScrolling) {
             isAutoScrolling = false;
             return;
         }
     
-        // ** THE FIX **: Ensure we only scroll by whole pixels.
         window.scrollBy(0, Math.round(scrollSpeedY));
         updateMarqueeAndSelection(lastClientX, lastClientY, lastClientModifierKey);
     
@@ -821,9 +839,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    /**
-     * UPDATED endDragAction function
-     */
     const endDragAction = (e) => {
         isAutoScrolling = false;
         scrollSpeedY = 0;
@@ -892,10 +907,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('mouseup', endDragAction);
 
-    // --- Mousedown listener for the whole document ---
     document.addEventListener('mousedown', (e) => {
         const itemMenu = document.getElementById('custom-context-menu');
         const galleryMenu = document.getElementById('gallery-context-menu');
+        
+        // Deselect search pills if clicking outside the search wrapper
+        const selectedPill = searchWrapper.querySelector('.search-pill.selected');
+        if (selectedPill && !searchWrapper.contains(e.target)) {
+            selectedPill.classList.remove('selected');
+        }
 
         if (e.button === 0 && !itemMenu.contains(e.target) && !galleryMenu.contains(e.target)) {
             itemMenu.style.display = 'none';
@@ -909,9 +929,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    /**
-     * SELECT ALL FUNCTIONALITY
-     */
     document.addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
             const activeEl = document.activeElement;
@@ -978,11 +995,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // START: UNIFIED DOWNLOAD LOGIC
     // =================================================================
 
-    /**
-     * Asynchronously fetches an image from a URL and returns its blob data.
-     * @param {string} url - The URL of the image to fetch.
-     * @returns {Promise<Blob>} A promise that resolves with the image blob.
-     */
     async function fetchImageBlob(url) {
         const response = await fetch(url);
         if (!response.ok) {
@@ -991,13 +1003,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return response.blob();
     }
 
-    /**
-     * Triggers a browser download for a given blob and filename.
-     * @param {Blob} blob - The data blob to be downloaded.
-     * @param {string} filename - The desired filename for the download.
-     */
     function triggerDownload(blob, filename) {
-        // This function uses FileSaver.js (saveAs)
         saveAs(blob, filename);
     }
 
@@ -1577,11 +1583,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /*
 ==================================================================
-// Autocomplete Search Suggestions Logic
+// Autocomplete Search Suggestions Logic (MODIFIED)
 ==================================================================
 */
 document.addEventListener('galleryLoaded', () => {
     const searchInput = document.getElementById('search-input');
+    const searchWrapper = document.getElementById('search-wrapper');
     const suggestionsContainer = document.getElementById('suggestions-container');
     const galleryItems = document.querySelectorAll('#photo-gallery figure img');
 
@@ -1589,28 +1596,91 @@ document.addEventListener('galleryLoaded', () => {
         return;
     }
 
+    // Function to rebuild the search query and trigger filtering
+    function runSearchFromPills() {
+        const pills = searchWrapper.querySelectorAll('.search-pill');
+        let pillQueries = [];
+        pills.forEach(pill => {
+            pillQueries.push(pill.dataset.value);
+        });
+        
+        const fullQueryText = pillQueries.join(' ') + ' ' + searchInput.value;
+        
+        // This is a simplified version of your original search function
+        const simplifiedQuery = fullQueryText.toLowerCase().trim();
+        const searchTerms = simplifiedQuery.split(' ').filter(term => term.length > 0);
+        
+        const galleryFigures = document.querySelectorAll('#photo-gallery figure');
+        galleryFigures.forEach(function(item) {
+            const img = item.querySelector('img');
+            const searchData = (img.dataset.search || "").toLowerCase();
+            const isMatch = searchTerms.every(term => searchData.includes(term));
+            item.style.display = isMatch ? 'flex' : 'none';
+        });
+
+        // Update placeholder based on pills
+        searchInput.placeholder = pills.length > 0 ? '' : 'Search by filename, character, actor, etc...';
+        
+        window.dispatchEvent(new CustomEvent('galleryFiltered'));
+    }
+
+    // --- Pill Creation and Management ---
+    function createPill(text) {
+        const pill = document.createElement('span');
+        pill.className = 'search-pill';
+        pill.setAttribute('draggable', true);
+        pill.dataset.value = text;
+
+        const pillText = document.createElement('span');
+        pillText.className = 'search-pill-text';
+        pillText.textContent = text;
+        
+        const removeBtn = document.createElement('span');
+        removeBtn.className = 'remove-pill';
+        removeBtn.innerHTML = '&times;';
+        removeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            pill.remove();
+            runSearchFromPills();
+        });
+
+        pill.appendChild(pillText);
+        pill.appendChild(removeBtn);
+
+        // Drag and Drop functionality
+        pill.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', e.target.dataset.value);
+            e.dataTransfer.effectAllowed = 'copy';
+        });
+
+        // Click to select functionality
+        pill.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const currentlySelected = searchWrapper.querySelector('.search-pill.selected');
+            if (currentlySelected) {
+                currentlySelected.classList.remove('selected');
+            }
+            e.currentTarget.classList.add('selected');
+            searchInput.focus();
+        });
+
+        return pill;
+    }
+    
+    // --- Autocomplete data setup ---
     const searchTerms = new Set();
     galleryItems.forEach(img => {
-        const peopleSources = [img.dataset.cast, img.dataset.crew, img.dataset.castAndCrew];
-
+        const peopleSources = [img.dataset.cast, img.dataset.crew, img.dataset.castAndCrew, img.dataset.characters];
         peopleSources.forEach(source => {
             if (source) {
                 source.split(',').forEach(term => {
                     const cleaned = term.trim();
-                    if (cleaned && cleaned.toLowerCase() !== 'red') searchTerms.add(cleaned);
+                    if (cleaned) searchTerms.add(cleaned);
                 });
             }
         });
-
-        if (img.dataset.characters) {
-            img.dataset.characters.split(',').forEach(term => {
-                const cleaned = term.trim();
-                if (cleaned) searchTerms.add(cleaned);
-            });
-        }
     });
     const sortedSearchTerms = Array.from(searchTerms).sort((a, b) => a.localeCompare(b));
-
     let activeSuggestionIndex = -1;
 
     function updateSuggestions() {
@@ -1630,7 +1700,7 @@ document.addEventListener('galleryLoaded', () => {
                 const item = document.createElement('div');
                 item.className = 'suggestion-item';
                 item.textContent = term;
-                item.addEventListener('mousedown', (e) => {
+                item.addEventListener('mousedown', (e) => { // mousedown to fire before blur
                     e.preventDefault();
                     selectSuggestion(term);
                 });
@@ -1643,40 +1713,42 @@ document.addEventListener('galleryLoaded', () => {
     }
 
     function selectSuggestion(value) {
-        searchInput.value = value;
+        searchWrapper.insertBefore(createPill(value), searchInput);
+        searchInput.value = '';
         suggestionsContainer.style.display = 'none';
-        searchInput.dispatchEvent(new Event('keyup', { bubbles: true }));
+        runSearchFromPills();
+        searchInput.focus();
     }
 
     function updateActiveSuggestion(items) {
         items.forEach((item, index) => {
+            item.classList.toggle('active', index === activeSuggestionIndex);
             if (index === activeSuggestionIndex) {
-                item.classList.add('active');
                 item.scrollIntoView({ block: 'nearest' });
-            } else {
-                item.classList.remove('active');
             }
         });
     }
 
-    searchInput.addEventListener('input', updateSuggestions);
+    searchInput.addEventListener('input', () => {
+        updateSuggestions();
+        runSearchFromPills();
+    });
 
     searchInput.addEventListener('keydown', (e) => {
         const items = suggestionsContainer.querySelectorAll('.suggestion-item');
-        if (items.length === 0) return;
-
+        
         switch (e.key) {
             case 'ArrowDown':
-                e.preventDefault();
-                if (activeSuggestionIndex < items.length - 1) {
-                    activeSuggestionIndex++;
+                if (items.length > 0) {
+                    e.preventDefault();
+                    activeSuggestionIndex = (activeSuggestionIndex + 1) % items.length;
                     updateActiveSuggestion(items);
                 }
                 break;
             case 'ArrowUp':
-                e.preventDefault();
-                if (activeSuggestionIndex > 0) {
-                    activeSuggestionIndex--;
+                if (items.length > 0) {
+                    e.preventDefault();
+                    activeSuggestionIndex = (activeSuggestionIndex - 1 + items.length) % items.length;
                     updateActiveSuggestion(items);
                 }
                 break;
@@ -1689,6 +1761,20 @@ document.addEventListener('galleryLoaded', () => {
             case 'Escape':
                 suggestionsContainer.style.display = 'none';
                 break;
+            case 'Backspace':
+                if (searchInput.value === '') {
+                    const selectedPill = searchWrapper.querySelector('.search-pill.selected');
+                    if (selectedPill) {
+                        selectedPill.remove();
+                        runSearchFromPills();
+                    } else {
+                        const allPills = searchWrapper.querySelectorAll('.search-pill');
+                        if (allPills.length > 0) {
+                            allPills[allPills.length - 1].classList.add('selected');
+                        }
+                    }
+                }
+                break;
         }
     });
 
@@ -1698,6 +1784,7 @@ document.addEventListener('galleryLoaded', () => {
         }
     });
 });
+
 
 document.addEventListener('keydown', (e) => {
     // Check for Ctrl+C or Command+C
