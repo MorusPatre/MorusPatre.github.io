@@ -1647,20 +1647,10 @@ document.addEventListener('galleryLoaded', () => {
         pill.appendChild(pillText);
         pill.appendChild(removeBtn);
 
-        // --- MODIFIED: Drag and Drop functionality for reordering and external copy ---
+        // Drag and Drop functionality
         pill.addEventListener('dragstart', (e) => {
-            e.stopPropagation();
-            pill.classList.add('is-dragging');
-            // This line is crucial for allowing drops in other windows
-            e.dataTransfer.setData('text/plain', pill.dataset.value);
-            // 'copyMove' indicates it can be either copied (external) or moved (internal)
-            e.dataTransfer.effectAllowed = 'copyMove';
-        });
-
-        pill.addEventListener('dragend', (e) => {
-            e.stopPropagation();
-            // Cleanup class regardless of where the drop happened
-            pill.classList.remove('is-dragging');
+            e.dataTransfer.setData('text/plain', e.target.dataset.value);
+            e.dataTransfer.effectAllowed = 'copy';
         });
 
         // Click to select functionality
@@ -1676,103 +1666,6 @@ document.addEventListener('galleryLoaded', () => {
 
         return pill;
     }
-    
-    // This helper function is still needed to find the correct drop position between pills
-    function getDragAfterElement(container, x) {
-        const draggableElements = [...container.querySelectorAll('.search-pill:not(.is-dragging)')];
-
-        return draggableElements.reduce((closest, child) => {
-            const box = child.getBoundingClientRect();
-            const offset = x - box.left - box.width / 2;
-            if (offset < 0 && offset > closest.offset) {
-                return { offset: offset, element: child };
-            } else {
-                return closest;
-            }
-        }, { offset: Number.NEGATIVE_INFINITY }).element;
-    }
-
-    // Add a single 'dragover' listener to the wrapper to give visual feedback
-    searchWrapper.addEventListener('dragover', e => {
-        e.preventDefault(); // This allows dropping
-
-        // Provide live reordering feedback only when dragging over other pills
-        if (e.target.id !== 'search-input') {
-            const draggingPill = document.querySelector('.search-pill.is-dragging');
-            if (!draggingPill) return;
-
-            const afterElement = getDragAfterElement(searchWrapper, e.clientX);
-            const searchInput = document.getElementById('search-input');
-            if (afterElement === null) {
-                searchWrapper.insertBefore(draggingPill, searchInput);
-            } else {
-                searchWrapper.insertBefore(draggingPill, afterElement);
-            }
-        }
-    });
-
-    // A single 'drop' listener on the wrapper handles all cases
-    searchWrapper.addEventListener('drop', e => {
-        e.preventDefault();
-        const draggedPill = document.querySelector('.search-pill.is-dragging');
-        const searchInput = document.getElementById('search-input');
-
-        // CASE 1: An internal pill was dropped ON THE SEARCH INPUT.
-        // This is the "drop between text" feature.
-        if (draggedPill && e.target.id === 'search-input') {
-            const cursorPosition = searchInput.selectionStart;
-            const text = searchInput.value;
-
-            const textBefore = text.substring(0, cursorPosition).trim();
-            const textAfter = text.substring(cursorPosition).trim();
-
-            // The dragged pill is already in the DOM, so we just move it.
-            // First, create a new pill from any text that was before the cursor.
-            if (textBefore) {
-                const beforePill = createPill(textBefore);
-                searchWrapper.insertBefore(beforePill, searchInput);
-                beforePill.after(draggedPill); // Place the dragged pill right after it
-            } else {
-                // If there was no text, place the dragged pill at the start of all pills
-                searchWrapper.insertBefore(draggedPill, searchWrapper.querySelector('.search-pill, #search-input'));
-            }
-
-            // Next, create a new pill from any text that was after the cursor.
-            if (textAfter) {
-                const afterPill = createPill(textAfter);
-                draggedPill.after(afterPill); // Place it right after the dragged pill
-            }
-
-            searchInput.value = ''; // The input text has been converted to pills
-        }
-        // CASE 2: External text was dropped ON THE SEARCH INPUT.
-        // This pastes text into the input field at the cursor position.
-        else if (!draggedPill && e.target.id === 'search-input') {
-            const droppedText = e.dataTransfer.getData('text/plain');
-            if (droppedText) {
-                const cursorPosition = searchInput.selectionStart;
-                const text = searchInput.value;
-                searchInput.value = text.slice(0, cursorPosition) + droppedText + text.slice(cursorPosition);
-                searchInput.selectionStart = searchInput.selectionEnd = cursorPosition + droppedText.length;
-            }
-        }
-        // CASE 3: A drop happened, but not on the input. This handles reordering
-        // and external text dropped directly between pills.
-        else {
-            const droppedText = e.dataTransfer.getData('text/plain');
-            // If external text was dropped on the wrapper, create a new pill for it.
-            if (droppedText && !draggedPill) {
-                const afterElement = getDragAfterElement(searchWrapper, e.clientX) || searchInput;
-                searchWrapper.insertBefore(createPill(droppedText.trim()), afterElement);
-            }
-            // If an internal pill was dropped on the wrapper, the 'dragover' event already moved it,
-            // so we don't need to do anything here.
-        }
-
-        // After any successful drop, update the search results.
-        runSearchFromPills();
-        searchInput.focus();
-    });
     
     // --- Autocomplete data setup ---
     const searchTerms = new Set();
