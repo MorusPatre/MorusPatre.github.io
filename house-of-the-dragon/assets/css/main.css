@@ -1292,7 +1292,7 @@ input, select, textarea {
     flex-grow: 1;
     border: none !important;
     background: transparent !important;
-    padding: 4px 0 4px 2px !important;
+    padding: 4px 0 4px 1px !important;
     margin: 0 !important;
     outline: none !important;
     color: #ffffff !important;
