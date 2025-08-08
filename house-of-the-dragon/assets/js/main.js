@@ -387,7 +387,6 @@
 
 })(jQuery);
 
-
 document.addEventListener('DOMContentLoaded', () => {
     const wrapper = document.getElementById('wrapper');
     const header = document.getElementById('header');
@@ -396,220 +395,122 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('search-input');
     const searchWrapper = document.getElementById('search-wrapper');
     const clearSearchBtn = document.getElementById('clear-search');
-
-    // --- Sizer setup for dynamic input width ---
-    const sizer = document.createElement('span');
-    sizer.style.position = 'absolute';
-    sizer.style.visibility = 'hidden';
-    sizer.style.height = 'auto';
-    sizer.style.width = 'auto';
-    sizer.style.whiteSpace = 'pre';
-
-    const inputStyles = window.getComputedStyle(searchInput);
-    sizer.style.fontSize = inputStyles.fontSize;
-    sizer.style.fontFamily = inputStyles.fontFamily;
-    sizer.style.fontWeight = inputStyles.fontWeight;
-    sizer.style.letterSpacing = inputStyles.letterSpacing;
-    sizer.style.textTransform = inputStyles.textTransform;
-    document.body.appendChild(sizer);
     
-    // Auto-resize the input field based on its content
-    function resizeInput() {
-        sizer.textContent = searchInput.value;
-        // Set width based on sizer, but don't let it be wider than the wrapper itself
-        const newWidth = Math.min(searchWrapper.clientWidth - 50, sizer.offsetWidth + 2);
-        searchInput.style.width = `${newWidth}px`;
+    // Make the entire wrapper focus the input field when clicked
+    if (searchWrapper) {
+        searchWrapper.addEventListener('click', (e) => {
+            const pills = searchWrapper.querySelectorAll('.search-pill');
+            let referenceNode = null;
+
+            // Find the correct position for the caret
+            for (const pill of pills) {
+                const pillRect = pill.getBoundingClientRect();
+                if (e.clientX > pillRect.left + (pillRect.width / 2)) {
+                    referenceNode = pill;
+                    break;
+                }
+            }
+
+            // Move the input field to the clicked position
+            if (referenceNode) {
+                searchWrapper.insertBefore(searchInput, referenceNode.nextSibling);
+            } else {
+                searchWrapper.prepend(searchInput);
+            }
+            
+            searchInput.focus();
+        });
     }
 
-    searchInput.addEventListener('input', resizeInput);
-
-    // --- Focus and Blur listeners ---
+    // Add/remove focus class to the wrapper for styling
     if (searchInput) {
         searchInput.addEventListener('focus', () => {
             searchWrapper.classList.add('is-focused');
-            resizeInput(); // Resize on focus
         });
         searchInput.addEventListener('blur', () => {
             searchWrapper.classList.remove('is-focused');
         });
     }
 
-    // --- Search Logic ---
-    function runSearch() {
-        const pills = Array.from(searchWrapper.querySelectorAll('.search-pill'));
-        const pillQueries = pills.map(pill => pill.dataset.value);
-        
-        const fullQueryText = [...pillQueries, searchInput.value].join(' ').trim();
-        const simplifiedQuery = fullQueryText.toLowerCase().normalize('NFD').replace(/[\u300-\u036f]/g, '');
-
-        if (fullQueryText.length > 0) {
-            clearSearchBtn.style.display = 'block';
-        } else {
-            clearSearchBtn.style.display = 'none';
-        }
-
-        const searchTerms = simplifiedQuery.split(' ').filter(term => term.length > 0);
-        const allFigures = gallery.querySelectorAll('figure');
-
-        allFigures.forEach(figure => {
-            const img = figure.querySelector('img');
-            const searchData = (img?.dataset.search || "").toLowerCase();
-            const isMatch = searchTerms.every(term => searchData.includes(term));
-            figure.style.display = isMatch ? 'flex' : 'none';
-        });
-
-        searchInput.placeholder = pills.length > 0 ? '' : 'Search by filename, actor, character, season, episode etc...';
-        window.dispatchEvent(new CustomEvent('galleryFiltered'));
+    function simplifySearchText(text) {
+        if (!text) return "";
+        return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     }
     
-    searchInput.addEventListener('keyup', runSearch);
-
-    clearSearchBtn.addEventListener('click', function() {
-        searchWrapper.querySelectorAll('.search-pill').forEach(pill => pill.remove());
-        searchInput.value = '';
-        runSearch();
-        resizeInput(); // Resize after clearing
-        searchInput.focus();
-    });
-
-    // --- Gallery Loaded (for Autocomplete) ---
-    document.addEventListener('galleryLoaded', () => {
-        const suggestionsContainer = document.getElementById('suggestions-container');
-        const galleryItems = document.querySelectorAll('#photo-gallery figure img');
-
-        if (!searchInput || !suggestionsContainer || galleryItems.length === 0) return;
-
-        function createPill(text) {
-            const pill = document.createElement('span');
-            pill.className = 'search-pill';
-            pill.dataset.value = text;
-
-            const pillText = document.createElement('span');
-            pillText.textContent = text;
-            
-            const removeBtn = document.createElement('span');
-            removeBtn.className = 'remove-pill';
-            removeBtn.innerHTML = '&times;';
-            removeBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                pill.remove();
-                runSearch();
-            });
-
-            pill.appendChild(pillText);
-            pill.appendChild(removeBtn);
-            return pill;
-        }
-
-        function selectSuggestion(value) {
-            // Pills are added to the right of the input now due to row-reverse
-            searchWrapper.appendChild(createPill(value));
-            searchInput.value = '';
-            suggestionsContainer.style.display = 'none';
-            runSearch();
-            resizeInput(); // Resize after adding a pill
-            searchInput.focus();
-        }
-
-        const searchTerms = new Set();
-        galleryItems.forEach(img => {
-            const sources = [img.dataset.cast, img.dataset.crew, img.dataset.characters];
-            sources.forEach(source => {
-                if (source) {
-                    source.split(',').forEach(term => {
-                        const cleaned = term.trim();
-                        if (cleaned) searchTerms.add(cleaned);
-                    });
-                }
-            });
+    // This is the core function that filters the gallery
+    function runSearch() {
+        // Build the query string from pills and the current input value
+        const pills = searchWrapper.querySelectorAll('.search-pill');
+        let pillQueries = [];
+        pills.forEach(pill => {
+            pillQueries.push(pill.dataset.value);
         });
-        const sortedSearchTerms = Array.from(searchTerms).sort((a, b) => a.localeCompare(b));
-        let activeSuggestionIndex = -1;
+        
+        const fullQueryText = pillQueries.join(' ') + ' ' + searchInput.value;
+        const simplifiedQuery = simplifySearchText(fullQueryText.toLowerCase());
 
-        function updateSuggestions() {
-            const query = searchInput.value.toLowerCase();
-            suggestionsContainer.innerHTML = '';
-            activeSuggestionIndex = -1;
+        // Show/hide clear button based on whether there's any query
+        if (fullQueryText.trim().length > 0) {
+            clearSearchBtn.style.display = 'block';
+            searchWrapper.style.paddingRight = '30px';
+        } else {
+            clearSearchBtn.style.display = 'none';
+            searchWrapper.style.paddingRight = '';
+        }
+        
+        const galleryItems = gallery.querySelectorAll('figure');
+        const phraseRegex = /\b(s\d+e\d+|season\s*\d+|episode\s*\d+|s\d+|e\d+)\b/g;
+        const phraseTerms = simplifiedQuery.match(phraseRegex) || [];
+        const remainingText = simplifiedQuery.replace(phraseRegex, '').trim();
+        const wordTerms = remainingText.split(' ').filter(term => term.length > 0);
+        const searchTerms = [...phraseTerms, ...wordTerms];
 
-            if (query.length === 0) {
-                suggestionsContainer.style.display = 'none';
+        galleryItems.forEach(function(item) {
+            const img = item.querySelector('img');
+            if (!img || !img.dataset.search) {
+                item.style.display = 'none';
                 return;
             }
 
-            const existingPillValues = new Set(
-                Array.from(searchWrapper.querySelectorAll('.search-pill')).map(p => p.dataset.value.toLowerCase())
-            );
+            const searchData = img.dataset.search.toLowerCase();
+            const isMatch = searchTerms.every(term => searchData.includes(term));
 
-            const matches = sortedSearchTerms.filter(term => {
-                const termLower = term.toLowerCase();
-                return termLower.startsWith(query) && !existingPillValues.has(termLower);
-            }).slice(0, 7);
-
-            if (matches.length > 0) {
-                matches.forEach(term => {
-                    const item = document.createElement('div');
-                    item.className = 'suggestion-item';
-                    item.textContent = term;
-                    item.addEventListener('mousedown', (e) => {
-                        e.preventDefault();
-                        selectSuggestion(term);
-                    });
-                    suggestionsContainer.appendChild(item);
-                });
-                suggestionsContainer.style.display = 'block';
+            if (isMatch) {
+                item.style.display = 'flex';
             } else {
-                suggestionsContainer.style.display = 'none';
+                item.style.display = 'none';
             }
+        });
+
+        // If there are pills, hide the placeholder
+        if (pills.length > 0) {
+            searchInput.placeholder = '';
+        } else {
+            searchInput.placeholder = 'Search by filename, actor, character, season, episode etc...';
         }
-        
-        let originalInputHandler = searchInput.oninput;
-        searchInput.addEventListener('input', updateSuggestions);
 
-        searchInput.addEventListener('keydown', (e) => {
-            const items = suggestionsContainer.querySelectorAll('.suggestion-item');
-            switch (e.key) {
-                case 'ArrowDown':
-                    if (items.length > 0) {
-                        e.preventDefault();
-                        activeSuggestionIndex = (activeSuggestionIndex + 1) % items.length;
-                    }
-                    break;
-                case 'ArrowUp':
-                    if (items.length > 0) {
-                        e.preventDefault();
-                        activeSuggestionIndex = (activeSuggestionIndex - 1 + items.length) % items.length;
-                    }
-                    break;
-                case 'Enter':
-                    if (activeSuggestionIndex > -1) {
-                        e.preventDefault();
-                        selectSuggestion(items[activeSuggestionIndex].textContent);
-                    }
-                    break;
-                case 'Escape':
-                    suggestionsContainer.style.display = 'none';
-                    break;
-                case 'Backspace':
-                    if (searchInput.value === '') {
-                        const lastPill = searchWrapper.querySelector('.search-pill:last-of-type');
-                        if (lastPill) {
-                            lastPill.remove();
-                            runSearch();
-                        }
-                    }
-                    break;
-            }
-            if (items.length > 0) {
-                 items.forEach((item, index) => item.classList.toggle('active', index === activeSuggestionIndex));
-            }
-        });
+        window.scrollTo(0, 0);
+        window.dispatchEvent(new CustomEvent('galleryFiltered'));
+    }
 
-        document.addEventListener('click', (e) => {
-            if (!searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
-                suggestionsContainer.style.display = 'none';
-            }
-        });
+    // Original search input listener, now just calls runSearch
+    searchInput.addEventListener('keyup', runSearch);
+
+    // Update clear button to remove pills too
+    clearSearchBtn.addEventListener('click', function() {
+        const pills = searchWrapper.querySelectorAll('.search-pill');
+        pills.forEach(pill => pill.remove());
+        searchInput.value = '';
+        runSearch(); // Update display and placeholder
+        searchInput.focus();
     });
+
+    // =================================================================
+    // END: MODIFIED SEARCH AND AUTOCOMPLETE LOGIC
+    // =================================================================
+
+
+    if (!gallery || !wrapper) return;
 
     const marquee = document.getElementById('marquee');
     const items = gallery.getElementsByTagName('figure');
@@ -1945,4 +1846,4 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
-
+}
