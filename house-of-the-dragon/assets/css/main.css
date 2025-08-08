@@ -1340,12 +1340,19 @@ input, select, textarea {
 
 /* Input appearance when placed between pills */
 #search-wrapper .input-interstitial {
-    width: 20px; /* narrow default when between pills */
-    min-width: 2px;
+    width: auto;
+    min-width: 1px;
+    flex: 0 0 auto; /* Prevent it from stretching in flexbox */
     padding: 0;
-    margin: 0 4px;
+    margin: 0 2px;
     display: inline-block;
 }
+
+#search-wrapper input {
+    width: auto;
+    min-width: 2px;
+}
+
 
 /* A pill's appearance when it is actively selected */
 .search-pill.selected {
