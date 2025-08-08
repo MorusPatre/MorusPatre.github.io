@@ -23,7 +23,9 @@
                 <div id="search-container">
                     <form onsubmit="return false;">
                         <span class="search-icon"></span>
-                        <input type="text" id="search-input" placeholder="Search by filename, character, actor, episode, season etc..." autocomplete="off">
+                        <div id="search-wrapper" class="search-wrapper">
+                             <input type="text" id="search-input" placeholder="Search by filename, character, actor, episode, season etc..." autocomplete="off">
+                        </div>
                         <span id="clear-search" class="clear-search-button">&times;</span>
                         <div id="suggestions-container"></div>
                     </form>
