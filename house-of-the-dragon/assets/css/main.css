@@ -1268,6 +1268,7 @@ input, select, textarea {
     align-items: center;
     border-radius: 20px;
     background-color: rgba(255, 255, 255, 0.05);
+    padding: 2px 30px 2px 30px; /* Top/Bottom, Right/Left */
     width: 26.5em;
     min-height: 24px;
     cursor: text;
@@ -2248,6 +2249,7 @@ html, body {
     align-items: center;
     border-radius: 20px;
     background-color: rgba(255, 255, 255, 0.05);
+    padding: 2px 30px 2px 30px; /* Top/Bottom, Right/Left */
     width: 26.5em;
     min-height: 24px;
     cursor: text;
