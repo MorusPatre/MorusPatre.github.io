@@ -394,29 +394,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const footer = document.getElementById('footer');
     const gallery = document.getElementById('photo-gallery');
     const searchInput = document.getElementById('search-input');
-    
-    // =================================================================
-    // START: ALL NEW SEARCH AND AUTOCOMPLETE LOGIC
-    // =================================================================
     const searchWrapper = document.getElementById('search-wrapper');
     const clearSearchBtn = document.getElementById('clear-search');
-
-    // --- Helper function to adjust the input field's style ---
-    function updateSearchInputStyle() {
-        // When at the end, the input should be wide.
-        if (!searchInput.nextElementSibling) {
-            searchInput.style.flexGrow = '1';
-            searchInput.style.width = 'auto';
-            searchInput.style.minWidth = '120px';
-        } 
-        // When between pills, it should be narrow.
-        else {
-            searchInput.style.flexGrow = '0';
-            // On reset, check if there's text to determine width, otherwise use minimum.
-            searchInput.style.width = searchInput.value ? `${sizer.offsetWidth + 2}px` : '8px';
-            searchInput.style.minWidth = '0px';
-        }
-    }
 
     // --- Sizer setup for dynamic input width ---
     const sizer = document.createElement('span');
@@ -433,70 +412,40 @@ document.addEventListener('DOMContentLoaded', () => {
     sizer.style.letterSpacing = inputStyles.letterSpacing;
     sizer.style.textTransform = inputStyles.textTransform;
     document.body.appendChild(sizer);
+    
+    // Auto-resize the input field based on its content
+    function resizeInput() {
+        sizer.textContent = searchInput.value;
+        // Set width based on sizer, but don't let it be wider than the wrapper itself
+        const newWidth = Math.min(searchWrapper.clientWidth - 50, sizer.offsetWidth + 2);
+        searchInput.style.width = `${newWidth}px`;
+    }
 
-    // --- Event listener for typing in the input ---
-    searchInput.addEventListener('input', () => {
-        // Only resize if it's not in the default "grow" state.
-        if (searchInput.style.flexGrow === '0') {
-            sizer.textContent = searchInput.value;
-            const newWidth = Math.max(8, sizer.offsetWidth + 2);
-            searchInput.style.width = `${newWidth}px`;
-            
-            // Scroll the input into the center of the search bar as you type.
-            searchInput.scrollIntoView({ block: 'nearest', inline: 'center' });
-        }
-    });
-
-    // --- Event listener for clicking in the wrapper ---
-    searchWrapper.addEventListener('click', (e) => {
-        // Only act if the click is on the background of the wrapper.
-        if (e.target.id === 'search-wrapper') {
-            let referenceNode = null;
-            const pills = searchWrapper.querySelectorAll('.search-pill');
-
-            for (const pill of pills) {
-                const pillRect = pill.getBoundingClientRect();
-                if (e.clientX < pillRect.left + (pillRect.width / 2)) {
-                    referenceNode = pill;
-                    break;
-                }
-            }
-            
-            // Move the input field to the clicked position.
-            searchWrapper.insertBefore(searchInput, referenceNode);
-            
-            // If the input was moved, clear its text content.
-            if (searchInput.value) {
-                searchInput.value = '';
-            }
-            
-            updateSearchInputStyle();
-        }
-        searchInput.focus();
-    });
+    searchInput.addEventListener('input', resizeInput);
 
     // --- Focus and Blur listeners ---
     if (searchInput) {
-        searchInput.addEventListener('focus', () => searchWrapper.classList.add('is-focused'));
-        searchInput.addEventListener('blur', () => searchWrapper.classList.remove('is-focused'));
+        searchInput.addEventListener('focus', () => {
+            searchWrapper.classList.add('is-focused');
+            resizeInput(); // Resize on focus
+        });
+        searchInput.addEventListener('blur', () => {
+            searchWrapper.classList.remove('is-focused');
+        });
     }
-    
-    // --- Main Search Function (called by various events) ---
+
+    // --- Search Logic ---
     function runSearch() {
         const pills = Array.from(searchWrapper.querySelectorAll('.search-pill'));
         const pillQueries = pills.map(pill => pill.dataset.value);
         
-        // Build the query from pills and the current input value
         const fullQueryText = [...pillQueries, searchInput.value].join(' ').trim();
-        const simplifiedQuery = fullQueryText.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const simplifiedQuery = fullQueryText.toLowerCase().normalize('NFD').replace(/[\u300-\u036f]/g, '');
 
-        // Toggle clear button visibility
         if (fullQueryText.length > 0) {
             clearSearchBtn.style.display = 'block';
-            searchWrapper.style.paddingRight = '30px';
         } else {
             clearSearchBtn.style.display = 'none';
-            searchWrapper.style.paddingRight = '';
         }
 
         const searchTerms = simplifiedQuery.split(' ').filter(term => term.length > 0);
@@ -509,29 +458,158 @@ document.addEventListener('DOMContentLoaded', () => {
             figure.style.display = isMatch ? 'flex' : 'none';
         });
 
-        // Update placeholder text
-        searchInput.placeholder = pills.length > 0 && !searchInput.value ? '' : 'Search by filename, actor, character, season, episode etc...';
+        searchInput.placeholder = pills.length > 0 ? '' : 'Search by filename, actor, character, season, episode etc...';
         window.dispatchEvent(new CustomEvent('galleryFiltered'));
     }
     
-    // Add keyup listener to trigger search as user types
     searchInput.addEventListener('keyup', runSearch);
 
-    // --- Clear Button Listener ---
     clearSearchBtn.addEventListener('click', function() {
         searchWrapper.querySelectorAll('.search-pill').forEach(pill => pill.remove());
         searchInput.value = '';
         runSearch();
-        updateSearchInputStyle();
+        resizeInput(); // Resize after clearing
         searchInput.focus();
     });
-    
-    // =================================================================
-    // END: ALL NEW SEARCH AND AUTOCOMPLETE LOGIC
-    // =================================================================
 
+    // --- Gallery Loaded (for Autocomplete) ---
+    document.addEventListener('galleryLoaded', () => {
+        const suggestionsContainer = document.getElementById('suggestions-container');
+        const galleryItems = document.querySelectorAll('#photo-gallery figure img');
 
-    if (!gallery || !wrapper) return;
+        if (!searchInput || !suggestionsContainer || galleryItems.length === 0) return;
+
+        function createPill(text) {
+            const pill = document.createElement('span');
+            pill.className = 'search-pill';
+            pill.dataset.value = text;
+
+            const pillText = document.createElement('span');
+            pillText.textContent = text;
+            
+            const removeBtn = document.createElement('span');
+            removeBtn.className = 'remove-pill';
+            removeBtn.innerHTML = '&times;';
+            removeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                pill.remove();
+                runSearch();
+            });
+
+            pill.appendChild(pillText);
+            pill.appendChild(removeBtn);
+            return pill;
+        }
+
+        function selectSuggestion(value) {
+            // Pills are added to the right of the input now due to row-reverse
+            searchWrapper.appendChild(createPill(value));
+            searchInput.value = '';
+            suggestionsContainer.style.display = 'none';
+            runSearch();
+            resizeInput(); // Resize after adding a pill
+            searchInput.focus();
+        }
+
+        const searchTerms = new Set();
+        galleryItems.forEach(img => {
+            const sources = [img.dataset.cast, img.dataset.crew, img.dataset.characters];
+            sources.forEach(source => {
+                if (source) {
+                    source.split(',').forEach(term => {
+                        const cleaned = term.trim();
+                        if (cleaned) searchTerms.add(cleaned);
+                    });
+                }
+            });
+        });
+        const sortedSearchTerms = Array.from(searchTerms).sort((a, b) => a.localeCompare(b));
+        let activeSuggestionIndex = -1;
+
+        function updateSuggestions() {
+            const query = searchInput.value.toLowerCase();
+            suggestionsContainer.innerHTML = '';
+            activeSuggestionIndex = -1;
+
+            if (query.length === 0) {
+                suggestionsContainer.style.display = 'none';
+                return;
+            }
+
+            const existingPillValues = new Set(
+                Array.from(searchWrapper.querySelectorAll('.search-pill')).map(p => p.dataset.value.toLowerCase())
+            );
+
+            const matches = sortedSearchTerms.filter(term => {
+                const termLower = term.toLowerCase();
+                return termLower.startsWith(query) && !existingPillValues.has(termLower);
+            }).slice(0, 7);
+
+            if (matches.length > 0) {
+                matches.forEach(term => {
+                    const item = document.createElement('div');
+                    item.className = 'suggestion-item';
+                    item.textContent = term;
+                    item.addEventListener('mousedown', (e) => {
+                        e.preventDefault();
+                        selectSuggestion(term);
+                    });
+                    suggestionsContainer.appendChild(item);
+                });
+                suggestionsContainer.style.display = 'block';
+            } else {
+                suggestionsContainer.style.display = 'none';
+            }
+        }
+        
+        let originalInputHandler = searchInput.oninput;
+        searchInput.addEventListener('input', updateSuggestions);
+
+        searchInput.addEventListener('keydown', (e) => {
+            const items = suggestionsContainer.querySelectorAll('.suggestion-item');
+            switch (e.key) {
+                case 'ArrowDown':
+                    if (items.length > 0) {
+                        e.preventDefault();
+                        activeSuggestionIndex = (activeSuggestionIndex + 1) % items.length;
+                    }
+                    break;
+                case 'ArrowUp':
+                    if (items.length > 0) {
+                        e.preventDefault();
+                        activeSuggestionIndex = (activeSuggestionIndex - 1 + items.length) % items.length;
+                    }
+                    break;
+                case 'Enter':
+                    if (activeSuggestionIndex > -1) {
+                        e.preventDefault();
+                        selectSuggestion(items[activeSuggestionIndex].textContent);
+                    }
+                    break;
+                case 'Escape':
+                    suggestionsContainer.style.display = 'none';
+                    break;
+                case 'Backspace':
+                    if (searchInput.value === '') {
+                        const lastPill = searchWrapper.querySelector('.search-pill:last-of-type');
+                        if (lastPill) {
+                            lastPill.remove();
+                            runSearch();
+                        }
+                    }
+                    break;
+            }
+            if (items.length > 0) {
+                 items.forEach((item, index) => item.classList.toggle('active', index === activeSuggestionIndex));
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+                suggestionsContainer.style.display = 'none';
+            }
+        });
+    });
 
     const marquee = document.getElementById('marquee');
     const items = gallery.getElementsByTagName('figure');
@@ -1867,3 +1945,4 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
+
