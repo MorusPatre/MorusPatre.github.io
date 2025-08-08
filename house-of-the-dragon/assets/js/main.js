@@ -401,9 +401,33 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchWrapper = document.getElementById('search-wrapper');
     const clearSearchBtn = document.getElementById('clear-search');
 
-    // Make the entire wrapper focus the input field when clicked
+    // Allow placing the caret anywhere between pills
     if (searchWrapper) {
-        searchWrapper.addEventListener('click', () => {
+        searchWrapper.addEventListener('click', (e) => {
+            // Don't interfere with clicks on the input itself or pill remove buttons
+            if (e.target === searchInput || e.target.classList.contains('remove-pill')) {
+                return;
+            }
+
+            const pills = Array.from(searchWrapper.querySelectorAll('.search-pill'));
+            let insertBeforePill = null;
+
+            for (const pill of pills) {
+                const rect = pill.getBoundingClientRect();
+                // If click is on left half of this pill, place input before it
+                if (e.clientX < rect.left + rect.width / 2) {
+                    insertBeforePill = pill;
+                    break;
+                }
+            }
+
+            if (insertBeforePill) {
+                searchWrapper.insertBefore(searchInput, insertBeforePill);
+            } else {
+                searchWrapper.appendChild(searchInput);
+            }
+
+            searchInput.classList.add('input-interstitial');
             searchInput.focus();
         });
     }
