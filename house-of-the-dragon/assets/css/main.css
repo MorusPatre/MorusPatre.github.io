@@ -1284,8 +1284,10 @@ input, select, textarea {
     transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
     font-size: 0.65rem;
     overflow-x: auto;
-    /* NEW: Align items to the right to enable the "pushing" effect */
-    justify-content: flex-end;
+    /* Revert to default flex-direction */
+    flex-direction: row;
+    /* The key is here: align items to the left, and let the input push them */
+    justify-content: flex-start;
 }
 
 .search-wrapper:hover {
