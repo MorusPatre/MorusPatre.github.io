@@ -1321,13 +1321,6 @@ input, select, textarea {
     user-select: none;
 }
 
-/* A new style for the search input when it's positioned between pills */
-#search-input.input-interstitial {
-    flex-grow: 0;       /* Prevents the input from expanding to fill space */
-    width: auto;        /* Allows the width to be set dynamically by JS */
-    min-width: 3px;     /* A very small minimum width for the blinking caret */
-}
-
 /* The pill for selected search terms, with its default visible style */
 .search-pill {
     display: inline-flex;
