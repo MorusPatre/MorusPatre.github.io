@@ -1268,10 +1268,9 @@ input, select, textarea {
     align-items: center;
     border-radius: 20px;
     background-color: rgba(255, 255, 255, 0.05);
-    /* MODIFIED: Re-added fixed width and adjusted padding for symmetry */
+    padding: 2px 30px;
     width: 26.5em;
-    padding: 2px 15px 2px 30px; /* Top, Right, Bottom, Left */
-    min-height: 24px;
+    min-height: 24px; /* 1.5rem */
     cursor: text;
     transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
