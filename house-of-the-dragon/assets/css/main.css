@@ -1273,7 +1273,6 @@ input, select, textarea {
     min-height: 24px; /* 1.5rem */
     cursor: text;
     transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-    font-size: 0.65rem;
 }
 
 .search-wrapper:hover {
