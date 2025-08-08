@@ -1346,6 +1346,11 @@ input, select, textarea {
     box-shadow: 0 0 5px rgba(163, 173, 175, 0.5); /* Adds the selection glow */
 }
 
+/* Provides visual feedback for the pill being dragged */
+.search-pill.dragging {
+    opacity: 0.5;
+}
+
 .search-pill-text {
     pointer-events: none;
 }
