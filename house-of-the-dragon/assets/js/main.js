@@ -1651,6 +1651,13 @@ document.addEventListener('galleryLoaded', () => {
         pill.addEventListener('dragstart', (e) => {
             e.dataTransfer.setData('text/plain', e.target.dataset.value);
             e.dataTransfer.effectAllowed = 'copy';
+            // Add a class to identify the pill being dragged
+            e.currentTarget.classList.add('is-dragging');
+        });
+
+        // Clean up the class when the drag operation ends
+        pill.addEventListener('dragend', (e) => {
+            e.currentTarget.classList.remove('is-dragging');
         });
 
         // Click to select functionality
@@ -1666,6 +1673,44 @@ document.addEventListener('galleryLoaded', () => {
 
         return pill;
     }
+    
+    // Draggable Pill Reordering Logic
+    function getDragAfterElement(container, x) {
+        const draggableElements = [...container.querySelectorAll('.search-pill:not(.is-dragging)')];
+
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = x - box.left - box.width / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    searchWrapper.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        const draggingPill = document.querySelector('.search-pill.is-dragging');
+        if (draggingPill) {
+            e.dataTransfer.dropEffect = 'move';
+        }
+    });
+
+    searchWrapper.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const draggingPill = document.querySelector('.search-pill.is-dragging');
+        // Ensure we are dropping a pill into the search wrapper
+        if (draggingPill && e.currentTarget.contains(draggingPill)) {
+            const afterElement = getDragAfterElement(searchWrapper, e.clientX);
+            if (afterElement == null) {
+                searchWrapper.insertBefore(draggingPill, searchInput);
+            } else {
+                searchWrapper.insertBefore(draggingPill, afterElement);
+            }
+            // The search filter does not need to be re-run as the terms haven't changed, only the order.
+        }
+    });
     
     // --- Autocomplete data setup ---
     const searchTerms = new Set();
