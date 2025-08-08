@@ -2158,3 +2158,94 @@ html, body {
     opacity: 1;
     transform: scale(1);
 }
+
+/* Paste this at the end of your main.css file */
+
+/* --- Pill Search --- */
+.search-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    border-radius: 20px;
+    background-color: rgba(255, 255, 255, 0.05);
+    padding: 2px 30px 2px 30px; /* Top/Bottom, Right/Left */
+    width: 26.5em;
+    min-height: 24px;
+    cursor: text;
+    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.search-wrapper:hover {
+    background-color: rgba(255, 255, 255, 0.075);
+}
+
+.search-wrapper.is-focused {
+    background: rgba(255, 255, 255, 0.075);
+    border: solid 1px #a3adaf;
+    box-shadow: 0 0 0 0.5px #a3adaf;
+    padding: 1px 29px 1px 29px; /* Adjust padding to account for border */
+}
+
+/* The actual text input, made to blend in */
+#search-wrapper #search-input {
+    flex-grow: 1;
+    border: none;
+    background: transparent;
+    padding: 4px 0;
+    margin: 0;
+    outline: none;
+    color: #ffffff;
+    height: auto;
+    width: auto;
+    min-width: 120px;
+    font-size: 0.65rem;
+    line-height: 1.4;
+}
+
+.search-pill {
+    display: inline-flex;
+    align-items: center;
+    background-color: #3f3a36;
+    border: 1px solid #5c5753;
+    border-radius: 10px;
+    padding: 2px 8px;
+    margin: 2px 6px 2px 0;
+    font-size: 0.6rem;
+    color: #e0e0e0;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s ease;
+}
+
+.search-pill.selected {
+    background-color: #5c5753;
+    border-color: #a3adaf;
+    color: #fff;
+    box-shadow: 0 0 5px rgba(163, 173, 175, 0.5);
+}
+
+.search-pill-text {
+    pointer-events: none;
+}
+
+.remove-pill {
+    margin-left: 6px;
+    font-weight: bold;
+    font-size: 0.8rem;
+    line-height: 1;
+    padding: 0 2px;
+}
+
+.remove-pill:hover {
+    color: #fff;
+}
+
+
+/* --- Replacement for original #search-input style --- */
+#search-input {
+    font-size: 0.65rem;
+    text-align: left;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
