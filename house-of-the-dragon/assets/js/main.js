@@ -387,37 +387,23 @@
 
 })(jQuery);
 
+
 document.addEventListener('DOMContentLoaded', () => {
     const wrapper = document.getElementById('wrapper');
     const header = document.getElementById('header');
     const footer = document.getElementById('footer');
     const gallery = document.getElementById('photo-gallery');
     const searchInput = document.getElementById('search-input');
+    
+    // =================================================================
+    // START: MODIFIED SEARCH AND AUTOCOMPLETE LOGIC
+    // =================================================================
     const searchWrapper = document.getElementById('search-wrapper');
     const clearSearchBtn = document.getElementById('clear-search');
-    
+
     // Make the entire wrapper focus the input field when clicked
     if (searchWrapper) {
-        searchWrapper.addEventListener('click', (e) => {
-            const pills = searchWrapper.querySelectorAll('.search-pill');
-            let referenceNode = null;
-
-            // Find the correct position for the caret
-            for (const pill of pills) {
-                const pillRect = pill.getBoundingClientRect();
-                if (e.clientX > pillRect.left + (pillRect.width / 2)) {
-                    referenceNode = pill;
-                    break;
-                }
-            }
-
-            // Move the input field to the clicked position
-            if (referenceNode) {
-                searchWrapper.insertBefore(searchInput, referenceNode.nextSibling);
-            } else {
-                searchWrapper.prepend(searchInput);
-            }
-            
+        searchWrapper.addEventListener('click', () => {
             searchInput.focus();
         });
     }
