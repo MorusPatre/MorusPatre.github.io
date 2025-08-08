@@ -1328,7 +1328,7 @@ input, select, textarea {
     background-color: #3f3a36; /* Correct visible background */
     border: 1px solid #5c5753;   /* Correct visible border */
     border-radius: 10px;
-    padding: 2px 8px;
+    padding: 1px 8px;
     margin: 2px 6px 2px 0;
     font-size: 0.6rem;
     color: #e0e0e0;
