@@ -1251,102 +1251,21 @@ input, select, textarea {
 }
 
 
-/*
-==================================================================
-// Search Input and Pills (REVISED)
-==================================================================
-*/
-/* INSTRUCTIONS:
-  Delete the original style block for "#search-input" from your CSS file
-  and replace it with all of the CSS rules below.
-*/
-
-/* The main wrapper that looks like an input field */
-.search-wrapper {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    border-radius: 20px;
-    background-color: rgba(255, 255, 255, 0.05);
-    padding: 2px 30px 2px 30px; /* Top/Bottom, Right/Left */
-    width: 26.5em;
-    min-height: 24px;
-    cursor: text;
-    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-    font-size: 0.65rem; /* Add this line */
-}
-
-.search-wrapper:hover {
-    background-color: rgba(255, 255, 255, 0.075);
-}
-
-.search-wrapper.is-focused {
-    background: rgba(255, 255, 255, 0.075);
-    border: solid 1px #a3adaf;
-    box-shadow: 0 0 0 0.5px #a3adaf;
-    padding: 1px 29px; /* Adjust padding to account for border */
-}
-
-/* The actual text input, styled to be invisible within the wrapper */
+/* Style for the Search Input */
 #search-input {
-    flex-grow: 1;
-    border: none !important;
-    background: transparent !important;
-    padding: 4px 0 !important;
-    margin: 0 !important;
-    outline: none !important;
-    color: #ffffff !important;
-    box-shadow: none !important;
-    border-radius: 0 !important;
-    height: auto !important;
-    width: auto !important;
-    min-width: 120px;
-    line-height: 1.4 !important;
+    height: 1.5rem; /* Adjust this value to your desired height */
+    line-height: 1.5rem; /* Match this to the height for vertical centering */
     font-size: 0.65rem;
     text-align: left;
-    -webkit-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-}
-
-/* The pill for selected search terms, now subtle by default */
-.search-pill {
-    display: inline-flex;
-    align-items: center;
-    background-color: transparent; /* No background by default */
-    border: 1px solid transparent;  /* No border by default */
-    border-radius: 10px;
-    padding: 2px 8px;
-    margin: 2px 6px 2px 0;
-    font-size: 0.6rem;
-    color: #e0e0e0;
-    cursor: pointer;
-    user-select: none;
-    transition: all 0.2s ease;
-}
-
-/* A pill becomes visible ONLY when it is selected */
-.search-pill.selected {
-    background-color: #5c5753;
-    border-color: #a3adaf;
-    color: #fff;
-}
-
-.search-pill-text {
-    pointer-events: none;
-}
-
-/* The 'x' button to remove a pill */
-.remove-pill {
-    margin-left: 6px;
-    font-weight: bold;
-    font-size: 0.8rem;
-    line-height: 1;
-    padding: 0 2px;
-}
-
-.remove-pill:hover {
-    color: #fff;
+    border-radius: 20px;
+    width: 26.5em;  /* Adjust this value to change the overall width */
+    padding-left: 30px; /* MODIFIED: Increased padding for the icon */
+    padding-right: 0.93em; /* Adds space on the right */
+    background-color: rgba(255, 255, 255, 0.05); /* Example: light white with 20% opacity */
+    /* Explicitly prevent user text selection */
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10+ and Edge */
+    user-select: none; /* Standard syntax */
 }
 
 
@@ -2238,96 +2157,4 @@ html, body {
 #download-indicator.is-downloading:hover .cancel-icon {
     opacity: 1;
     transform: scale(1);
-}
-
-/* Paste this at the end of your main.css file */
-
-/* --- Pill Search --- */
-.search-wrapper {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    border-radius: 20px;
-    background-color: rgba(255, 255, 255, 0.05);
-    padding: 2px 30px 2px 30px; /* Top/Bottom, Right/Left */
-    width: 26.5em;
-    min-height: 24px;
-    cursor: text;
-    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-    font-size: 0.65rem; /* Add this line */
-}
-
-.search-wrapper:hover {
-    background-color: rgba(255, 255, 255, 0.075);
-}
-
-.search-wrapper.is-focused {
-    background: rgba(255, 255, 255, 0.075);
-    border: solid 1px #a3adaf;
-    box-shadow: 0 0 0 0.5px #a3adaf;
-    padding: 1px 29px 1px 29px; /* Adjust padding to account for border */
-}
-
-/* The actual text input, made to blend in */
-#search-wrapper #search-input {
-    flex-grow: 1;
-    border: none;
-    background: transparent;
-    padding: 4px 0;
-    margin: 0;
-    outline: none;
-    color: #ffffff;
-    height: auto;
-    width: auto;
-    min-width: 120px;
-    font-size: 0.65rem;
-    line-height: 1.4;
-}
-
-.search-pill {
-    display: inline-flex;
-    align-items: center;
-    background-color: #3f3a36;
-    border: 1px solid #5c5753;
-    border-radius: 10px;
-    padding: 2px 8px;
-    margin: 2px 6px 2px 0;
-    font-size: 0.6rem;
-    color: #e0e0e0;
-    cursor: pointer;
-    user-select: none;
-    transition: all 0.2s ease;
-}
-
-.search-pill.selected {
-    background-color: #5c5753;
-    border-color: #a3adaf;
-    color: #fff;
-    box-shadow: 0 0 5px rgba(163, 173, 175, 0.5);
-}
-
-.search-pill-text {
-    pointer-events: none;
-}
-
-.remove-pill {
-    margin-left: 6px;
-    font-weight: bold;
-    font-size: 0.8rem;
-    line-height: 1;
-    padding: 0 2px;
-}
-
-.remove-pill:hover {
-    color: #fff;
-}
-
-
-/* --- Replacement for original #search-input style --- */
-#search-input {
-    font-size: 0.65rem;
-    text-align: left;
-    -webkit-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
 }
