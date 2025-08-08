@@ -1253,8 +1253,12 @@ input, select, textarea {
 
 /*
 ==================================================================
-// Search Input and Pills (Final Version)
+// Search Input and Pills (REVISED)
 ==================================================================
+*/
+/* INSTRUCTIONS:
+  Delete the original style block for "#search-input" from your CSS file
+  and replace it with all of the CSS rules below.
 */
 
 /* The main wrapper that looks like an input field */
@@ -1264,13 +1268,11 @@ input, select, textarea {
     align-items: center;
     border-radius: 20px;
     background-color: rgba(255, 255, 255, 0.05);
-    /* MODIFICATION: Padding is now symmetrical for the text area */
-    padding: 2px 15px 2px 30px; /* Top, Right, Bottom, Left */
-    min-height: 24px;
+    padding: 2px 30px;
+    width: 26.5em;
+    min-height: 24px; /* 1.5rem */
     cursor: text;
-    transition: all 0.2s ease-in-out;
-    /* MODIFICATION: Hide the bar initially to prevent a "flash" of incorrect width */
-    visibility: hidden;
+    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
 
 .search-wrapper:hover {
@@ -1281,8 +1283,7 @@ input, select, textarea {
     background: rgba(255, 255, 255, 0.075);
     border: solid 1px #a3adaf;
     box-shadow: 0 0 0 0.5px #a3adaf;
-    /* Adjust padding to account for border */
-    padding: 1px 14px 1px 29px;
+    padding: 1px 29px; /* Adjust padding to account for border */
 }
 
 /* The actual text input, styled to be invisible within the wrapper */
@@ -1311,8 +1312,8 @@ input, select, textarea {
 .search-pill {
     display: inline-flex;
     align-items: center;
-    background-color: transparent;
-    border: 1px solid transparent;
+    background-color: transparent; /* No background by default */
+    border: 1px solid transparent;  /* No border by default */
     border-radius: 10px;
     padding: 2px 8px;
     margin: 2px 6px 2px 0;
