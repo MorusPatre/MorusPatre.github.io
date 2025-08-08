@@ -1302,23 +1302,23 @@ input, select, textarea {
 /* The actual text input, styled to be invisible within the wrapper */
 #search-input {
     flex-grow: 1;
-    border: none !important;
-    background: transparent !important;
-    padding: 4px 0 4px 1px !important;
-    margin: 0 !important;
-    outline: none !important;
-    color: #ffffff !important;
-    box-shadow: none !important;
-    border-radius: 0 !important;
-    height: auto !important;
-    width: auto !important;
+    border: none;
+    background: transparent;
+    padding: 4px 0 4px 1px;
+    margin: 0;
+    outline: none;
+    color: #ffffff;
+    box-shadow: none;
+    border-radius: 0;
+    height: auto;
+    width: auto;
     min-width: 120px;
-    line-height: 1.4 !important;
+    line-height: 1.4;
     font-size: 0.65rem;
     text-align: left;
-    -webkit-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
+    -webkit-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
 }
 
 /* The pill for selected search terms, with its default visible style */
