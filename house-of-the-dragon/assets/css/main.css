@@ -1259,25 +1259,21 @@ input, select, textarea {
 
 /* The new ContentEditable div, styled to look like an input */
 #search-input {
+    display: flex;
+    align-items: center; /* This is the key to vertical centering */
     flex-grow: 1;
-    border: none;
-    background: transparent;
-    padding: 4px 0 4px 1px;
+    width: 100%;
     margin: 0;
+    padding: 0 0 0 1px;
+    border: none;
     outline: none;
     color: #ffffff;
-    box-shadow: none;
-    border-radius: 0;
-    height: auto;
-    width: 100%; /* Changed to 100% to fill the form */
-    min-height: 24px; /* Ensure it has a minimum height */
-    line-height: 1.4;
+    background: transparent;
     font-size: 0.65rem;
-    text-align: left;
-    white-space: normal; /* Allow content to wrap if needed */
-    cursor: text; /* Show the text cursor */
-    overflow-y: auto; /* Allow scrolling if content is too long */
-    max-height: 80px; /* Prevent it from growing too tall */
+    cursor: text;
+    white-space: nowrap;
+    overflow-x: hidden;
+    overflow-y: hidden;
 }
 
 /* The form element now acts as the wrapper */
@@ -1287,12 +1283,13 @@ input, select, textarea {
     align-items: center;
     border-radius: 20px;
     background-color: rgba(255, 255, 255, 0.05);
-    padding: 2px 12px 2px 30px;
-    width: 26.5em;
-    min-height: 34px; /* Adjust to match visual height */
+    width: 17.282226em;
+    height: 31px;
     cursor: text;
     transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
     position: relative;
+    border: solid 1px transparent; /* Add a transparent border by default */
+    padding: 1px 11px 1px 29px;   /* Use the focused state's padding by default */
 }
 
 #search-container form:hover {
@@ -1302,23 +1299,22 @@ input, select, textarea {
 /* Use :focus-within on the form to detect focus inside the contenteditable div */
 #search-container form:focus-within {
     background: rgba(255, 255, 255, 0.075);
-    border: solid 1px #a3adaf;
+    border-color: #a3adaf; /* --- FIX --- Only change the border-color */
     box-shadow: 0 0 0 0.5px #a3adaf;
-    padding: 1px 11px 1px 29px;
 }
 
 /* Placeholder implementation using ::before */
-#search-input:empty::before {
+#search-input.is-placeholder-visible::before {
     content: attr(data-placeholder);
     color: rgba(255, 255, 255, 0.5);
     cursor: text;
     pointer-events: none;
+    font-size: 0.65rem;
 }
 
 /* The new pill styling */
 .pill {
-    display: inline-block; /* Crucial for editor behavior */
-    vertical-align: baseline; /* Align with text */
+    flex-shrink: 0; /* Prevents pills from shrinking if space is tight */
     contenteditable: false; /* Make the pill an un-editable "atom" */
     -webkit-user-select: none; /* Prevent selecting text inside the pill */
     -moz-user-select: none;
@@ -1326,11 +1322,11 @@ input, select, textarea {
     user-select: none;
     background-color: #3f3a36;
     border: 1px solid #5c5753;
-    border-radius: 10px;
+    border-radius: 6px;
     padding: 1px 8px; /* Adjusted padding */
     margin: 0 4px 0 2px;
-    font-size: 0.6rem;
-    line-height: 1.5; /* Ensure proper height */
+    font-size: 0.65rem;
+    line-height: 1; /* Ensure proper height */
     color: #e0e0e0;
     cursor: default;
     white-space: nowrap; /* Prevent pill content from wrapping */
