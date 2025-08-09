@@ -389,113 +389,166 @@
 
 
 document.addEventListener('DOMContentLoaded', () => {
+    // =================================================================
+    // START: NEW CONTENTEDITABLE EDITOR LOGIC
+    // =================================================================
+    const editor = document.getElementById('search-input');
+    const searchForm = editor.closest('form');
+    const suggestionsContainer = document.getElementById('suggestions-container');
+    const clearSearchBtn = document.getElementById('clear-search');
+
+    if (!editor || !searchForm) return;
+
+    /**
+     * Inserts a pill at the current cursor position in the editor.
+     * @param {string} type - The type of pill (e.g., 'tag', 'character').
+     * @param {string} value - The text content of the pill.
+     */
+    const insertPill = (type, value) => {
+        editor.focus();
+        
+        const sanitizedValue = value.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        
+        const pillHTML = `
+            <span class="pill" contenteditable="false" data-type="${type}" data-value="${sanitizedValue}">
+                ${sanitizedValue}
+                <span class="remove-pill" onclick="this.parentNode.remove()">&times;</span>
+            </span>&nbsp;`;
+
+        const selection = window.getSelection();
+        if (!selection.rangeCount) return;
+
+        let range = selection.getRangeAt(0);
+        
+        // This part is tricky: we want to replace the text that triggered the autocomplete.
+        // A simple way is to find the text node the cursor is in and replace its content.
+        let textNode = selection.anchorNode;
+        if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+             // Find the last word the user typed, which triggered the suggestion
+             const textContent = textNode.textContent;
+             const query = getSearchQuery().text;
+             const lastWordIndex = textContent.toLowerCase().lastIndexOf(query.toLowerCase());
+             if (lastWordIndex !== -1) {
+                 range.setStart(textNode, lastWordIndex);
+                 range.setEnd(textNode, lastWordIndex + query.length);
+             }
+        }
+        range.deleteContents();
+
+        const fragment = document.createRange().createContextualFragment(pillHTML);
+        const lastNode = fragment.lastChild;
+        range.insertNode(fragment);
+        
+        range = range.cloneRange();
+        range.setStartAfter(lastNode);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+
+        editor.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+
+    /**
+     * Parses the editor's content and returns a structured query.
+     * @returns {{text: string, pills: Array<{type: string, value: string}>}}
+     */
+    const getSearchQuery = () => {
+        const pills = [];
+        let textContent = '';
+
+        editor.childNodes.forEach(node => {
+            if (node.nodeType === Node.ELEMENT_NODE && node.classList.contains('pill')) {
+                pills.push({
+                    type: node.dataset.type,
+                    value: node.dataset.value
+                });
+            } else if (node.nodeType === Node.TEXT_NODE) {
+                textContent += node.textContent;
+            } else if (node.nodeType === Node.ELEMENT_NODE && (node.tagName === 'DIV' || node.tagName === 'BR')) {
+                // Handle cases where browsers wrap text in <div> or add <br>
+                textContent += ' ' + node.textContent;
+            }
+        });
+        
+        const text = textContent.replace(/\s+/g, ' ').trim();
+
+        return { text, pills };
+    };
+
+    /**
+     * The main search/filter function for the gallery.
+     */
+    const runSearch = () => {
+        const query = getSearchQuery();
+        const galleryItems = document.querySelectorAll('#photo-gallery figure');
+        const hasQuery = query.text || query.pills.length > 0;
+
+        clearSearchBtn.style.display = hasQuery ? 'block' : 'none';
+        searchForm.style.paddingRight = hasQuery ? '30px' : '12px';
+
+        galleryItems.forEach(figure => {
+            const img = figure.querySelector('img');
+            if (!img || !img.dataset.search) {
+                figure.style.display = 'none';
+                return;
+            }
+            const searchData = img.dataset.search.toLowerCase();
+            let isMatch = true;
+
+            if (query.pills.length > 0) {
+                isMatch = query.pills.every(pill => searchData.includes(pill.value.toLowerCase()));
+            }
+
+            if (isMatch && query.text) {
+                isMatch = query.text.toLowerCase().split(' ').filter(term => term).every(term => searchData.includes(term));
+            }
+            
+            figure.style.display = isMatch ? 'flex' : 'none';
+        });
+        
+        window.dispatchEvent(new CustomEvent('galleryFiltered'));
+    };
+
+    // --- Event Listeners for the Editor ---
+    editor.addEventListener('input', runSearch);
+    
+    editor.addEventListener('DOMNodeRemoved', (e) => {
+        if (e.target.classList && e.target.classList.contains('pill')) {
+            runSearch();
+        }
+    });
+
+    editor.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const text = e.clipboardData.getData('text/plain');
+        document.execCommand('insertText', false, text);
+    });
+    
+    clearSearchBtn.addEventListener('click', () => {
+        editor.innerHTML = '';
+        runSearch();
+        editor.focus();
+    });
+
+    editor.addEventListener('submitSearch', () => {
+        const activeSuggestion = suggestionsContainer.querySelector('.suggestion-item.active');
+        const firstSuggestion = suggestionsContainer.querySelector('.suggestion-item');
+        
+        const suggestionToClick = activeSuggestion || firstSuggestion;
+
+        if (suggestionsContainer.style.display === 'block' && suggestionToClick) {
+            suggestionToClick.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+        }
+    });
+    // =================================================================
+    // END: NEW CONTENTEDITABLE EDITOR LOGIC
+    // =================================================================
+    
     const wrapper = document.getElementById('wrapper');
     const header = document.getElementById('header');
     const footer = document.getElementById('footer');
     const gallery = document.getElementById('photo-gallery');
-    const searchInput = document.getElementById('search-input');
     
-    // =================================================================
-    // START: MODIFIED SEARCH AND AUTOCOMPLETE LOGIC
-    // =================================================================
-    const searchWrapper = document.getElementById('search-wrapper');
-    const clearSearchBtn = document.getElementById('clear-search');
-
-    // Make the entire wrapper focus the input field when clicked
-    if (searchWrapper) {
-        searchWrapper.addEventListener('click', () => {
-            searchInput.focus();
-        });
-    }
-
-    // Add/remove focus class to the wrapper for styling
-    if (searchInput) {
-        searchInput.addEventListener('focus', () => {
-            searchWrapper.classList.add('is-focused');
-        });
-        searchInput.addEventListener('blur', () => {
-            searchWrapper.classList.remove('is-focused');
-        });
-    }
-
-    function simplifySearchText(text) {
-        if (!text) return "";
-        return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    }
-    
-    // This is the core function that filters the gallery
-    function runSearch() {
-        // Build the query string from pills and the current input value
-        const pills = searchWrapper.querySelectorAll('.search-pill');
-        let pillQueries = [];
-        pills.forEach(pill => {
-            pillQueries.push(pill.dataset.value);
-        });
-        
-        const fullQueryText = pillQueries.join(' ') + ' ' + searchInput.value;
-        const simplifiedQuery = simplifySearchText(fullQueryText.toLowerCase());
-
-        // Show/hide clear button based on whether there's any query
-        if (fullQueryText.trim().length > 0) {
-            clearSearchBtn.style.display = 'block';
-            searchWrapper.style.paddingRight = '30px';
-        } else {
-            clearSearchBtn.style.display = 'none';
-            searchWrapper.style.paddingRight = '';
-        }
-        
-        const galleryItems = gallery.querySelectorAll('figure');
-        const phraseRegex = /\b(s\d+e\d+|season\s*\d+|episode\s*\d+|s\d+|e\d+)\b/g;
-        const phraseTerms = simplifiedQuery.match(phraseRegex) || [];
-        const remainingText = simplifiedQuery.replace(phraseRegex, '').trim();
-        const wordTerms = remainingText.split(' ').filter(term => term.length > 0);
-        const searchTerms = [...phraseTerms, ...wordTerms];
-
-        galleryItems.forEach(function(item) {
-            const img = item.querySelector('img');
-            if (!img || !img.dataset.search) {
-                item.style.display = 'none';
-                return;
-            }
-
-            const searchData = img.dataset.search.toLowerCase();
-            const isMatch = searchTerms.every(term => searchData.includes(term));
-
-            if (isMatch) {
-                item.style.display = 'flex';
-            } else {
-                item.style.display = 'none';
-            }
-        });
-
-        // If there are pills, hide the placeholder
-        if (pills.length > 0) {
-            searchInput.placeholder = '';
-        } else {
-            searchInput.placeholder = 'Search by filename, actor, character, season, episode etc...';
-        }
-
-        window.scrollTo(0, 0);
-        window.dispatchEvent(new CustomEvent('galleryFiltered'));
-    }
-
-    // Original search input listener, now just calls runSearch
-    searchInput.addEventListener('keyup', runSearch);
-
-    // Update clear button to remove pills too
-    clearSearchBtn.addEventListener('click', function() {
-        const pills = searchWrapper.querySelectorAll('.search-pill');
-        pills.forEach(pill => pill.remove());
-        searchInput.value = '';
-        runSearch(); // Update display and placeholder
-        searchInput.focus();
-    });
-
-    // =================================================================
-    // END: MODIFIED SEARCH AND AUTOCOMPLETE LOGIC
-    // =================================================================
-
-
     if (!gallery || !wrapper) return;
 
     const marquee = document.getElementById('marquee');
@@ -513,7 +566,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const indicator = document.getElementById('download-indicator');
     const cancelBtn = indicator.querySelector('.cancel-icon');
 
-    // --- Auto-scroll state variables ---
     let isAutoScrolling = false;
     let scrollSpeedY = 0;
     let lastClientX = 0;
@@ -521,7 +573,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastClientModifierKey = false;
 
 
-    // Attach a single, permanent listener to the cancel button
     cancelBtn.addEventListener('click', () => {
         if (downloadAbortController) {
             downloadAbortController.abort();
@@ -534,15 +585,10 @@ document.addEventListener('DOMContentLoaded', () => {
     ==================================================================
     */
 
-    // --- State Variables for Navigation ---
-    let selectionAnchor = null; // For range selections (Shift key)
-    let lastSelectedItem = null; // The currently "focused" item for keyboard navigation
-    let gridMetrics = { cols: 0 }; // To store the calculated number of columns
+    let selectionAnchor = null;
+    let lastSelectedItem = null;
+    let gridMetrics = { cols: 0 };
 
-    /**
-     * Calculates the number of columns in the responsive grid.
-     * This is crucial for Up/Down arrow navigation.
-     */
     function calculateGridMetrics() {
         const visibleItems = Array.from(items).filter(item => item.style.display !== 'none');
         if (visibleItems.length === 0) {
@@ -562,10 +608,6 @@ document.addEventListener('DOMContentLoaded', () => {
         gridMetrics.cols = cols > 0 ? cols : 1;
     }
 
-    /**
-     * Applies a selection to all items between the anchor and the focus item.
-     * Mimics Finder's shift-click and shift-arrow behavior.
-     */
     function applyRangeSelection() {
         if (!selectionAnchor) return;
 
@@ -578,13 +620,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const start = Math.min(anchorIndex, focusIndex);
         const end = Math.max(anchorIndex, focusIndex);
 
-        // First, determine the final set of selected items
         const itemsToSelect = new Set();
         for (let i = start; i <= end; i++) {
             itemsToSelect.add(visibleItems[i]);
         }
 
-        // Now, update the DOM and the main selectedItems set in one pass
         for(const item of visibleItems) {
             if(itemsToSelect.has(item)) {
                 if (!selectedItems.has(item)) {
@@ -600,21 +640,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Event Listener for Keyboard Navigation ---
     document.addEventListener('keydown', (e) => {
-        // MODIFIED: Also check for selected pills
         const activeEl = document.activeElement;
-        const isSearchActive = (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) || searchWrapper.querySelector('.search-pill.selected');
+        const isSearchActive = activeEl && activeEl.id === 'search-input';
         
         if (isSearchActive) {
-            return;
+            // Let the search input's own keydown handler manage events
+            return; 
         }
 
         if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
             return;
         }
 
-        e.preventDefault(); // Prevent page scrolling
+        e.preventDefault();
 
         const visibleItems = Array.from(items).filter(item => item.style.display !== 'none');
         if (visibleItems.length === 0) return;
@@ -623,25 +662,14 @@ document.addEventListener('DOMContentLoaded', () => {
         let newIndex = -1;
 
         if (currentIndex === -1) {
-             if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-                newIndex = 0;
-            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-                newIndex = visibleItems.length -1;
-            }
+             if (e.key === 'ArrowRight' || e.key === 'ArrowDown') newIndex = 0;
+             else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') newIndex = visibleItems.length -1;
         } else {
             switch (e.key) {
-                case 'ArrowLeft':
-                    newIndex = currentIndex - 1;
-                    break;
-                case 'ArrowRight':
-                    newIndex = currentIndex + 1;
-                    break;
-                case 'ArrowUp':
-                    newIndex = currentIndex - gridMetrics.cols;
-                    break;
-                case 'ArrowDown':
-                    newIndex = currentIndex + gridMetrics.cols;
-                    break;
+                case 'ArrowLeft': newIndex = currentIndex - 1; break;
+                case 'ArrowRight': newIndex = currentIndex + 1; break;
+                case 'ArrowUp': newIndex = currentIndex - gridMetrics.cols; break;
+                case 'ArrowDown': newIndex = currentIndex + gridMetrics.cols; break;
             }
         }
 
@@ -662,27 +690,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- Initial Setup and Observers ---
-
     calculateGridMetrics();
 
     const galleryObserver = new ResizeObserver(() => {
         calculateGridMetrics();
     });
     galleryObserver.observe(gallery);
+    
+    window.addEventListener('galleryFiltered', () => {
+        setTimeout(calculateGridMetrics, 50);
+    });
 
-    if (searchInput) {
-        searchInput.addEventListener('keyup', () => {
-            setTimeout(calculateGridMetrics, 50);
-        });
-    }
     /*
     ==================================================================
     // END: FINDER-STYLE ARROW KEY NAVIGATION LOGIC
     ==================================================================
     */
 
-    // Helper functions
     const isSelected = (el) => selectedItems.has(el);
     const toggleSelection = (el) => {
         if (isSelected(el)) {
@@ -694,9 +718,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     const clearSelection = () => {
-        Array.from(selectedItems).forEach(item => {
-            item.classList.remove('selected');
-        });
+        Array.from(selectedItems).forEach(item => item.classList.remove('selected'));
         selectedItems.clear();
     };
     const setSelection = (el, shouldBeSelected) => {
@@ -713,8 +735,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    // --- Refactored Marquee and Auto-Scroll Functions ---
-
     function updateMarqueeAndSelection(clientX, clientY, isModifier) {
         marquee.style.visibility = 'visible';
     
@@ -771,10 +791,8 @@ document.addEventListener('DOMContentLoaded', () => {
         requestAnimationFrame(autoScrollLoop);
     }
 
-
-    // --- MouseDown Listener ---
     wrapper.addEventListener('mousedown', (e) => {
-        if (e.target === searchInput) {
+        if (editor.contains(e.target)) {
             return;
         }
 
@@ -785,7 +803,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if(gallery.contains(e.target) || e.target === gallery) {
             e.preventDefault();
-            if (searchInput) searchInput.blur();
+            if (editor) editor.blur();
         }
 
         hasDragged = false;
@@ -801,7 +819,6 @@ document.addEventListener('DOMContentLoaded', () => {
         preMarqueeSelectedItems = new Set(selectedItems);
     });
 
-    // --- MouseMove Listener ---
     document.addEventListener('mousemove', (e) => {
         if (!isMarquee) return;
         
@@ -879,17 +896,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } else {
             const itemUnderMouse = e.target.closest('figure');
-
-            if (mouseDownItem) {
-                selectionAnchor = mouseDownItem;
-            }
-
+            if (mouseDownItem) selectionAnchor = mouseDownItem;
             if (itemUnderMouse && selectedItems.has(itemUnderMouse)) {
                 lastSelectedItem = itemUnderMouse;
             } else {
-                const visibleSelectedItems = Array.from(items)
-                    .filter(item => item.style.display !== 'none' && selectedItems.has(item));
-
+                const visibleSelectedItems = Array.from(items).filter(item => item.style.display !== 'none' && selectedItems.has(item));
                 if (visibleSelectedItems.length > 0) {
                     lastSelectedItem = visibleSelectedItems[visibleSelectedItems.length - 1];
                 }
@@ -910,12 +921,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('mousedown', (e) => {
         const itemMenu = document.getElementById('custom-context-menu');
         const galleryMenu = document.getElementById('gallery-context-menu');
-        
-        // Deselect search pills if clicking outside the search wrapper
-        const selectedPill = searchWrapper.querySelector('.search-pill.selected');
-        if (selectedPill && !searchWrapper.contains(e.target)) {
-            selectedPill.classList.remove('selected');
-        }
 
         if (e.button === 0 && !itemMenu.contains(e.target) && !galleryMenu.contains(e.target)) {
             itemMenu.style.display = 'none';
@@ -932,14 +937,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
             const activeEl = document.activeElement;
-            if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
-                return;
-            }
+            if (activeEl && activeEl.id === 'search-input') return;
             e.preventDefault();
             const visibleItems = Array.from(items).filter(item => item.style.display !== 'none');
-            visibleItems.forEach(item => {
-                setSelection(item, true);
-            });
+            visibleItems.forEach(item => setSelection(item, true));
         }
     });
 
@@ -956,7 +957,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     gallery.addEventListener('contextmenu', (e) => {
         e.preventDefault();
-
         const figure = e.target.closest('figure');
 
         itemContextMenu.style.display = 'none';
@@ -964,25 +964,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (figure) {
             rightClickedItem = figure;
-
             if (!selectedItems.has(figure)) {
                 clearSelection();
                 toggleSelection(figure);
                 selectionAnchor = figure;
                 lastSelectedItem = figure;
             }
-
             const saveMenuItem = document.getElementById('context-menu-save');
-            if (selectedItems.size > 1) {
-                saveMenuItem.textContent = `Save ${selectedItems.size} Images to "Downloads"`;
-            } else {
-                saveMenuItem.textContent = 'Save Image to "Downloads"';
-            }
-
+            saveMenuItem.textContent = selectedItems.size > 1 ? `Save ${selectedItems.size} Images to "Downloads"` : 'Save Image to "Downloads"';
             itemContextMenu.style.display = 'block';
             itemContextMenu.style.left = `${e.clientX}px`;
             itemContextMenu.style.top = `${e.clientY}px`;
-
         } else if (e.target === gallery) {
             rightClickedItem = null;
             galleryContextMenu.style.display = 'block';
@@ -991,15 +983,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // =================================================================
-    // START: UNIFIED DOWNLOAD LOGIC
-    // =================================================================
-
     async function fetchImageBlob(url) {
         const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status} for URL: ${url}`);
-        }
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status} for URL: ${url}`);
         return response.blob();
     }
 
@@ -1010,31 +996,23 @@ document.addEventListener('DOMContentLoaded', () => {
     itemContextMenu.addEventListener('click', async (e) => {
         const targetId = e.target.id;
         if (!targetId) return;
-
         itemContextMenu.style.display = 'none';
-
         const primaryTarget = rightClickedItem || Array.from(selectedItems)[0];
         if (!primaryTarget) return;
 
         switch (targetId) {
             case 'context-menu-open': {
-                const dblClickEvent = new MouseEvent('dblclick', {
-                    bubbles: true, cancelable: true, view: window
-                });
+                const dblClickEvent = new MouseEvent('dblclick', { bubbles: true, cancelable: true, view: window });
                 primaryTarget.dispatchEvent(dblClickEvent);
                 break;
             }
             case 'context-menu-open-tab': {
                 const img = primaryTarget.querySelector('img');
-                const fullSrc = img.dataset.fullsrc;
-                if (fullSrc) window.open(fullSrc, '_blank');
+                if (img && img.dataset.fullsrc) window.open(img.dataset.fullsrc, '_blank');
                 break;
             }
             case 'context-menu-save': {
-                if (downloadAbortController) {
-                    downloadAbortController.abort();
-                }
-                
+                if (downloadAbortController) downloadAbortController.abort();
                 downloadAbortController = new AbortController();
                 const signal = downloadAbortController.signal;
 
@@ -1054,17 +1032,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         default: return num;
                     }
                 };
-
-                const updateProgress = (percent) => {
-                    progressCircle.style.setProperty('--progress-angle', `${percent * 3.6}deg`);
-                };
-                
+                const updateProgress = (percent) => progressCircle.style.setProperty('--progress-angle', `${percent * 3.6}deg`);
                 updateProgress(0);
 
                 const performDownloads = async () => {
-                    let totalDownloaded = 0;
-                    let totalDownloadSize = 0;
-
                     try {
                         const itemsToDownload = Array.from(selectedItems);
                         if (itemsToDownload.length === 0) {
@@ -1072,69 +1043,45 @@ document.addEventListener('DOMContentLoaded', () => {
                              return;
                         }
 
-                        itemsToDownload.forEach(item => {
-                            const img = item.querySelector('img');
-                            totalDownloadSize += parseSizeToBytes(img.dataset.size);
-                        });
-
+                        let totalDownloadSize = 0;
+                        itemsToDownload.forEach(item => totalDownloadSize += parseSizeToBytes(item.querySelector('img').dataset.size));
+                        
+                        let totalDownloaded = 0;
                         const processInBatches = async (items, batchSize, processFn) => {
-                            let position = 0;
-                            while (position < items.length) {
+                            for (let i = 0; i < items.length; i += batchSize) {
                                 if (signal.aborted) throw new Error('AbortError');
-                                const itemsForBatch = items.slice(position, position + batchSize);
-                                await Promise.all(itemsForBatch.map(item => processFn(item)));
-                                position += batchSize;
+                                const batch = items.slice(i, i + batchSize);
+                                await Promise.all(batch.map(item => processFn(item)));
                             }
                         };
-
+                        
                         await processInBatches(itemsToDownload, 6, async (item) => {
                             const img = item.querySelector('img');
                             const url = img.dataset.fullsrc;
                             const filename = url.substring(url.lastIndexOf('/') + 1);
-
                             try {
                                 const response = await fetch(url, { signal, cache: 'no-store' });
-                                if (!response.ok) {
-                                    console.error(`Failed to fetch ${filename}: ${response.statusText}`);
-                                    totalDownloadSize -= parseSizeToBytes(img.dataset.size);
-                                    return;
-                                }
+                                if (!response.ok) throw new Error(response.statusText);
                                 const blob = await response.blob();
                                 saveAs(blob, filename);
-
                                 totalDownloaded += blob.size;
-                                const percent = totalDownloadSize > 0 ? (totalDownloaded / totalDownloadSize) * 100 : 0;
-                                updateProgress(percent);
-
+                                updateProgress(totalDownloadSize > 0 ? (totalDownloaded / totalDownloadSize) * 100 : 0);
                             } catch (error) {
-                                if (error.name !== 'AbortError') {
-                                    console.error(`Could not download ${filename}:`, error);
-                                } else {
-                                    throw error;
-                                }
+                                if (error.name !== 'AbortError') console.error(`Could not download ${filename}:`, error);
+                                throw error;
                             }
                         });
                         
                         updateProgress(100);
-
                         await new Promise(resolve => setTimeout(resolve, 400));
-                        
-                        indicator.classList.remove('is-active', 'is-downloading');
-
                     } catch (error) {
-                        if (error.name === 'AbortError') {
-                            console.log('Download canceled by user.');
-                        } else {
-                            console.error("Download failed:", error);
-                            alert(`An error occurred during the download: ${error.message}`);
-                        }
-                        indicator.classList.remove('is-downloading', 'is-active');
+                        if (error.name !== 'AbortError') console.error("Download failed:", error);
                     } finally {
+                        indicator.classList.remove('is-active', 'is-downloading');
                         downloadAbortController = null;
                         setTimeout(() => updateProgress(0), 400);
                     }
                 };
-
                 performDownloads();
                 break;
             }
@@ -1144,62 +1091,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     galleryContextMenu.addEventListener('click', (e) => {
         galleryContextMenu.style.display = 'none';
-        const targetId = e.target.id;
-
-        switch (targetId) {
-            case 'gallery-context-add':
-                if (imageUploadInput) {
-                    imageUploadInput.click();
-                }
-                break;
-            case 'gallery-context-sort':
-                alert('Functionality for "Sort By" is not yet implemented.');
-                break;
-            case 'gallery-context-view':
-                alert('Functionality for "Show View Options" is not yet implemented.');
-                break;
-        }
+        if (e.target.id === 'gallery-context-add' && imageUploadInput) imageUploadInput.click();
     });
     
     if (imageUploadInput) {
         imageUploadInput.addEventListener('change', async (event) => {
             const files = event.target.files;
-            if (!files.length) {
-                return;
-            }
-    
+            if (!files.length) return;
             const UPLOAD_URL = 'https://r2-upload-presigner.witcherarchive.workers.dev';
-            const uploadPromises = [];
-    
             document.body.style.cursor = 'wait';
-    
-            for (const file of files) {
-                const uploadTask = fetch(UPLOAD_URL, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': file.type,
-                        'X-Custom-Filename': file.name
-                    },
-                    body: file
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        return response.text().then(text => { 
-                            throw new Error(`Failed to upload ${file.name}: ${text}`); 
-                        });
-                    }
-                    return response.json();
-                });
-    
-                uploadPromises.push(uploadTask);
-            }
-    
             try {
-                await Promise.all(uploadPromises);
+                await Promise.all(Array.from(files).map(file => fetch(UPLOAD_URL, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': file.type, 'X-Custom-Filename': file.name },
+                    body: file
+                }).then(response => { if (!response.ok) throw new Error(`Upload failed for ${file.name}`); })));
                 alert(`${files.length} image(s) uploaded successfully!`);
                 location.reload(); 
             } catch (error) {
-                console.error('An error occurred during one of the uploads:', error);
                 alert(`An error occurred during upload: ${error.message}`);
             } finally {
                 document.body.style.cursor = 'default';
@@ -1226,235 +1135,101 @@ document.addEventListener('DOMContentLoaded', () => {
     const infoPanel = document.querySelector('.modal-info-panel');
     let currentImageIndex = -1;
 
-    const KEY_TO_LABEL_MAP = {
-        season: 'Season',
-        episode: 'Episode',
-        cast: 'Cast',
-        crew: 'Crew',
-        castAndCrew: 'Cast & Crew',
-        characters: 'Characters'
-    };
-
+    const KEY_TO_LABEL_MAP = { season: 'Season', episode: 'Episode', cast: 'Cast', crew: 'Crew', castAndCrew: 'Cast & Crew', characters: 'Characters' };
     const primaryKeys = ['season', 'episode', 'cast', 'crew', 'castAndCrew', 'characters'];
-
-
-    modalContent.addEventListener('mouseenter', () => {
-        if (modal.classList.contains('is-visible')) {
-            document.body.style.overflow = 'hidden';
-        }
-    });
-
-    modalContent.addEventListener('mouseleave', () => {
-        if (modal.classList.contains('is-visible')) {
-            document.body.style.overflow = '';
-        }
-    });
 
     function showImage(index) {
         const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
-        if (index < 0 || index >= visibleFigures.length) {
-            return;
-        }
+        if (index < 0 || index >= visibleFigures.length) return;
         currentImageIndex = index;
-        const figure = visibleFigures[currentImageIndex];
-        const img = figure.querySelector('img');
+        const img = visibleFigures[currentImageIndex].querySelector('img');
 
         downloadBtn.dataset.fullsrc = img.dataset.fullsrc; 
-
-        modalImg.src = img.src;
-
-        const highResImage = new Image();
-        highResImage.src = img.dataset.fullsrc;
-        highResImage.onload = function() {
-            modalImg.src = highResImage.src;
-        };
+        modalImg.src = img.src; // Show thumbnail first
+        new Image().src = img.dataset.fullsrc; // Preload high-res
         modalImg.alt = img.alt;
-
         modalFilename.textContent = img.dataset.filename;
 
         let primaryHTML = '<dl class="info-grid">';
         let detailsHTML = '<dl class="info-grid">';
-        const dataset = img.dataset;
-
         primaryKeys.forEach(key => {
-            if (dataset[key] && dataset[key].trim() !== '' && dataset[key].trim() !== '-' && dataset[key].trim() !== '- (-)') {
-                const label = KEY_TO_LABEL_MAP[key] || key;
-                primaryHTML += `<div class="info-item"><dt>${label}</dt><dd>${dataset[key]}</dd></div>`;
+            if (img.dataset[key] && img.dataset[key].trim() !== '-' && img.dataset[key].trim() !== '- (-)') {
+                primaryHTML += `<div class="info-item"><dt>${KEY_TO_LABEL_MAP[key] || key}</dt><dd>${img.dataset[key]}</dd></div>`;
             }
         });
-
         let hasDetails = false;
         const handledKeys = ['search', 'fullsrc', 'filename', ...primaryKeys];
-
-        for (const key in dataset) {
-            if (!handledKeys.includes(key) && dataset[key] && dataset[key].trim() !== '' && dataset[key].trim() !== '-') {
+        for (const key in img.dataset) {
+            if (!handledKeys.includes(key) && img.dataset[key] && img.dataset[key].trim() !== '-') {
                 hasDetails = true;
                 let label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-                let value = dataset[key];
+                let value = img.dataset[key];
                 if (label === 'Dimensions' && value.includes('×')) {
-                    const parts = value.split('×');
-                    value = `${parts[0]}<span class="dimensions-x">×</span>${parts[1]}`;
+                    value = `${value.split('×')[0]}<span class="dimensions-x">×</span>${value.split('×')[1]}`;
                 }
                 detailsHTML += `<div class="info-item"><dt>${label}</dt><dd>${value}</dd></div>`;
             }
         }
-
         primaryHTML += '</dl>';
         detailsHTML += '</dl>';
+        modalMetadata.innerHTML = primaryHTML + (hasDetails ? '<h4 class="metadata-header">Metadata</h4>' + detailsHTML : '');
 
-        let finalHTML = primaryHTML;
-        if (hasDetails) {
-            finalHTML += '<h4 class="metadata-header">Metadata</h4>' + detailsHTML;
-        }
-
-        modalMetadata.innerHTML = finalHTML;
-
-        document.body.classList.add('is-article-visible');
         modal.classList.add('is-visible');
+        document.body.classList.add('is-article-visible');
     }
 
     downloadBtn.addEventListener('click', async (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-
+        event.preventDefault(); event.stopPropagation();
         const url = event.currentTarget.dataset.fullsrc; 
         const filename = modalFilename.textContent || url.split('/').pop();
-
-        if (!url || !filename) {
-            console.error("Modal download failed: URL or filename not found.");
-            alert("Could not download the image because its data is missing.");
-            return;
-        }
-
+        if (!url || !filename) return;
         const buttonText = downloadBtn.textContent;
         try {
-            downloadBtn.textContent = 'Downloading...';
-            downloadBtn.disabled = true;
-
+            downloadBtn.textContent = 'Downloading...'; downloadBtn.disabled = true;
             const blob = await fetchImageBlob(url);
             triggerDownload(blob, filename);
-
-        } catch (error) {
-            console.error("Modal download failed:", error);
-            alert("An error occurred while trying to download the image.");
-        } finally {
-            setTimeout(() => {
-                downloadBtn.textContent = buttonText;
-                downloadBtn.disabled = false;
-            }, 1000);
-        }
+        } catch (error) { console.error("Modal download failed:", error); } 
+        finally { setTimeout(() => { downloadBtn.textContent = buttonText; downloadBtn.disabled = false; }, 1000); }
     });
 
-    downloadBtn.addEventListener('dragstart', function(event) {
-        event.preventDefault();
-    });
-
-    function showNextImage() {
-        const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
-        let nextIndex = (currentImageIndex + 1) % visibleFigures.length;
-        showImage(nextIndex);
-    }
-
-    function showPrevImage() {
-        const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
-        let prevIndex = (currentImageIndex - 1 + visibleFigures.length) % visibleFigures.length;
-        showImage(prevIndex);
-    }
+    const showNextImage = () => showImage((currentImageIndex + 1) % gallery.querySelectorAll('figure:not([style*="display: none"])').length);
+    const showPrevImage = () => showImage((currentImageIndex - 1 + gallery.querySelectorAll('figure:not([style*="display: none"])').length) % gallery.querySelectorAll('figure:not([style*="display: none"])').length);
 
     gallery.addEventListener('dblclick', function(event) {
         const figure = event.target.closest('figure');
         if (!figure) return;
-        const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
-        const index = visibleFigures.indexOf(figure);
-        if (index > -1) {
-            showImage(index);
-        }
+        const index = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])')).indexOf(figure);
+        if (index > -1) showImage(index);
     });
 
     function hideModal() {
-        document.body.classList.remove('is-article-visible');
         modal.classList.remove('is-visible');
-        currentImageIndex = -1;
-
-        document.body.style.overflow = '';
-
-        setTimeout(() => {
-            modalImg.src = "";
-            modalFilename.textContent = "";
-            modalMetadata.innerHTML = "";
-        }, 250);
+        document.body.classList.remove('is-article-visible');
+        setTimeout(() => { modalImg.src = ""; modalFilename.textContent = ""; modalMetadata.innerHTML = ""; }, 250);
     }
-
-    modalContent.addEventListener('click', function(event) {
-        event.stopPropagation();
-    });
-
+    
+    modalContent.addEventListener('click', e => e.stopPropagation());
     closeModal.addEventListener('click', hideModal);
     prevButton.addEventListener('click', showPrevImage);
     nextButton.addEventListener('click', showNextImage);
-
-    let mouseDownOnOverlay = false;
-
-    modal.addEventListener('mousedown', function(event) {
-        if (event.target === modal) {
-            mouseDownOnOverlay = true;
-        }
-    });
-
-    modal.addEventListener('mouseup', function(event) {
-        if (event.target === modal && mouseDownOnOverlay) {
-            hideModal();
-        }
-        mouseDownOnOverlay = false;
-    });
+    modal.addEventListener('click', hideModal);
 
     document.addEventListener('keydown', function(event) {
         if (modal.classList.contains('is-visible')) {
-            if (event.key === 'Escape') {
-                hideModal();
-            } else if (event.key === 'ArrowRight') {
-                showNextImage();
-            } else if (event.key === 'ArrowLeft') {
-                showPrevImage();
-            }
+            if (event.key === 'Escape') hideModal();
+            else if (event.key === 'ArrowRight') showNextImage();
+            else if (event.key === 'ArrowLeft') showPrevImage();
         }
     });
 
-    imageContainer.addEventListener('mousedown', (e) => {
-        if (e.button === 0) {
-            document.body.classList.add('is-selecting-text');
-        }
-    });
-
+    imageContainer.addEventListener('mousedown', (e) => { if (e.button === 0) document.body.classList.add('is-selecting-text'); });
     infoPanel.addEventListener('mousedown', (e) => {
-        const validTargets = '.info-grid dt, .info-grid dd, #modal-filename, .metadata-header';
         if (e.button === 0) {
             document.body.classList.add('is-selecting-text');
-            if (e.target.matches(validTargets)) {
-                e.target.classList.add('selection-active');
-            }
-        }
-        else if (e.button === 2) {
-            if (e.target.matches(validTargets)) {
-                const targetElement = e.target;
-                const selection = window.getSelection();
-                const range = document.createRange();
-                range.selectNodeContents(targetElement);
-                selection.removeAllRanges();
-                selection.addRange(range);
-            }
+            if (e.target.closest('.info-item, #modal-filename, .metadata-header')) e.target.classList.add('selection-active');
         }
     });
-
-    document.addEventListener('mouseup', () => {
-        if (document.body.classList.contains('is-selecting-text')) {
-            document.body.classList.remove('is-selecting-text');
-            const activeElement = document.querySelector('.selection-active');
-            if (activeElement) {
-                activeElement.classList.remove('selection-active');
-            }
-        }
-    });
+    document.addEventListener('mouseup', () => { document.body.classList.remove('is-selecting-text'); document.querySelector('.selection-active')?.classList.remove('selection-active'); });
 });
 
 /*Custom Scrollbar Advanced*/
@@ -1470,14 +1245,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateThumbPosition() {
         const scrollableHeight = document.documentElement.scrollHeight;
         const viewportHeight = window.innerHeight;
+        if (scrollableHeight <= viewportHeight) return;
         const trackHeight = track.offsetHeight;
         const thumbHeight = thumb.offsetHeight;
-
-        if (scrollableHeight <= viewportHeight) return;
-
         const scrollPercentage = window.scrollY / (scrollableHeight - viewportHeight);
         const thumbPosition = scrollPercentage * (trackHeight - thumbHeight);
-
         thumb.style.transform = `translateY(${thumbPosition}px)`;
     }
 
@@ -1485,29 +1257,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const headerHeight = header.offsetHeight;
         const scrollableHeight = document.documentElement.scrollHeight;
         const viewportHeight = window.innerHeight;
-
-        if (scrollableHeight <= viewportHeight) {
-            track.style.display = 'none';
-            return;
-        }
-        track.style.display = 'block';
-        thumb.classList.remove('is-near');
+        track.style.display = (scrollableHeight <= viewportHeight) ? 'none' : 'block';
         track.style.top = `${headerHeight}px`;
         track.style.height = `calc(100% - ${headerHeight}px)`;
-
         const trackHeight = track.offsetHeight;
         const thumbHeight = Math.max((viewportHeight / scrollableHeight) * trackHeight, 20);
         thumb.style.height = `${thumbHeight}px`;
-
         updateThumbPosition();
     }
 
     document.addEventListener('scroll', () => {
         if (!ticking) {
-            window.requestAnimationFrame(() => {
-                updateThumbPosition();
-                ticking = false;
-            });
+            window.requestAnimationFrame(() => { updateThumbPosition(); ticking = false; });
             ticking = true;
         }
     });
@@ -1523,9 +1284,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const viewportHeight = window.innerHeight;
             const trackHeight = track.offsetHeight;
             const thumbHeight = thumb.offsetHeight;
-
             if (trackHeight - thumbHeight === 0) return;
-
             const deltaScroll = (deltaY / (trackHeight - thumbHeight)) * (scrollableHeight - viewportHeight);
             window.scrollTo(0, startScrollTop + deltaScroll);
         }
@@ -1539,41 +1298,24 @@ document.addEventListener('DOMContentLoaded', () => {
         document.addEventListener('mouseup', onMouseUp);
     });
 
-    window.addEventListener('resize', setupScrollbar);
-    window.addEventListener('load', setupScrollbar);
-    window.addEventListener('orientationchange', setupScrollbar);
-    window.addEventListener('galleryFiltered', setupScrollbar);
-
+    const setupEvents = ['resize', 'load', 'orientationchange', 'galleryFiltered'];
+    setupEvents.forEach(event => window.addEventListener(event, setupScrollbar));
     setupScrollbar();
     setTimeout(setupScrollbar, 500);
 });
 
-/*
-==================================================================
-// Scrollbar Proximity Effect
-==================================================================
-*/
+/* Scrollbar Proximity Effect */
 document.addEventListener('DOMContentLoaded', () => {
     const thumb = document.getElementById('custom-scrollbar-thumb');
     if (!thumb) return;
-
     const proximity = 30;
     let ticking = false;
-
     document.addEventListener('mousemove', (e) => {
         if (!ticking) {
             window.requestAnimationFrame(() => {
                 const thumbRect = thumb.getBoundingClientRect();
-
-                const isHorizontallyNear = e.clientX >= thumbRect.left - proximity;
-                const isVerticallyNear = (e.clientY >= thumbRect.top - proximity) && (e.clientY <= thumbRect.bottom + proximity);
-
-                if (isHorizontallyNear && isVerticallyNear && e.clientX < window.innerWidth - 2) {
-                    thumb.classList.add('is-near');
-                } else {
-                    thumb.classList.remove('is-near');
-                }
-
+                const isNear = e.clientX >= thumbRect.left - proximity && e.clientY >= thumbRect.top - proximity && e.clientY <= thumbRect.bottom + proximity && e.clientX < window.innerWidth - 2;
+                thumb.classList.toggle('is-near', isNear);
                 ticking = false;
             });
             ticking = true;
@@ -1581,139 +1323,62 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-/*
-==================================================================
-// Autocomplete Search Suggestions Logic (MODIFIED)
-==================================================================
-*/
+/* Autocomplete Search Suggestions Logic */
 document.addEventListener('galleryLoaded', () => {
     const searchInput = document.getElementById('search-input');
-    const searchWrapper = document.getElementById('search-wrapper');
     const suggestionsContainer = document.getElementById('suggestions-container');
     const galleryItems = document.querySelectorAll('#photo-gallery figure img');
 
-    if (!searchInput || !suggestionsContainer || galleryItems.length === 0) {
-        return;
-    }
+    if (!searchInput || !suggestionsContainer || galleryItems.length === 0) return;
 
-    // Function to rebuild the search query and trigger filtering
-    function runSearchFromPills() {
-        const pills = searchWrapper.querySelectorAll('.search-pill');
-        let pillQueries = [];
-        pills.forEach(pill => {
-            pillQueries.push(pill.dataset.value);
-        });
-        
-        const fullQueryText = pillQueries.join(' ') + ' ' + searchInput.value;
-        
-        // This is a simplified version of your original search function
-        const simplifiedQuery = fullQueryText.toLowerCase().trim();
-        const searchTerms = simplifiedQuery.split(' ').filter(term => term.length > 0);
-        
-        const galleryFigures = document.querySelectorAll('#photo-gallery figure');
-        galleryFigures.forEach(function(item) {
-            const img = item.querySelector('img');
-            const searchData = (img.dataset.search || "").toLowerCase();
-            const isMatch = searchTerms.every(term => searchData.includes(term));
-            item.style.display = isMatch ? 'flex' : 'none';
-        });
-
-        // Update placeholder based on pills
-        searchInput.placeholder = pills.length > 0 ? '' : 'Search by filename, character, actor, etc...';
-        
-        window.dispatchEvent(new CustomEvent('galleryFiltered'));
-    }
-
-    // --- Pill Creation and Management ---
-    function createPill(text) {
-        const pill = document.createElement('span');
-        pill.className = 'search-pill';
-        pill.setAttribute('draggable', true);
-        pill.dataset.value = text;
-
-        const pillText = document.createElement('span');
-        pillText.className = 'search-pill-text';
-        pillText.textContent = text;
-        
-        const removeBtn = document.createElement('span');
-        removeBtn.className = 'remove-pill';
-        removeBtn.innerHTML = '&times;';
-        removeBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            pill.remove();
-            runSearchFromPills();
-        });
-
-        pill.appendChild(pillText);
-        pill.appendChild(removeBtn);
-
-        // Drag and Drop functionality
-        pill.addEventListener('dragstart', (e) => {
-            e.dataTransfer.setData('text/plain', e.target.dataset.value);
-            e.dataTransfer.effectAllowed = 'copy';
-        });
-
-        // Click to select functionality
-        pill.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const currentlySelected = searchWrapper.querySelector('.search-pill.selected');
-            if (currentlySelected) {
-                currentlySelected.classList.remove('selected');
+    const getSearchQuery = () => {
+        const pills = [];
+        let textContent = '';
+        searchInput.childNodes.forEach(node => {
+            if (node.nodeType === Node.ELEMENT_NODE && node.classList.contains('pill')) {
+                pills.push({ type: node.dataset.type, value: node.dataset.value });
+            } else if (node.nodeType === Node.TEXT_NODE) {
+                textContent += node.textContent;
+            } else if (node.nodeType === Node.ELEMENT_NODE && (node.tagName === 'DIV' || node.tagName === 'BR')) {
+                textContent += ' ' + node.textContent;
             }
-            e.currentTarget.classList.add('selected');
-            searchInput.focus();
         });
+        return { text: textContent.replace(/\s+/g, ' ').trim(), pills };
+    };
 
-        return pill;
-    }
-    
-    // --- Autocomplete data setup ---
     const searchTerms = new Set();
     galleryItems.forEach(img => {
-        const peopleSources = [img.dataset.cast, img.dataset.crew, img.dataset.castAndCrew, img.dataset.characters];
-        peopleSources.forEach(source => {
-            if (source) {
-                source.split(',').forEach(term => {
-                    const cleaned = term.trim();
-                    if (cleaned) searchTerms.add(cleaned);
-                });
-            }
+        const sources = [img.dataset.cast, img.dataset.crew, img.dataset.castAndCrew, img.dataset.characters];
+        sources.forEach(source => {
+            if (source) source.split(',').forEach(term => { if (term.trim()) searchTerms.add(term.trim()); });
         });
     });
     const sortedSearchTerms = Array.from(searchTerms).sort((a, b) => a.localeCompare(b));
     let activeSuggestionIndex = -1;
 
     function updateSuggestions() {
-        const query = searchInput.value.toLowerCase();
+        const query = getSearchQuery().text.toLowerCase();
         suggestionsContainer.innerHTML = '';
         activeSuggestionIndex = -1;
 
-        // --- NEW: Get the values of all pills that currently exist ---
-        const existingPills = searchWrapper.querySelectorAll('.search-pill');
-        const existingPillValues = new Set();
-        existingPills.forEach(pill => {
-            // Add the pill's value to a Set for quick lookups
-            existingPillValues.add(pill.dataset.value.toLowerCase());
-        });
+        const existingPillValues = new Set(getSearchQuery().pills.map(p => p.value.toLowerCase()));
 
         if (query.length === 0) {
             suggestionsContainer.style.display = 'none';
             return;
         }
 
-        // --- MODIFIED: The filter now also checks if a term is already a pill ---
         const matches = sortedSearchTerms.filter(term => {
             const termLower = term.toLowerCase();
-            // A term is a match if it starts with the query AND is not already an active pill
             return termLower.startsWith(query) && !existingPillValues.has(termLower);
         }).slice(0, 7);
 
         if (matches.length > 0) {
-            matches.forEach(term => {
+            matches.forEach((term, index) => {
                 const item = document.createElement('div');
                 item.className = 'suggestion-item';
                 item.textContent = term;
-                item.addEventListener('mousedown', (e) => { // mousedown to fire before blur
+                item.addEventListener('mousedown', (e) => {
                     e.preventDefault();
                     selectSuggestion(term);
                 });
@@ -1726,26 +1391,19 @@ document.addEventListener('galleryLoaded', () => {
     }
 
     function selectSuggestion(value) {
-        searchWrapper.insertBefore(createPill(value), searchInput);
-        searchInput.value = '';
+        window.insertPill('tag', value);
+        updateSuggestions();
         suggestionsContainer.style.display = 'none';
-        runSearchFromPills();
-        searchInput.focus();
     }
 
     function updateActiveSuggestion(items) {
         items.forEach((item, index) => {
             item.classList.toggle('active', index === activeSuggestionIndex);
-            if (index === activeSuggestionIndex) {
-                item.scrollIntoView({ block: 'nearest' });
-            }
+            if (index === activeSuggestionIndex) item.scrollIntoView({ block: 'nearest' });
         });
     }
 
-    searchInput.addEventListener('input', () => {
-        updateSuggestions();
-        runSearchFromPills();
-    });
+    searchInput.addEventListener('input', updateSuggestions);
 
     searchInput.addEventListener('keydown', (e) => {
         const items = suggestionsContainer.querySelectorAll('.suggestion-item');
@@ -1766,28 +1424,23 @@ document.addEventListener('galleryLoaded', () => {
                 }
                 break;
             case 'Enter':
-                if (activeSuggestionIndex > -1) {
-                    e.preventDefault();
-                    selectSuggestion(items[activeSuggestionIndex].textContent);
-                }
+                e.preventDefault();
+                searchInput.dispatchEvent(new CustomEvent('submitSearch'));
                 break;
             case 'Escape':
                 suggestionsContainer.style.display = 'none';
                 break;
-            case 'Backspace':
-                if (searchInput.value === '') {
-                    const selectedPill = searchWrapper.querySelector('.search-pill.selected');
-                    if (selectedPill) {
-                        selectedPill.remove();
-                        runSearchFromPills();
-                    } else {
-                        const allPills = searchWrapper.querySelectorAll('.search-pill');
-                        if (allPills.length > 0) {
-                            allPills[allPills.length - 1].classList.add('selected');
-                        }
+            case 'Backspace': {
+                const selection = window.getSelection();
+                if (selection.isCollapsed && selection.anchorOffset === 0) {
+                    const previousSibling = selection.anchorNode.previousSibling;
+                    if (previousSibling && previousSibling.nodeType === Node.ELEMENT_NODE && previousSibling.classList.contains('pill')) {
+                        previousSibling.remove();
+                        e.preventDefault();
                     }
                 }
                 break;
+            }
         }
     });
 
@@ -1796,39 +1449,72 @@ document.addEventListener('galleryLoaded', () => {
             suggestionsContainer.style.display = 'none';
         }
     });
+
+    // Make insertPill globally available for the autocomplete logic
+    window.insertPill = (type, value) => {
+        const event = new CustomEvent('insertPill', { detail: { type, value } });
+        document.dispatchEvent(event);
+    };
+
+    document.addEventListener('insertPill', (e) => {
+        const { type, value } = e.detail;
+        const editor = document.getElementById('search-input');
+        editor.focus();
+        
+        const sanitizedValue = value.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        
+        const pillHTML = `
+            <span class="pill" contenteditable="false" data-type="${type}" data-value="${sanitizedValue}">
+                ${sanitizedValue}
+                <span class="remove-pill" onclick="this.parentNode.remove()">&times;</span>
+            </span>&nbsp;`;
+
+        const selection = window.getSelection();
+        if (!selection.rangeCount) return;
+
+        let range = selection.getRangeAt(0);
+        let textNode = selection.anchorNode;
+
+        if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+            const currentText = textNode.textContent;
+            const queryText = getSearchQuery().text.toLowerCase();
+            const lastWordIndex = currentText.toLowerCase().lastIndexOf(queryText);
+            if (lastWordIndex !== -1) {
+                range.setStart(textNode, lastWordIndex);
+                range.setEnd(textNode, lastWordIndex + queryText.length);
+            }
+        }
+        range.deleteContents();
+
+        const fragment = document.createRange().createContextualFragment(pillHTML);
+        const lastNode = fragment.lastChild;
+        range.insertNode(fragment);
+        
+        range = range.cloneRange();
+        range.setStartAfter(lastNode);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+
+        editor.dispatchEvent(new Event('input', { bubbles: true }));
+    });
 });
 
-
+/* Copy Filenames on Ctrl+C */
 document.addEventListener('keydown', (e) => {
-    // Check for Ctrl+C or Command+C
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
-        const gallery = document.getElementById('photo-gallery');
         const searchInput = document.getElementById('search-input');
         const modal = document.getElementById('image-modal');
 
-        if (document.activeElement === searchInput || (modal && modal.classList.contains('is-visible'))) {
-            return;
-        }
+        if (document.activeElement === searchInput || (modal && modal.classList.contains('is-visible'))) return;
 
-        const selectedFigures = gallery.querySelectorAll('figure.selected');
-
-        if (selectedFigures.length > 0) {
-            e.preventDefault();
-
-            const filenames = Array.from(selectedFigures).map(figure => {
-                const img = figure.querySelector('img');
-                return img ? img.dataset.filename : '';
-            }).filter(name => name); 
-
-            if (filenames.length > 0) {
-                const textToCopy = filenames.join(' ');
-
-                navigator.clipboard.writeText(textToCopy).then(() => {
-                    console.log(`${filenames.length} filenames copied to clipboard.`);
-                }).catch(err => {
-                    console.error('Could not copy filenames to clipboard: ', err);
-                });
-            }
+        const selectedFigures = document.querySelectorAll('#photo-gallery figure.selected');
+        if (selectedFigures.length === 0) return;
+        
+        e.preventDefault();
+        const filenames = Array.from(selectedFigures).map(figure => figure.querySelector('img')?.dataset.filename).filter(Boolean);
+        if (filenames.length > 0) {
+            navigator.clipboard.writeText(filenames.join(' ')).catch(err => console.error('Could not copy filenames.', err));
         }
     }
 });
