@@ -390,7 +390,7 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
-    // START: NEW CONTENTEDITABLE EDITOR LOGIC
+    // START: CONTENTEDITABLE EDITOR LOGIC
     // =================================================================
     const editor = document.getElementById('search-input');
     const searchForm = editor.closest('form');
@@ -398,55 +398,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const clearSearchBtn = document.getElementById('clear-search');
 
     if (!editor || !searchForm) return;
-
-    /**
-     * Inserts a pill at the current cursor position in the editor.
-     * @param {string} type - The type of pill (e.g., 'tag', 'character').
-     * @param {string} value - The text content of the pill.
-     */
-    const insertPill = (type, value) => {
-        editor.focus();
-        
-        const sanitizedValue = value.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        
-        const pillHTML = `
-            <span class="pill" contenteditable="false" data-type="${type}" data-value="${sanitizedValue}">
-                ${sanitizedValue}
-                <span class="remove-pill" onclick="this.parentNode.remove()">&times;</span>
-            </span>&nbsp;`;
-
-        const selection = window.getSelection();
-        if (!selection.rangeCount) return;
-
-        let range = selection.getRangeAt(0);
-        
-        // This part is tricky: we want to replace the text that triggered the autocomplete.
-        // A simple way is to find the text node the cursor is in and replace its content.
-        let textNode = selection.anchorNode;
-        if (textNode && textNode.nodeType === Node.TEXT_NODE) {
-             // Find the last word the user typed, which triggered the suggestion
-             const textContent = textNode.textContent;
-             const query = getSearchQuery().text;
-             const lastWordIndex = textContent.toLowerCase().lastIndexOf(query.toLowerCase());
-             if (lastWordIndex !== -1) {
-                 range.setStart(textNode, lastWordIndex);
-                 range.setEnd(textNode, lastWordIndex + query.length);
-             }
-        }
-        range.deleteContents();
-
-        const fragment = document.createRange().createContextualFragment(pillHTML);
-        const lastNode = fragment.lastChild;
-        range.insertNode(fragment);
-        
-        range = range.cloneRange();
-        range.setStartAfter(lastNode);
-        range.collapse(true);
-        selection.removeAllRanges();
-        selection.addRange(range);
-
-        editor.dispatchEvent(new Event('input', { bubbles: true }));
-    };
 
     /**
      * Parses the editor's content and returns a structured query.
@@ -465,13 +416,11 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (node.nodeType === Node.TEXT_NODE) {
                 textContent += node.textContent;
             } else if (node.nodeType === Node.ELEMENT_NODE && (node.tagName === 'DIV' || node.tagName === 'BR')) {
-                // Handle cases where browsers wrap text in <div> or add <br>
                 textContent += ' ' + node.textContent;
             }
         });
         
         const text = textContent.replace(/\s+/g, ' ').trim();
-
         return { text, pills };
     };
 
@@ -508,13 +457,31 @@ document.addEventListener('DOMContentLoaded', () => {
         
         window.dispatchEvent(new CustomEvent('galleryFiltered'));
     };
+    
+    /**
+     * Checks if the editor is empty and toggles a class to show/hide the placeholder.
+     */
+    const updatePlaceholderVisibility = () => {
+        const query = getSearchQuery();
+        const isEffectivelyEmpty = query.text === '' && query.pills.length === 0;
+
+        if (isEffectivelyEmpty) {
+            editor.classList.add('is-placeholder-visible');
+        } else {
+            editor.classList.remove('is-placeholder-visible');
+        }
+    };
 
     // --- Event Listeners for the Editor ---
-    editor.addEventListener('input', runSearch);
+    editor.addEventListener('input', () => {
+        runSearch();
+        updatePlaceholderVisibility();
+    });
     
     editor.addEventListener('DOMNodeRemoved', (e) => {
         if (e.target.classList && e.target.classList.contains('pill')) {
             runSearch();
+            updatePlaceholderVisibility();
         }
     });
 
@@ -527,21 +494,23 @@ document.addEventListener('DOMContentLoaded', () => {
     clearSearchBtn.addEventListener('click', () => {
         editor.innerHTML = '';
         runSearch();
+        updatePlaceholderVisibility();
         editor.focus();
     });
 
     editor.addEventListener('submitSearch', () => {
         const activeSuggestion = suggestionsContainer.querySelector('.suggestion-item.active');
         const firstSuggestion = suggestionsContainer.querySelector('.suggestion-item');
-        
         const suggestionToClick = activeSuggestion || firstSuggestion;
-
         if (suggestionsContainer.style.display === 'block' && suggestionToClick) {
             suggestionToClick.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
         }
     });
+
+    // Set initial placeholder state
+    updatePlaceholderVisibility();
     // =================================================================
-    // END: NEW CONTENTEDITABLE EDITOR LOGIC
+    // END: CONTENTEDITABLE EDITOR LOGIC
     // =================================================================
     
     const wrapper = document.getElementById('wrapper');
@@ -558,20 +527,16 @@ document.addEventListener('DOMContentLoaded', () => {
     let isMarquee = false;
     let startPos = { x: 0, y: 0 };
     let preMarqueeSelectedItems = new Set();
-
     let hasDragged = false;
     let mouseDownItem = null;
     let downloadAbortController = null;
-    
     const indicator = document.getElementById('download-indicator');
     const cancelBtn = indicator.querySelector('.cancel-icon');
-
     let isAutoScrolling = false;
     let scrollSpeedY = 0;
     let lastClientX = 0;
     let lastClientY = 0;
     let lastClientModifierKey = false;
-
 
     cancelBtn.addEventListener('click', () => {
         if (downloadAbortController) {
@@ -579,12 +544,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    /*
-    ==================================================================
-    // START: FINDER-STYLE ARROW KEY NAVIGATION LOGIC
-    ==================================================================
-    */
-
+    // --- FINDER-STYLE ARROW KEY NAVIGATION LOGIC ---
     let selectionAnchor = null;
     let lastSelectedItem = null;
     let gridMetrics = { cols: 0 };
@@ -595,72 +555,45 @@ document.addEventListener('DOMContentLoaded', () => {
             gridMetrics.cols = 0;
             return;
         }
-
         const firstItemTop = visibleItems[0].offsetTop;
         let cols = 0;
         for (const item of visibleItems) {
-            if (item.offsetTop === firstItemTop) {
-                cols++;
-            } else {
-                break;
-            }
+            if (item.offsetTop === firstItemTop) cols++;
+            else break;
         }
         gridMetrics.cols = cols > 0 ? cols : 1;
     }
 
     function applyRangeSelection() {
         if (!selectionAnchor) return;
-
         const visibleItems = Array.from(items).filter(item => item.style.display !== 'none');
         const anchorIndex = visibleItems.indexOf(selectionAnchor);
         const focusIndex = visibleItems.indexOf(lastSelectedItem);
-
         if (anchorIndex === -1 || focusIndex === -1) return;
-
         const start = Math.min(anchorIndex, focusIndex);
         const end = Math.max(anchorIndex, focusIndex);
-
-        const itemsToSelect = new Set();
-        for (let i = start; i <= end; i++) {
-            itemsToSelect.add(visibleItems[i]);
-        }
-
+        const itemsToSelect = new Set(visibleItems.slice(start, end + 1));
         for(const item of visibleItems) {
-            if(itemsToSelect.has(item)) {
-                if (!selectedItems.has(item)) {
-                     item.classList.add('selected');
-                     selectedItems.add(item);
-                }
-            } else {
-                if (selectedItems.has(item)) {
-                    item.classList.remove('selected');
-                    selectedItems.delete(item);
-                }
+            const shouldBeSelected = itemsToSelect.has(item);
+            const isSelected = selectedItems.has(item);
+            if (shouldBeSelected && !isSelected) {
+                 item.classList.add('selected');
+                 selectedItems.add(item);
+            } else if (!shouldBeSelected && isSelected) {
+                item.classList.remove('selected');
+                selectedItems.delete(item);
             }
         }
     }
 
     document.addEventListener('keydown', (e) => {
-        const activeEl = document.activeElement;
-        const isSearchActive = activeEl && activeEl.id === 'search-input';
-        
-        if (isSearchActive) {
-            // Let the search input's own keydown handler manage events
-            return; 
-        }
-
-        if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-            return;
-        }
-
+        if (document.activeElement.id === 'search-input') return;
+        if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
         e.preventDefault();
-
         const visibleItems = Array.from(items).filter(item => item.style.display !== 'none');
         if (visibleItems.length === 0) return;
-
         let currentIndex = lastSelectedItem ? visibleItems.indexOf(lastSelectedItem) : -1;
         let newIndex = -1;
-
         if (currentIndex === -1) {
              if (e.key === 'ArrowRight' || e.key === 'ArrowDown') newIndex = 0;
              else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') newIndex = visibleItems.length -1;
@@ -672,44 +605,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'ArrowDown': newIndex = currentIndex + gridMetrics.cols; break;
             }
         }
-
         if (newIndex >= 0 && newIndex < visibleItems.length) {
             const newItem = visibleItems[newIndex];
-
             if (e.shiftKey) {
                 lastSelectedItem = newItem;
                 applyRangeSelection();
             } else {
-                clearSelection();
-                toggleSelection(newItem);
+                selectedItems.forEach(item => item.classList.remove('selected'));
+                selectedItems.clear();
+                selectedItems.add(newItem);
+                newItem.classList.add('selected');
                 selectionAnchor = newItem;
                 lastSelectedItem = newItem;
             }
-
             newItem.scrollIntoView({ block: 'nearest', inline: 'nearest' });
         }
     });
 
     calculateGridMetrics();
-
-    const galleryObserver = new ResizeObserver(() => {
-        calculateGridMetrics();
-    });
+    const galleryObserver = new ResizeObserver(calculateGridMetrics);
     galleryObserver.observe(gallery);
-    
-    window.addEventListener('galleryFiltered', () => {
-        setTimeout(calculateGridMetrics, 50);
-    });
+    window.addEventListener('galleryFiltered', () => setTimeout(calculateGridMetrics, 50));
 
-    /*
-    ==================================================================
-    // END: FINDER-STYLE ARROW KEY NAVIGATION LOGIC
-    ==================================================================
-    */
-
-    const isSelected = (el) => selectedItems.has(el);
+    // --- GALLERY SELECTION LOGIC ---
     const toggleSelection = (el) => {
-        if (isSelected(el)) {
+        if (selectedItems.has(el)) {
             selectedItems.delete(el);
             el.classList.remove('selected');
         } else {
@@ -718,45 +638,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     const clearSelection = () => {
-        Array.from(selectedItems).forEach(item => item.classList.remove('selected'));
+        selectedItems.forEach(item => item.classList.remove('selected'));
         selectedItems.clear();
-    };
-    const setSelection = (el, shouldBeSelected) => {
-        if (shouldBeSelected) {
-            if (!isSelected(el)) {
-                selectedItems.add(el);
-                el.classList.add('selected');
-            }
-        } else {
-            if (isSelected(el)) {
-                selectedItems.delete(el);
-                el.classList.remove('selected');
-            }
-        }
     };
     
     function updateMarqueeAndSelection(clientX, clientY, isModifier) {
         marquee.style.visibility = 'visible';
-    
         const galleryRect = gallery.getBoundingClientRect();
-        let rawX = clientX - galleryRect.left;
-        let rawY = clientY - galleryRect.top;
-    
         const marqueeRect = {
-            x: Math.round(Math.min(startPos.x, rawX)),
-            y: Math.round(Math.min(startPos.y, rawY)),
-            w: Math.round(Math.abs(startPos.x - rawX)),
-            h: Math.round(Math.abs(startPos.y - rawY))
+            x: Math.min(startPos.x, clientX - galleryRect.left),
+            y: Math.min(startPos.y, clientY - galleryRect.top),
+            w: Math.abs(startPos.x - (clientX - galleryRect.left)),
+            h: Math.abs(startPos.y - (clientY - galleryRect.top))
         };
-    
         marquee.style.left = `${marqueeRect.x}px`;
         marquee.style.top = `${marqueeRect.y}px`;
         marquee.style.width = `${marqueeRect.w}px`;
         marquee.style.height = `${marqueeRect.h}px`;
-    
         for (const item of items) {
             if (item.style.display === 'none') continue;
-    
             const itemRect = item.getBoundingClientRect();
             const relativeItemRect = {
                 left: itemRect.left - galleryRect.left,
@@ -764,17 +664,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 right: itemRect.right - galleryRect.left,
                 bottom: itemRect.bottom - galleryRect.top
             };
-    
-            const intersects =
-                marqueeRect.x < relativeItemRect.right &&
-                marqueeRect.x + marqueeRect.w > relativeItemRect.left &&
-                marqueeRect.y < relativeItemRect.bottom &&
-                marqueeRect.y + marqueeRect.h > relativeItemRect.top;
-    
-            if (isModifier) {
-                setSelection(item, intersects ? !preMarqueeSelectedItems.has(item) : preMarqueeSelectedItems.has(item));
-            } else {
-                setSelection(item, intersects);
+            const intersects = marqueeRect.x < relativeItemRect.right && marqueeRect.x + marqueeRect.w > relativeItemRect.left &&
+                             marqueeRect.y < relativeItemRect.bottom && marqueeRect.y + marqueeRect.h > relativeItemRect.top;
+            const shouldBeSelected = isModifier ? (intersects ? !preMarqueeSelectedItems.has(item) : preMarqueeSelectedItems.has(item)) : intersects;
+            const isItemSelected = selectedItems.has(item);
+            if (shouldBeSelected && !isItemSelected) {
+                item.classList.add('selected');
+                selectedItems.add(item);
+            } else if (!shouldBeSelected && isItemSelected) {
+                item.classList.remove('selected');
+                selectedItems.delete(item);
             }
         }
     }
@@ -784,70 +683,45 @@ document.addEventListener('DOMContentLoaded', () => {
             isAutoScrolling = false;
             return;
         }
-    
         window.scrollBy(0, Math.round(scrollSpeedY));
         updateMarqueeAndSelection(lastClientX, lastClientY, lastClientModifierKey);
-    
         requestAnimationFrame(autoScrollLoop);
     }
 
     wrapper.addEventListener('mousedown', (e) => {
-        if (editor.contains(e.target)) {
-            return;
-        }
-
+        if (editor.contains(e.target)) return;
         if (e.button !== 0 || header.contains(e.target) || footer.contains(e.target)) {
             isMarquee = false; 
             return;
         }
-
-        if(gallery.contains(e.target) || e.target === gallery) {
+        if (gallery.contains(e.target) || e.target === gallery) {
             e.preventDefault();
-            if (editor) editor.blur();
+            editor.blur();
         }
-
         hasDragged = false;
         isMarquee = true;
         mouseDownItem = e.target.closest('figure');
-
         const galleryRect = gallery.getBoundingClientRect();
-        startPos = {
-            x: e.clientX - galleryRect.left,
-            y: e.clientY - galleryRect.top,
-        };
-
+        startPos = { x: e.clientX - galleryRect.left, y: e.clientY - galleryRect.top };
         preMarqueeSelectedItems = new Set(selectedItems);
     });
 
     document.addEventListener('mousemove', (e) => {
         if (!isMarquee) return;
-        
         hasDragged = true;
         document.body.classList.add('is-marquee-dragging');
-    
         lastClientX = e.clientX;
         lastClientY = e.clientY;
         lastClientModifierKey = e.metaKey || e.ctrlKey || e.shiftKey;
-        
         updateMarqueeAndSelection(e.clientX, e.clientY, lastClientModifierKey);
-
-        const viewportHeight = window.innerHeight;
         const scrollThreshold = 60; 
-        const minScrollSpeed = 2;
-        const maxScrollSpeed = 30;
-    
-        if (e.clientY > viewportHeight - scrollThreshold) {
-            const overshoot = e.clientY - (viewportHeight - scrollThreshold);
-            const speedRatio = overshoot / scrollThreshold;
-            scrollSpeedY = minScrollSpeed + (speedRatio * (maxScrollSpeed - minScrollSpeed));
+        if (e.clientY > window.innerHeight - scrollThreshold) {
+            scrollSpeedY = (e.clientY - (window.innerHeight - scrollThreshold)) / scrollThreshold * 28 + 2;
         } else if (e.clientY < scrollThreshold) {
-            const overshoot = scrollThreshold - e.clientY;
-            const speedRatio = overshoot / scrollThreshold;
-            scrollSpeedY = -(minScrollSpeed + (speedRatio * (maxScrollSpeed - minScrollSpeed)));
+            scrollSpeedY = -((scrollThreshold - e.clientY) / scrollThreshold * 28 + 2);
         } else {
             scrollSpeedY = 0;
         }
-    
         if (scrollSpeedY !== 0 && !isAutoScrolling) {
             isAutoScrolling = true;
             autoScrollLoop();
@@ -856,57 +730,33 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    const endDragAction = (e) => {
+    document.addEventListener('mouseup', (e) => {
         isAutoScrolling = false;
         scrollSpeedY = 0;
-
         document.body.classList.remove('is-marquee-dragging');
         if (!isMarquee) return;
-
         if (!hasDragged) {
-            const isShift = e.shiftKey;
-            const isModifier = e.metaKey || e.ctrlKey;
+            const isModifier = e.metaKey || e.ctrlKey || e.shiftKey;
             const clickedOnItem = mouseDownItem;
-
             if (clickedOnItem) {
-                if (isShift || isModifier) {
+                if (isModifier) {
                     toggleSelection(clickedOnItem);
-                    if (isSelected(clickedOnItem)) {
-                        selectionAnchor = clickedOnItem;
-                        lastSelectedItem = clickedOnItem;
-                    }
                 } else {
-                    if (!isSelected(clickedOnItem) || selectedItems.size > 1) {
+                    if (!selectedItems.has(clickedOnItem) || selectedItems.size > 1) {
                         clearSelection();
                         toggleSelection(clickedOnItem);
-                        selectionAnchor = clickedOnItem;
-                        lastSelectedItem = clickedOnItem;
                     } else {
                         clearSelection();
-                        selectionAnchor = null;
-                        lastSelectedItem = null;
                     }
                 }
-            } else {
-                if (!isModifier && !isShift) {
-                    clearSelection();
-                    selectionAnchor = null;
-                    lastSelectedItem = null;
-                }
-            }
-        } else {
-            const itemUnderMouse = e.target.closest('figure');
-            if (mouseDownItem) selectionAnchor = mouseDownItem;
-            if (itemUnderMouse && selectedItems.has(itemUnderMouse)) {
-                lastSelectedItem = itemUnderMouse;
-            } else {
-                const visibleSelectedItems = Array.from(items).filter(item => item.style.display !== 'none' && selectedItems.has(item));
-                if (visibleSelectedItems.length > 0) {
-                    lastSelectedItem = visibleSelectedItems[visibleSelectedItems.length - 1];
-                }
+                lastSelectedItem = selectedItems.has(clickedOnItem) ? clickedOnItem : null;
+                selectionAnchor = lastSelectedItem;
+            } else if (!isModifier) {
+                clearSelection();
+                lastSelectedItem = null;
+                selectionAnchor = null;
             }
         }
-
         isMarquee = false;
         hasDragged = false;
         mouseDownItem = null;
@@ -914,42 +764,32 @@ document.addEventListener('DOMContentLoaded', () => {
         marquee.style.width = '0px';
         marquee.style.height = '0px';
         preMarqueeSelectedItems.clear();
-    };
-
-    document.addEventListener('mouseup', endDragAction);
+    });
 
     document.addEventListener('mousedown', (e) => {
         const itemMenu = document.getElementById('custom-context-menu');
         const galleryMenu = document.getElementById('gallery-context-menu');
-
         if (e.button === 0 && !itemMenu.contains(e.target) && !galleryMenu.contains(e.target)) {
             itemMenu.style.display = 'none';
             galleryMenu.style.display = 'none';
         }
-
-        if (!wrapper.contains(e.target) && !itemMenu.contains(e.target) && !galleryMenu.contains(e.target)) {
-            if (!e.metaKey && !e.ctrlKey && !e.shiftKey) {
-                clearSelection();
-            }
+        if (!wrapper.contains(e.target) && !itemMenu.contains(e.target) && !galleryMenu.contains(e.target) && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
+            clearSelection();
         }
     });
 
     document.addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
-            const activeEl = document.activeElement;
-            if (activeEl && activeEl.id === 'search-input') return;
+            if (document.activeElement.id === 'search-input') return;
             e.preventDefault();
-            const visibleItems = Array.from(items).filter(item => item.style.display !== 'none');
-            visibleItems.forEach(item => setSelection(item, true));
+            Array.from(items).filter(item => item.style.display !== 'none').forEach(item => {
+                item.classList.add('selected');
+                selectedItems.add(item);
+            });
         }
     });
 
-    /*
-    ==================================================================
-    // START: CUSTOM CONTEXT MENU & UPLOAD LOGIC
-    ==================================================================
-    */
-
+    // --- CONTEXT MENU & UPLOAD LOGIC ---
     const itemContextMenu = document.getElementById('custom-context-menu');
     const galleryContextMenu = document.getElementById('gallery-context-menu');
     const imageUploadInput = document.getElementById('image-upload-input');
@@ -958,20 +798,16 @@ document.addEventListener('DOMContentLoaded', () => {
     gallery.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         const figure = e.target.closest('figure');
-
         itemContextMenu.style.display = 'none';
         galleryContextMenu.style.display = 'none';
-
         if (figure) {
             rightClickedItem = figure;
             if (!selectedItems.has(figure)) {
                 clearSelection();
                 toggleSelection(figure);
-                selectionAnchor = figure;
-                lastSelectedItem = figure;
+                selectionAnchor = lastSelectedItem = figure;
             }
-            const saveMenuItem = document.getElementById('context-menu-save');
-            saveMenuItem.textContent = selectedItems.size > 1 ? `Save ${selectedItems.size} Images to "Downloads"` : 'Save Image to "Downloads"';
+            document.getElementById('context-menu-save').textContent = selectedItems.size > 1 ? `Save ${selectedItems.size} Images to "Downloads"` : 'Save Image to "Downloads"';
             itemContextMenu.style.display = 'block';
             itemContextMenu.style.left = `${e.clientX}px`;
             itemContextMenu.style.top = `${e.clientY}px`;
@@ -989,102 +825,58 @@ document.addEventListener('DOMContentLoaded', () => {
         return response.blob();
     }
 
-    function triggerDownload(blob, filename) {
-        saveAs(blob, filename);
-    }
-
     itemContextMenu.addEventListener('click', async (e) => {
         const targetId = e.target.id;
         if (!targetId) return;
         itemContextMenu.style.display = 'none';
         const primaryTarget = rightClickedItem || Array.from(selectedItems)[0];
         if (!primaryTarget) return;
-
         switch (targetId) {
-            case 'context-menu-open': {
-                const dblClickEvent = new MouseEvent('dblclick', { bubbles: true, cancelable: true, view: window });
-                primaryTarget.dispatchEvent(dblClickEvent);
+            case 'context-menu-open':
+                primaryTarget.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true, view: window }));
                 break;
-            }
-            case 'context-menu-open-tab': {
+            case 'context-menu-open-tab':
                 const img = primaryTarget.querySelector('img');
                 if (img && img.dataset.fullsrc) window.open(img.dataset.fullsrc, '_blank');
                 break;
-            }
-            case 'context-menu-save': {
+            case 'context-menu-save':
                 if (downloadAbortController) downloadAbortController.abort();
                 downloadAbortController = new AbortController();
                 const signal = downloadAbortController.signal;
-
-                const indicator = document.getElementById('download-indicator');
                 const progressCircle = indicator.querySelector('.progress-circle');
                 indicator.classList.add('is-active', 'is-downloading');
-
-                const parseSizeToBytes = (sizeStr) => {
-                    if (!sizeStr) return 0;
-                    const [value, unit] = sizeStr.split(' ');
-                    const num = parseFloat(value);
-                    if (isNaN(num)) return 0;
-                    switch (unit.toUpperCase()) {
-                        case 'KB': return num * 1024;
-                        case 'MB': return num * 1024 * 1024;
-                        case 'GB': return num * 1024 * 1024 * 1024;
-                        default: return num;
-                    }
-                };
-                const updateProgress = (percent) => progressCircle.style.setProperty('--progress-angle', `${percent * 3.6}deg`);
+                const updateProgress = (p) => progressCircle.style.setProperty('--progress-angle', `${p * 3.6}deg`);
                 updateProgress(0);
-
-                const performDownloads = async () => {
-                    try {
-                        const itemsToDownload = Array.from(selectedItems);
-                        if (itemsToDownload.length === 0) {
-                             indicator.classList.remove('is-active', 'is-downloading');
-                             return;
-                        }
-
-                        let totalDownloadSize = 0;
-                        itemsToDownload.forEach(item => totalDownloadSize += parseSizeToBytes(item.querySelector('img').dataset.size));
-                        
-                        let totalDownloaded = 0;
-                        const processInBatches = async (items, batchSize, processFn) => {
-                            for (let i = 0; i < items.length; i += batchSize) {
-                                if (signal.aborted) throw new Error('AbortError');
-                                const batch = items.slice(i, i + batchSize);
-                                await Promise.all(batch.map(item => processFn(item)));
-                            }
-                        };
-                        
-                        await processInBatches(itemsToDownload, 6, async (item) => {
-                            const img = item.querySelector('img');
-                            const url = img.dataset.fullsrc;
-                            const filename = url.substring(url.lastIndexOf('/') + 1);
-                            try {
-                                const response = await fetch(url, { signal, cache: 'no-store' });
-                                if (!response.ok) throw new Error(response.statusText);
-                                const blob = await response.blob();
-                                saveAs(blob, filename);
-                                totalDownloaded += blob.size;
-                                updateProgress(totalDownloadSize > 0 ? (totalDownloaded / totalDownloadSize) * 100 : 0);
-                            } catch (error) {
-                                if (error.name !== 'AbortError') console.error(`Could not download ${filename}:`, error);
-                                throw error;
-                            }
-                        });
-                        
-                        updateProgress(100);
-                        await new Promise(resolve => setTimeout(resolve, 400));
-                    } catch (error) {
-                        if (error.name !== 'AbortError') console.error("Download failed:", error);
-                    } finally {
+                try {
+                    const itemsToDownload = Array.from(selectedItems);
+                    if (itemsToDownload.length === 0) break;
+                    let totalSize = 0;
+                    const parseSize = s => (s ? (v => (u => v * ({KB:1024, MB:1024*1024, GB:1024*1024*1024}[u]||1))(s.split(' ')[1]))(parseFloat(s.split(' ')[0])) : 0);
+                    itemsToDownload.forEach(item => totalSize += parseSize(item.querySelector('img').dataset.size));
+                    let downloaded = 0;
+                    await Promise.all(itemsToDownload.map(async item => {
+                        if (signal.aborted) throw new Error('AbortError');
+                        const img = item.querySelector('img');
+                        const url = img.dataset.fullsrc;
+                        try {
+                            const res = await fetch(url, { signal, cache: 'no-store' });
+                            if (!res.ok) throw new Error(res.statusText);
+                            const blob = await res.blob();
+                            saveAs(blob, url.substring(url.lastIndexOf('/') + 1));
+                            downloaded += blob.size;
+                            updateProgress(totalSize > 0 ? (downloaded / totalSize) * 100 : 0);
+                        } catch (err) { if (err.name !== 'AbortError') console.error(`Download failed for ${url}`, err); throw err; }
+                    }));
+                    updateProgress(100);
+                } catch (err) { if (err.name !== 'AbortError') console.error("Download failed:", err); }
+                finally {
+                    setTimeout(() => {
                         indicator.classList.remove('is-active', 'is-downloading');
                         downloadAbortController = null;
                         setTimeout(() => updateProgress(0), 400);
-                    }
-                };
-                performDownloads();
+                    }, 500);
+                }
                 break;
-            }
         }
         rightClickedItem = null;
     });
@@ -1103,25 +895,16 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 await Promise.all(Array.from(files).map(file => fetch(UPLOAD_URL, {
                     method: 'PUT',
-                    headers: { 'Content-Type': file.type, 'X-Custom-Filename': file.name },
-                    body: file
-                }).then(response => { if (!response.ok) throw new Error(`Upload failed for ${file.name}`); })));
+                    headers: { 'Content-Type': file.type, 'X-Custom-Filename': file.name }, body: file
+                }).then(res => { if (!res.ok) throw new Error(`Upload failed for ${file.name}`); })));
                 alert(`${files.length} image(s) uploaded successfully!`);
                 location.reload(); 
-            } catch (error) {
-                alert(`An error occurred during upload: ${error.message}`);
-            } finally {
-                document.body.style.cursor = 'default';
-                event.target.value = '';
-            }
+            } catch (err) { alert(`An error occurred during upload: ${err.message}`); }
+            finally { document.body.style.cursor = 'default'; event.target.value = ''; }
         });
     }
 
-    /*
-    ==================================================================
-    // START: MODAL LOGIC
-    ==================================================================
-    */
+    // --- MODAL LOGIC ---
     const modal = document.getElementById('image-modal');
     const modalContent = document.querySelector('.modal-content');
     const modalImg = document.getElementById('modal-img');
@@ -1132,7 +915,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const prevButton = document.querySelector('.modal-prev');
     const nextButton = document.querySelector('.modal-next');
     const imageContainer = document.querySelector('.modal-image-container');
-    const infoPanel = document.querySelector('.modal-info-panel');
     let currentImageIndex = -1;
 
     const KEY_TO_LABEL_MAP = { season: 'Season', episode: 'Episode', cast: 'Cast', crew: 'Crew', castAndCrew: 'Cast & Crew', characters: 'Characters' };
@@ -1143,37 +925,27 @@ document.addEventListener('DOMContentLoaded', () => {
         if (index < 0 || index >= visibleFigures.length) return;
         currentImageIndex = index;
         const img = visibleFigures[currentImageIndex].querySelector('img');
-
         downloadBtn.dataset.fullsrc = img.dataset.fullsrc; 
-        modalImg.src = img.src; // Show thumbnail first
-        new Image().src = img.dataset.fullsrc; // Preload high-res
+        modalImg.src = img.src; // Show thumb first
+        const highRes = new Image();
+        highRes.onload = () => { if (currentImageIndex === index) modalImg.src = highRes.src; };
+        highRes.src = img.dataset.fullsrc; // Preload high-res
         modalImg.alt = img.alt;
         modalFilename.textContent = img.dataset.filename;
-
-        let primaryHTML = '<dl class="info-grid">';
-        let detailsHTML = '<dl class="info-grid">';
-        primaryKeys.forEach(key => {
-            if (img.dataset[key] && img.dataset[key].trim() !== '-' && img.dataset[key].trim() !== '- (-)') {
-                primaryHTML += `<div class="info-item"><dt>${KEY_TO_LABEL_MAP[key] || key}</dt><dd>${img.dataset[key]}</dd></div>`;
-            }
-        });
+        let pHTML = '<dl class="info-grid">', dHTML = '<dl class="info-grid">';
+        primaryKeys.forEach(k => { if (img.dataset[k] && !['-', '- (-)'].includes(img.dataset[k].trim())) pHTML += `<div class="info-item"><dt>${KEY_TO_LABEL_MAP[k]||k}</dt><dd>${img.dataset[k]}</dd></div>`; });
         let hasDetails = false;
         const handledKeys = ['search', 'fullsrc', 'filename', ...primaryKeys];
-        for (const key in img.dataset) {
-            if (!handledKeys.includes(key) && img.dataset[key] && img.dataset[key].trim() !== '-') {
+        for (const k in img.dataset) {
+            if (!handledKeys.includes(k) && img.dataset[k] && img.dataset[k].trim() !== '-') {
                 hasDetails = true;
-                let label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-                let value = img.dataset[key];
-                if (label === 'Dimensions' && value.includes('×')) {
-                    value = `${value.split('×')[0]}<span class="dimensions-x">×</span>${value.split('×')[1]}`;
-                }
-                detailsHTML += `<div class="info-item"><dt>${label}</dt><dd>${value}</dd></div>`;
+                let label = k.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase());
+                let value = img.dataset[k];
+                if (label === 'Dimensions' && value.includes('×')) value = `${value.split('×')[0]}<span class="dimensions-x">×</span>${value.split('×')[1]}`;
+                dHTML += `<div class="info-item"><dt>${label}</dt><dd>${value}</dd></div>`;
             }
         }
-        primaryHTML += '</dl>';
-        detailsHTML += '</dl>';
-        modalMetadata.innerHTML = primaryHTML + (hasDetails ? '<h4 class="metadata-header">Metadata</h4>' + detailsHTML : '');
-
+        modalMetadata.innerHTML = pHTML + '</dl>' + (hasDetails ? '<h4 class="metadata-header">Metadata</h4>' + dHTML + '</dl>' : '');
         modal.classList.add('is-visible');
         document.body.classList.add('is-article-visible');
     }
@@ -1181,30 +953,31 @@ document.addEventListener('DOMContentLoaded', () => {
     downloadBtn.addEventListener('click', async (event) => {
         event.preventDefault(); event.stopPropagation();
         const url = event.currentTarget.dataset.fullsrc; 
-        const filename = modalFilename.textContent || url.split('/').pop();
-        if (!url || !filename) return;
+        if (!url) return;
         const buttonText = downloadBtn.textContent;
         try {
             downloadBtn.textContent = 'Downloading...'; downloadBtn.disabled = true;
             const blob = await fetchImageBlob(url);
-            triggerDownload(blob, filename);
+            saveAs(blob, modalFilename.textContent || url.split('/').pop());
         } catch (error) { console.error("Modal download failed:", error); } 
         finally { setTimeout(() => { downloadBtn.textContent = buttonText; downloadBtn.disabled = false; }, 1000); }
     });
 
-    const showNextImage = () => showImage((currentImageIndex + 1) % gallery.querySelectorAll('figure:not([style*="display: none"])').length);
-    const showPrevImage = () => showImage((currentImageIndex - 1 + gallery.querySelectorAll('figure:not([style*="display: none"])').length) % gallery.querySelectorAll('figure:not([style*="display: none"])').length);
+    const getVisibleFigures = () => Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
+    const showNextImage = () => showImage((currentImageIndex + 1) % getVisibleFigures().length);
+    const showPrevImage = () => showImage((currentImageIndex - 1 + getVisibleFigures().length) % getVisibleFigures().length);
 
-    gallery.addEventListener('dblclick', function(event) {
-        const figure = event.target.closest('figure');
+    gallery.addEventListener('dblclick', e => {
+        const figure = e.target.closest('figure');
         if (!figure) return;
-        const index = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])')).indexOf(figure);
+        const index = getVisibleFigures().indexOf(figure);
         if (index > -1) showImage(index);
     });
 
     function hideModal() {
         modal.classList.remove('is-visible');
         document.body.classList.remove('is-article-visible');
+        currentImageIndex = -1;
         setTimeout(() => { modalImg.src = ""; modalFilename.textContent = ""; modalMetadata.innerHTML = ""; }, 250);
     }
     
@@ -1214,42 +987,32 @@ document.addEventListener('DOMContentLoaded', () => {
     nextButton.addEventListener('click', showNextImage);
     modal.addEventListener('click', hideModal);
 
-    document.addEventListener('keydown', function(event) {
+    document.addEventListener('keydown', e => {
         if (modal.classList.contains('is-visible')) {
-            if (event.key === 'Escape') hideModal();
-            else if (event.key === 'ArrowRight') showNextImage();
-            else if (event.key === 'ArrowLeft') showPrevImage();
+            if (e.key === 'Escape') hideModal();
+            else if (e.key === 'ArrowRight') showNextImage();
+            else if (e.key === 'ArrowLeft') showPrevImage();
         }
     });
 
-    imageContainer.addEventListener('mousedown', (e) => { if (e.button === 0) document.body.classList.add('is-selecting-text'); });
-    infoPanel.addEventListener('mousedown', (e) => {
-        if (e.button === 0) {
-            document.body.classList.add('is-selecting-text');
-            if (e.target.closest('.info-item, #modal-filename, .metadata-header')) e.target.classList.add('selection-active');
-        }
-    });
+    imageContainer.addEventListener('mousedown', e => { if (e.button === 0) document.body.classList.add('is-selecting-text'); });
+    infoPanel.addEventListener('mousedown', e => { if (e.button === 0) { document.body.classList.add('is-selecting-text'); if (e.target.closest('.info-item, #modal-filename, .metadata-header')) e.target.classList.add('selection-active'); } });
     document.addEventListener('mouseup', () => { document.body.classList.remove('is-selecting-text'); document.querySelector('.selection-active')?.classList.remove('selection-active'); });
 });
 
-/*Custom Scrollbar Advanced*/
+/* Custom Scrollbar */
 document.addEventListener('DOMContentLoaded', () => {
     const track = document.getElementById('custom-scrollbar-track');
     const thumb = document.getElementById('custom-scrollbar-thumb');
     const header = document.getElementById('header');
-
     if (!track || !thumb || !header) return;
-
     let ticking = false;
 
     function updateThumbPosition() {
         const scrollableHeight = document.documentElement.scrollHeight;
         const viewportHeight = window.innerHeight;
         if (scrollableHeight <= viewportHeight) return;
-        const trackHeight = track.offsetHeight;
-        const thumbHeight = thumb.offsetHeight;
-        const scrollPercentage = window.scrollY / (scrollableHeight - viewportHeight);
-        const thumbPosition = scrollPercentage * (trackHeight - thumbHeight);
+        const thumbPosition = (window.scrollY / (scrollableHeight - viewportHeight)) * (track.offsetHeight - thumb.offsetHeight);
         thumb.style.transform = `translateY(${thumbPosition}px)`;
     }
 
@@ -1260,46 +1023,25 @@ document.addEventListener('DOMContentLoaded', () => {
         track.style.display = (scrollableHeight <= viewportHeight) ? 'none' : 'block';
         track.style.top = `${headerHeight}px`;
         track.style.height = `calc(100% - ${headerHeight}px)`;
-        const trackHeight = track.offsetHeight;
-        const thumbHeight = Math.max((viewportHeight / scrollableHeight) * trackHeight, 20);
-        thumb.style.height = `${thumbHeight}px`;
+        thumb.style.height = `${Math.max((viewportHeight / scrollableHeight) * track.offsetHeight, 20)}px`;
         updateThumbPosition();
     }
 
-    document.addEventListener('scroll', () => {
-        if (!ticking) {
-            window.requestAnimationFrame(() => { updateThumbPosition(); ticking = false; });
-            ticking = true;
-        }
-    });
-
-    thumb.addEventListener('mousedown', (e) => {
+    document.addEventListener('scroll', () => { if (!ticking) { window.requestAnimationFrame(() => { updateThumbPosition(); ticking = false; }); ticking = true; } });
+    thumb.addEventListener('mousedown', e => {
         e.preventDefault();
-        const startY = e.clientY;
-        const startScrollTop = document.documentElement.scrollTop;
-
-        function onMouseMove(e) {
+        const startY = e.clientY, startScrollTop = document.documentElement.scrollTop;
+        const onMouseMove = e => {
             const deltaY = e.clientY - startY;
-            const scrollableHeight = document.documentElement.scrollHeight;
-            const viewportHeight = window.innerHeight;
-            const trackHeight = track.offsetHeight;
-            const thumbHeight = thumb.offsetHeight;
-            if (trackHeight - thumbHeight === 0) return;
-            const deltaScroll = (deltaY / (trackHeight - thumbHeight)) * (scrollableHeight - viewportHeight);
-            window.scrollTo(0, startScrollTop + deltaScroll);
-        }
-
-        function onMouseUp() {
-            document.removeEventListener('mousemove', onMouseMove);
-            document.removeEventListener('mouseup', onMouseUp);
-        }
-
+            const scrollRange = document.documentElement.scrollHeight - window.innerHeight;
+            const trackRange = track.offsetHeight - thumb.offsetHeight;
+            if (trackRange > 0) window.scrollTo(0, startScrollTop + (deltaY / trackRange) * scrollRange);
+        };
+        const onMouseUp = () => document.removeEventListener('mousemove', onMouseMove) || document.removeEventListener('mouseup', onMouseUp);
         document.addEventListener('mousemove', onMouseMove);
         document.addEventListener('mouseup', onMouseUp);
     });
-
-    const setupEvents = ['resize', 'load', 'orientationchange', 'galleryFiltered'];
-    setupEvents.forEach(event => window.addEventListener(event, setupScrollbar));
+    ['resize', 'load', 'orientationchange', 'galleryFiltered'].forEach(e => window.addEventListener(e, setupScrollbar));
     setupScrollbar();
     setTimeout(setupScrollbar, 500);
 });
@@ -1308,14 +1050,12 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('DOMContentLoaded', () => {
     const thumb = document.getElementById('custom-scrollbar-thumb');
     if (!thumb) return;
-    const proximity = 30;
     let ticking = false;
-    document.addEventListener('mousemove', (e) => {
+    document.addEventListener('mousemove', e => {
         if (!ticking) {
             window.requestAnimationFrame(() => {
                 const thumbRect = thumb.getBoundingClientRect();
-                const isNear = e.clientX >= thumbRect.left - proximity && e.clientY >= thumbRect.top - proximity && e.clientY <= thumbRect.bottom + proximity && e.clientX < window.innerWidth - 2;
-                thumb.classList.toggle('is-near', isNear);
+                thumb.classList.toggle('is-near', e.clientX >= thumbRect.left - 30 && e.clientY >= thumbRect.top - 30 && e.clientY <= thumbRect.bottom + 30 && e.clientX < window.innerWidth - 2);
                 ticking = false;
             });
             ticking = true;
@@ -1325,22 +1065,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /* Autocomplete Search Suggestions Logic */
 document.addEventListener('galleryLoaded', () => {
-    const searchInput = document.getElementById('search-input');
+    const editor = document.getElementById('search-input');
     const suggestionsContainer = document.getElementById('suggestions-container');
     const galleryItems = document.querySelectorAll('#photo-gallery figure img');
+    if (!editor || !suggestionsContainer || galleryItems.length === 0) return;
 
-    if (!searchInput || !suggestionsContainer || galleryItems.length === 0) return;
-
+    // This is a helper function to avoid duplicating code.
     const getSearchQuery = () => {
         const pills = [];
         let textContent = '';
-        searchInput.childNodes.forEach(node => {
+        editor.childNodes.forEach(node => {
             if (node.nodeType === Node.ELEMENT_NODE && node.classList.contains('pill')) {
                 pills.push({ type: node.dataset.type, value: node.dataset.value });
             } else if (node.nodeType === Node.TEXT_NODE) {
                 textContent += node.textContent;
-            } else if (node.nodeType === Node.ELEMENT_NODE && (node.tagName === 'DIV' || node.tagName === 'BR')) {
-                textContent += ' ' + node.textContent;
             }
         });
         return { text: textContent.replace(/\s+/g, ' ').trim(), pills };
@@ -1348,8 +1086,7 @@ document.addEventListener('galleryLoaded', () => {
 
     const searchTerms = new Set();
     galleryItems.forEach(img => {
-        const sources = [img.dataset.cast, img.dataset.crew, img.dataset.castAndCrew, img.dataset.characters];
-        sources.forEach(source => {
+        [img.dataset.cast, img.dataset.crew, img.dataset.castAndCrew, img.dataset.characters].forEach(source => {
             if (source) source.split(',').forEach(term => { if (term.trim()) searchTerms.add(term.trim()); });
         });
     });
@@ -1360,26 +1097,24 @@ document.addEventListener('galleryLoaded', () => {
         const query = getSearchQuery().text.toLowerCase();
         suggestionsContainer.innerHTML = '';
         activeSuggestionIndex = -1;
-
-        const existingPillValues = new Set(getSearchQuery().pills.map(p => p.value.toLowerCase()));
-
         if (query.length === 0) {
             suggestionsContainer.style.display = 'none';
             return;
         }
-
-        const matches = sortedSearchTerms.filter(term => {
-            const termLower = term.toLowerCase();
-            return termLower.startsWith(query) && !existingPillValues.has(termLower);
-        }).slice(0, 7);
-
+        const existingPillValues = new Set(getSearchQuery().pills.map(p => p.value.toLowerCase()));
+        const matches = sortedSearchTerms.filter(term => term.toLowerCase().startsWith(query) && !existingPillValues.has(term.toLowerCase())).slice(0, 7);
         if (matches.length > 0) {
-            matches.forEach((term, index) => {
+            matches.forEach(term => {
                 const item = document.createElement('div');
                 item.className = 'suggestion-item';
                 item.textContent = term;
-                item.addEventListener('mousedown', (e) => {
+                item.addEventListener('mousedown', e => {
                     e.preventDefault();
+
+                    // This is the fix: It stops the click event from bubbling up to the wrapper
+                    // and incorrectly starting a marquee selection.
+                    e.stopPropagation();
+
                     selectSuggestion(term);
                 });
                 suggestionsContainer.appendChild(item);
@@ -1391,7 +1126,8 @@ document.addEventListener('galleryLoaded', () => {
     }
 
     function selectSuggestion(value) {
-        window.insertPill('tag', value);
+        // This is now the primary way to insert a pill from autocomplete
+        document.dispatchEvent(new CustomEvent('insertPill', { detail: { type: 'tag', value } }));
         updateSuggestions();
         suggestionsContainer.style.display = 'none';
     }
@@ -1403,78 +1139,51 @@ document.addEventListener('galleryLoaded', () => {
         });
     }
 
-    searchInput.addEventListener('input', updateSuggestions);
-
-    searchInput.addEventListener('keydown', (e) => {
+    editor.addEventListener('input', updateSuggestions);
+    editor.addEventListener('keydown', e => {
         const items = suggestionsContainer.querySelectorAll('.suggestion-item');
-        
         switch (e.key) {
             case 'ArrowDown':
-                if (items.length > 0) {
-                    e.preventDefault();
-                    activeSuggestionIndex = (activeSuggestionIndex + 1) % items.length;
-                    updateActiveSuggestion(items);
-                }
+                if (items.length > 0) { e.preventDefault(); activeSuggestionIndex = (activeSuggestionIndex + 1) % items.length; updateActiveSuggestion(items); }
                 break;
             case 'ArrowUp':
-                if (items.length > 0) {
-                    e.preventDefault();
-                    activeSuggestionIndex = (activeSuggestionIndex - 1 + items.length) % items.length;
-                    updateActiveSuggestion(items);
-                }
+                if (items.length > 0) { e.preventDefault(); activeSuggestionIndex = (activeSuggestionIndex - 1 + items.length) % items.length; updateActiveSuggestion(items); }
                 break;
             case 'Enter':
                 e.preventDefault();
-                searchInput.dispatchEvent(new CustomEvent('submitSearch'));
+                editor.dispatchEvent(new CustomEvent('submitSearch'));
                 break;
             case 'Escape':
                 suggestionsContainer.style.display = 'none';
                 break;
-            case 'Backspace': {
-                const selection = window.getSelection();
-                if (selection.isCollapsed && selection.anchorOffset === 0) {
-                    const previousSibling = selection.anchorNode.previousSibling;
-                    if (previousSibling && previousSibling.nodeType === Node.ELEMENT_NODE && previousSibling.classList.contains('pill')) {
-                        previousSibling.remove();
-                        e.preventDefault();
-                    }
+            case 'Backspace':
+                const sel = window.getSelection();
+                if (sel.isCollapsed && sel.anchorOffset === 0 && sel.anchorNode.previousSibling?.classList.contains('pill')) {
+                    sel.anchorNode.previousSibling.remove();
+                    e.preventDefault();
                 }
                 break;
-            }
         }
     });
 
-    document.addEventListener('click', (e) => {
-        if (!searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+    document.addEventListener('click', e => {
+        if (!editor.contains(e.target) && !suggestionsContainer.contains(e.target)) {
             suggestionsContainer.style.display = 'none';
         }
     });
 
-    // Make insertPill globally available for the autocomplete logic
-    window.insertPill = (type, value) => {
-        const event = new CustomEvent('insertPill', { detail: { type, value } });
-        document.dispatchEvent(event);
-    };
-
+    // Event listener to handle pill insertion requests
     document.addEventListener('insertPill', (e) => {
         const { type, value } = e.detail;
-        const editor = document.getElementById('search-input');
-        editor.focus();
-        
         const sanitizedValue = value.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const pillHTML = `<span class="pill" contenteditable="false" data-type="${type}" data-value="${sanitizedValue}">${sanitizedValue}<span class="remove-pill" onclick="this.parentNode.remove()">&times;</span></span>\u200B`;
         
-        const pillHTML = `
-            <span class="pill" contenteditable="false" data-type="${type}" data-value="${sanitizedValue}">
-                ${sanitizedValue}
-                <span class="remove-pill" onclick="this.parentNode.remove()">&times;</span>
-            </span>&nbsp;`;
-
+        editor.focus();
         const selection = window.getSelection();
         if (!selection.rangeCount) return;
-
         let range = selection.getRangeAt(0);
         let textNode = selection.anchorNode;
-
+        // Logic to replace the typed text with the new pill
         if (textNode && textNode.nodeType === Node.TEXT_NODE) {
             const currentText = textNode.textContent;
             const queryText = getSearchQuery().text.toLowerCase();
@@ -1485,17 +1194,15 @@ document.addEventListener('galleryLoaded', () => {
             }
         }
         range.deleteContents();
-
         const fragment = document.createRange().createContextualFragment(pillHTML);
         const lastNode = fragment.lastChild;
         range.insertNode(fragment);
-        
         range = range.cloneRange();
         range.setStartAfter(lastNode);
         range.collapse(true);
         selection.removeAllRanges();
         selection.addRange(range);
-
+        editor.scrollLeft = editor.scrollWidth;
         editor.dispatchEvent(new Event('input', { bubbles: true }));
     });
 });
@@ -1505,16 +1212,11 @@ document.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
         const searchInput = document.getElementById('search-input');
         const modal = document.getElementById('image-modal');
-
         if (document.activeElement === searchInput || (modal && modal.classList.contains('is-visible'))) return;
-
         const selectedFigures = document.querySelectorAll('#photo-gallery figure.selected');
         if (selectedFigures.length === 0) return;
-        
         e.preventDefault();
-        const filenames = Array.from(selectedFigures).map(figure => figure.querySelector('img')?.dataset.filename).filter(Boolean);
-        if (filenames.length > 0) {
-            navigator.clipboard.writeText(filenames.join(' ')).catch(err => console.error('Could not copy filenames.', err));
-        }
+        const filenames = Array.from(selectedFigures).map(f => f.querySelector('img')?.dataset.filename).filter(Boolean);
+        if (filenames.length > 0) navigator.clipboard.writeText(filenames.join('\n')).catch(err => console.error('Could not copy filenames.', err));
     }
 });
