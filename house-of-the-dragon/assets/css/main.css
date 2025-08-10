@@ -1253,101 +1253,114 @@ input, select, textarea {
 
 /*
 ==================================================================
-// NEW: ContentEditable Search Input and Pills
+// Search Input and Pills (REVISED)
 ==================================================================
 */
+/* INSTRUCTIONS:
+  Delete the original style block for "#search-input" from your CSS file
+  and replace it with all of the CSS rules below.
+*/
 
-/* The new ContentEditable div, styled to look like an input */
-#search-input {
-    display: flex;
-    align-items: center; /* This is the key to vertical centering */
-    flex-grow: 1;
-    width: 100%;
-    margin: 0;
-    padding: 0 0 0 1px;
-    border: none;
-    outline: none;
-    color: #ffffff;
-    background: transparent;
-    font-size: 0.65rem;
-    cursor: text;
-    white-space: nowrap;
-    overflow-x: hidden;
-    overflow-y: hidden;
+/* Hides the scrollbar inside the search wrapper for a clean look */
+.search-wrapper::-webkit-scrollbar {
+    display: none;
+}
+.search-wrapper {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-/* The form element now acts as the wrapper */
-#search-container form {
+/* The main wrapper that looks like an input field */
+.search-wrapper {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: nowrap; /* Prevents wrapping */
     align-items: center;
     border-radius: 20px;
     background-color: rgba(255, 255, 255, 0.05);
-    width: 17.282226em;
-    height: 31px;
+    padding: 2px 12px 2px 30px;
+    width: 26.5em;
+    min-height: 24px;
     cursor: text;
     transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-    position: relative;
-    border: solid 1px transparent; /* Add a transparent border by default */
-    padding: 1px 11px 1px 29px;   /* Use the focused state's padding by default */
-}
-
-#search-container form:hover {
-     background-color: rgba(255, 255, 255, 0.075);
-}
-
-/* Use :focus-within on the form to detect focus inside the contenteditable div */
-#search-container form:focus-within {
-    background: rgba(255, 255, 255, 0.075);
-    border-color: #a3adaf; /* --- FIX --- Only change the border-color */
-    box-shadow: 0 0 0 0.5px #a3adaf;
-}
-
-/* Placeholder implementation using ::before */
-#search-input.is-placeholder-visible::before {
-    content: attr(data-placeholder);
-    color: rgba(255, 255, 255, 0.5);
-    cursor: text;
-    pointer-events: none;
     font-size: 0.65rem;
+    overflow-x: auto; /* Enables horizontal scrolling */
 }
 
-/* The new pill styling */
-.pill {
-    flex-shrink: 0; /* Prevents pills from shrinking if space is tight */
-    contenteditable: false; /* Make the pill an un-editable "atom" */
-    -webkit-user-select: none; /* Prevent selecting text inside the pill */
-    -moz-user-select: none;
+.search-wrapper:hover {
+    background-color: rgba(255, 255, 255, 0.075);
+}
+
+.search-wrapper.is-focused {
+    background: rgba(255, 255, 255, 0.075);
+    border: solid 1px #a3adaf;
+    box-shadow: 0 0 0 0.5px #a3adaf;
+    /* This padding (top, right, bottom, left) now matches the
+       unfocused state, minus 1px on each side for the border. */
+    padding: 1px 11px 1px 29px;
+}
+
+/* The actual text input, styled to be invisible within the wrapper */
+#search-input {
+    flex-grow: 1;
+    border: none !important;
+    background: transparent !important;
+    padding: 4px 0 4px 1px !important;
+    margin: 0 !important;
+    outline: none !important;
+    color: #ffffff !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    height: auto !important;
+    width: auto !important;
+    min-width: 120px;
+    line-height: 1.4 !important;
+    font-size: 0.65rem;
+    text-align: left;
+    -webkit-user-select: none;
     -ms-user-select: none;
     user-select: none;
-    background-color: #3f3a36;
-    border: 1px solid #5c5753;
-    border-radius: 6px;
-    padding: 1px 8px; /* Adjusted padding */
-    margin: 0 4px 0 2px;
-    font-size: 0.65rem;
-    line-height: 1; /* Ensure proper height */
-    color: #e0e0e0;
-    cursor: default;
-    white-space: nowrap; /* Prevent pill content from wrapping */
 }
 
-.pill .remove-pill {
+/* The pill for selected search terms, with its default visible style */
+.search-pill {
+    display: inline-flex;
+    align-items: center;
+    background-color: #3f3a36; /* Correct visible background */
+    border: 1px solid #5c5753;   /* Correct visible border */
+    border-radius: 10px;
+    padding: 0px 8px;
+    margin: 2px 6px 2px 0;
+    font-size: 0.6rem;
+    color: #e0e0e0;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s ease;
+    flex-shrink: 0; /* Prevents pills from shrinking */
+}
+
+/* A pill's appearance when it is actively selected */
+.search-pill.selected {
+    background-color: #5c5753;
+    border-color: #a3adaf;
+    color: #fff;
+    box-shadow: 0 0 5px rgba(163, 173, 175, 0.5); /* Adds the selection glow */
+}
+
+.search-pill-text {
+    pointer-events: none;
+}
+
+/* The 'x' button to remove a pill */
+.remove-pill {
     margin-left: 6px;
     font-weight: bold;
     font-size: 0.8rem;
-    cursor: pointer; /* Pointer cursor for the 'x' */
+    line-height: 1;
+    padding: 0 2px;
 }
 
-.pill .remove-pill:hover {
+.remove-pill:hover {
     color: #fff;
-}
-
-/* Style for when a pill is "selected" via keyboard/logic */
-.pill.selected {
-    background-color: #5c5753;
-    border-color: #a3adaf;
-    box-shadow: 0 0 5px rgba(163, 173, 175, 0.5);
 }
 
 /* Main */
