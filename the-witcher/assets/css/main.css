@@ -2082,3 +2082,67 @@ html, body {
 #suggestions-container::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.5);
 }
+
+/*
+==================================================================
+// Token-Based Search Bar Styles
+==================================================================
+*/
+
+.token-search-container {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 0 5px; /* Add some padding inside the container */
+    cursor: text; /* Make it feel like a text input */
+    height: auto; /* Allow height to grow with tokens */
+    min-height: 1.5rem;
+}
+
+.search-token {
+    background-color: #555;
+    border-radius: 5px;
+    color: #fff;
+    padding: 2px 8px;
+    margin: 2px;
+    display: flex;
+    align-items: center;
+    font-size: 0.65rem;
+    cursor: default;
+    user-select: none;
+}
+
+.search-token .token-remove {
+    margin-left: 5px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+#search-input-field {
+    border: none;
+    background: transparent;
+    color: #fff;
+    outline: none;
+    flex-grow: 1;
+    min-width: 100px; /* Minimum width for the input */
+    padding: 2px;
+    font-size: 0.65rem;
+    height: 1.2rem;
+}
+
+/* Hide the placeholder on the container when the input has focus or text */
+.token-search-container:focus-within::before,
+.token-search-container:not(:empty)::before {
+    content: none;
+}
+
+/* Use a pseudo-element for the placeholder text */
+.token-search-container[placeholder]:empty::before {
+    content: attr(placeholder);
+    color: rgba(255, 255, 255, 0.5);
+    position: absolute;
+    left: 30px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none; /* Make sure the placeholder doesn't block clicks */
+}

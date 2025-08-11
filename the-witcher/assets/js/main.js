@@ -393,7 +393,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const header = document.getElementById('header');
     const footer = document.getElementById('footer');
     const gallery = document.getElementById('photo-gallery');
-    const searchInput = document.getElementById('search-input');
+    const searchInputContainer = document.getElementById('search-input');
+    const searchInputField = document.getElementById('search-input-field');
 
     if (!gallery || !wrapper) return;
 
@@ -410,7 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /*
     ==================================================================
-    // START: SEARCH LOGIC (MOVED FROM INDEX.HTML)
+    // START: TOKEN-BASED SEARCH LOGIC
     ==================================================================
     */
     const clearSearchBtn = document.getElementById('clear-search');
@@ -420,61 +421,176 @@ document.addEventListener('DOMContentLoaded', () => {
         return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     }
 
-    searchInput.addEventListener('keyup', function(event) {
-        if (searchInput.value.length > 0) {
+    function getSearchQuery() {
+        const tokens = searchInputContainer.querySelectorAll('.search-token');
+        const tokenTexts = Array.from(tokens).map(t => t.firstChild.textContent.trim());
+        const currentInput = searchInputField.value.trim();
+        const allTerms = [...tokenTexts, currentInput].filter(t => t);
+        return allTerms.join(' ');
+    }
+
+    function performSearch() {
+        const originalQuery = simplifySearchText(getSearchQuery().toLowerCase());
+        const galleryItems = gallery.querySelectorAll('figure');
+        const phraseRegex = /\b(s\d+e\d+|season\s*\d+|episode\s*\d+|s\d+|e\d+)\b/g;
+        const phraseTerms = originalQuery.match(phraseRegex) || [];
+        const remainingText = originalQuery.replace(phraseRegex, '').trim();
+        const wordTerms = remainingText.split(' ').filter(term => term.length > 0);
+        const searchTerms = [...phraseTerms, ...wordTerms];
+        const hasSearchTerms = searchTerms.length > 0;
+
+        if (searchInputContainer.querySelectorAll('.search-token').length > 0 || searchInputField.value.length > 0) {
             clearSearchBtn.style.display = 'block';
-            searchInput.style.paddingRight = '30px';
         } else {
             clearSearchBtn.style.display = 'none';
-            searchInput.style.paddingRight = '';
         }
 
-        const originalQuery = simplifySearchText(event.target.value.toLowerCase());
-        const galleryItems = gallery.querySelectorAll('figure');
-
-        // This regex looks for patterns like "season 1", "s1", "e2", "s1e2", etc.
-        const phraseRegex = /\b(s\d+e\d+|season\s*\d+|episode\s*\d+|s\d+|e\d+)\b/g;
-
-        // Pull out all the special phrases (e.g., ["season 1", "episode 2"])
-        const phraseTerms = originalQuery.match(phraseRegex) || [];
-
-        // Get the rest of the query by removing the phrases we just found
-        const remainingText = originalQuery.replace(phraseRegex, '').trim();
-
-        // Split the rest of the query into individual words
-        const wordTerms = remainingText.split(' ').filter(term => term.length > 0);
-
-        // Combine them into the final list of terms to search for
-        const searchTerms = [...phraseTerms, ...wordTerms];
-
         galleryItems.forEach(function(item) {
+            if (!hasSearchTerms) {
+                item.style.display = 'flex';
+                return;
+            }
             const img = item.querySelector('img');
             if (!img || !img.dataset.search) {
                 item.style.display = 'none';
                 return;
             }
-
             const searchData = img.dataset.search.toLowerCase();
-
-            // Check if ALL terms (both phrases and individual words) are present
             const isMatch = searchTerms.every(term => searchData.includes(term));
-
-            if (isMatch) {
-                item.style.display = 'flex';
-            } else {
-                item.style.display = 'none';
-            }
+            item.style.display = isMatch ? 'flex' : 'none';
         });
 
         window.scrollTo(0, 0);
         window.dispatchEvent(new CustomEvent('galleryFiltered'));
+    }
+
+    function addToken(text) {
+        const trimmedText = text.trim();
+        if (trimmedText === '') return;
+
+        const token = document.createElement('div');
+        token.className = 'search-token';
+        token.tabIndex = -1; // Make it focusable for key events
+
+        const tokenText = document.createElement('span');
+        tokenText.textContent = trimmedText;
+        token.appendChild(tokenText);
+
+        const removeBtn = document.createElement('span');
+        removeBtn.className = 'token-remove';
+        removeBtn.innerHTML = '&times;';
+        removeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            token.remove();
+            performSearch();
+            searchInputField.focus();
+        });
+        token.appendChild(removeBtn);
+
+        searchInputContainer.insertBefore(token, searchInputField);
+        searchInputField.value = '';
+    }
+
+    searchInputContainer.addEventListener('click', (e) => {
+        if (e.target === searchInputField || e.target.classList.contains('token-remove')) {
+            return;
+        }
+
+        // If a token is clicked, select it.
+        const clickedToken = e.target.closest('.search-token');
+        if (clickedToken) {
+            clickedToken.focus();
+            return;
+        }
+
+        const children = [...searchInputContainer.children];
+        let insertBeforeElement = null;
+        for (const child of children) {
+            if (child === searchInputField) continue;
+            const rect = child.getBoundingClientRect();
+            if (e.clientX < rect.left + rect.width / 2) {
+                insertBeforeElement = child;
+                break;
+            }
+        }
+        if (insertBeforeElement) {
+            searchInputContainer.insertBefore(searchInputField, insertBeforeElement);
+        } else {
+            searchInputContainer.appendChild(searchInputField);
+        }
+        searchInputField.focus();
     });
 
+    searchInputField.addEventListener('keyup', (e) => {
+        if (e.key !== 'Enter') {
+            performSearch();
+        }
+    });
+
+    searchInputField.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addToken(searchInputField.value);
+            performSearch();
+        } else if (e.key === 'Backspace' && searchInputField.value === '') {
+            const tokens = searchInputContainer.querySelectorAll('.search-token');
+            if (tokens.length > 0) {
+                // Select the last token instead of deleting it immediately
+                tokens[tokens.length - 1].focus();
+            }
+        }
+    });
+
+    // Add keydown listener to the container to handle events on focused tokens
+    searchInputContainer.addEventListener('keydown', (e) => {
+        const focusedToken = document.activeElement;
+        if (focusedToken && focusedToken.classList.contains('search-token')) {
+            if (e.key === 'Backspace' || e.key === 'Delete') {
+                e.preventDefault();
+                const nextFocus = focusedToken.nextElementSibling || focusedToken.previousElementSibling;
+                focusedToken.remove();
+                performSearch();
+                if (nextFocus && nextFocus.classList.contains('search-token')) {
+                    nextFocus.focus();
+                } else {
+                    searchInputField.focus();
+                }
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                if (focusedToken.previousElementSibling) {
+                    if (focusedToken.previousElementSibling === searchInputField) {
+                         searchInputField.focus();
+                    } else {
+                        focusedToken.previousElementSibling.focus();
+                    }
+                } else {
+                    // If it's the first token, move caret before it
+                    searchInputContainer.insertBefore(searchInputField, focusedToken);
+                    searchInputField.focus();
+                }
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                if (focusedToken.nextElementSibling) {
+                     if (focusedToken.nextElementSibling === searchInputField) {
+                         searchInputField.focus();
+                    } else {
+                        focusedToken.nextElementSibling.focus();
+                    }
+                } else {
+                    // If it's the last token, move caret after it
+                    searchInputContainer.appendChild(searchInputField);
+                    searchInputField.focus();
+                }
+            }
+        }
+    });
+
+
     clearSearchBtn.addEventListener('click', function() {
-        searchInput.value = '';
-        const keyupEvent = new Event('keyup', { bubbles: true });
-        searchInput.dispatchEvent(keyupEvent);
-        searchInput.focus();
+        searchInputContainer.querySelectorAll('.search-token').forEach(t => t.remove());
+        searchInputField.value = '';
+        performSearch();
+        searchInputField.focus();
     });
 
     /*
@@ -553,7 +669,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('keydown', (e) => {
         // Ignore key events if the user is typing in the search bar
         const activeEl = document.activeElement;
-        if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+        if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.classList.contains('search-token'))) {
             return;
         }
 
@@ -625,8 +741,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     galleryObserver.observe(gallery);
 
-    if (searchInput) {
-        searchInput.addEventListener('keyup', () => {
+    if (searchInputField) {
+        searchInputField.addEventListener('keyup', () => {
             setTimeout(calculateGridMetrics, 50);
         });
     }
@@ -670,7 +786,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- MouseDown Listener ---
     wrapper.addEventListener('mousedown', (e) => {
         // MODIFIED: If click starts in search bar, exit to allow native text selection.
-        if (e.target === searchInput) {
+        if (searchInputContainer.contains(e.target)) {
             return;
         }
 
@@ -682,7 +798,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if(gallery.contains(e.target) || e.target === gallery) {
             e.preventDefault();
-            if (searchInput) searchInput.blur(); // MODIFIED: Use variable and check for existence
+            if (searchInputField) searchInputField.blur(); // MODIFIED: Use variable and check for existence
         }
 
         hasDragged = false;
@@ -990,7 +1106,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (!response.ok) {
                             throw new Error(`Server could not create zip: ${await response.text()}`);
                         }
-                        
+
                         const zipBlob = await response.blob();
 
                         // Get the filename from the server's 'Content-Disposition' response header
@@ -1018,7 +1134,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             throw new Error(`Failed to fetch image: ${response.statusText}`);
                         }
                         const blob = await response.blob();
-                        
+
                         saveAs(blob, filename);
                     }
                 } catch (error) {
@@ -1052,7 +1168,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
         }
     });
-    
+
     // Add event listener for when files are selected for upload
     if (imageUploadInput) {
         imageUploadInput.addEventListener('change', async (event) => {
@@ -1060,13 +1176,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!files.length) {
                 return; // Exit if no files were selected
             }
-    
+
             // URL of your Cloudflare Worker
             const UPLOAD_URL = 'https://r2-upload-presigner.witcherarchive.workers.dev';
             const uploadPromises = [];
-    
+
             document.body.style.cursor = 'wait'; // Show waiting cursor
-    
+
             // Loop through each selected file
             for (const file of files) {
                 const uploadTask = fetch(UPLOAD_URL, {
@@ -1080,16 +1196,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 .then(response => {
                     if (!response.ok) {
                         // If any upload fails, throw an error to be caught later
-                        return response.text().then(text => { 
-                            throw new Error(`Failed to upload ${file.name}: ${text}`); 
+                        return response.text().then(text => {
+                            throw new Error(`Failed to upload ${file.name}: ${text}`);
                         });
                     }
                     return response.json();
                 });
-    
+
                 uploadPromises.push(uploadTask);
             }
-    
+
             try {
                 // Wait for all upload promises to resolve
                 await Promise.all(uploadPromises);
@@ -1512,29 +1628,27 @@ document.addEventListener('DOMContentLoaded', () => {
 ==================================================================
 */
 document.addEventListener('galleryLoaded', () => {
-    const searchInput = document.getElementById('search-input');
+    const searchInputContainer = document.getElementById('search-input');
+    const searchInputField = document.getElementById('search-input-field');
     const suggestionsContainer = document.getElementById('suggestions-container');
     const galleryItems = document.querySelectorAll('#photo-gallery figure img');
 
-    if (!searchInput || !suggestionsContainer || galleryItems.length === 0) {
+    if (!searchInputContainer || !searchInputField || !suggestionsContainer || galleryItems.length === 0) {
         return;
     }
 
     // Build a unique, sorted list of searchable terms from the JSON data.
     const searchTerms = new Set();
     galleryItems.forEach(img => {
-        // MODIFICATION: Check for the new data attributes: cast, crew, and castAndCrew.
         const peopleSources = [img.dataset.cast, img.dataset.crew, img.dataset.castAndCrew];
-
         peopleSources.forEach(source => {
-            if (source) { // Check if the source (e.g., img.dataset.cast) exists
+            if (source) {
                 source.split(',').forEach(term => {
                     const cleaned = term.trim();
                     if (cleaned && cleaned.toLowerCase() !== 'red') searchTerms.add(cleaned);
                 });
             }
         });
-
         if (img.dataset.characters) {
             img.dataset.characters.split(',').forEach(term => {
                 const cleaned = term.trim();
@@ -1548,7 +1662,7 @@ document.addEventListener('galleryLoaded', () => {
 
     // Updates and displays the suggestion list based on user input.
     function updateSuggestions() {
-        const query = searchInput.value.toLowerCase();
+        const query = searchInputField.value.toLowerCase();
         suggestionsContainer.innerHTML = '';
         activeSuggestionIndex = -1;
 
@@ -1557,14 +1671,17 @@ document.addEventListener('galleryLoaded', () => {
             return;
         }
 
-        const matches = sortedSearchTerms.filter(term => term.toLowerCase().startsWith(query)).slice(0, 7);
+        const matches = sortedSearchTerms.filter(term => {
+            // Also check that the term is not already a token
+            const existingTokens = Array.from(searchInputContainer.querySelectorAll('.search-token')).map(t => t.firstChild.textContent.trim().toLowerCase());
+            return term.toLowerCase().startsWith(query) && !existingTokens.includes(term.toLowerCase());
+        }).slice(0, 7);
 
         if (matches.length > 0) {
             matches.forEach(term => {
                 const item = document.createElement('div');
                 item.className = 'suggestion-item';
                 item.textContent = term;
-                // Use 'mousedown' to prevent the input's 'blur' event from hiding the suggestions before the click registers.
                 item.addEventListener('mousedown', (e) => {
                     e.preventDefault();
                     selectSuggestion(term);
@@ -1579,10 +1696,10 @@ document.addEventListener('galleryLoaded', () => {
 
     // Handles the selection of a suggestion from the list.
     function selectSuggestion(value) {
-        searchInput.value = value;
+        addToken(value); // Use the global addToken function
+        performSearch(); // Use the global performSearch function
         suggestionsContainer.style.display = 'none';
-        // Manually trigger the original 'keyup' event to perform the search.
-        searchInput.dispatchEvent(new Event('keyup', { bubbles: true }));
+        searchInputField.focus();
     }
 
     // Manages the 'active' class for keyboard navigation.
@@ -1600,35 +1717,32 @@ document.addEventListener('galleryLoaded', () => {
     // --- Event Listeners ---
 
     // Update suggestions on every input change.
-    searchInput.addEventListener('input', updateSuggestions);
+    searchInputField.addEventListener('input', updateSuggestions);
 
     // Handle keyboard navigation (arrows, Enter, Escape).
-    searchInput.addEventListener('keydown', (e) => {
+    searchInputField.addEventListener('keydown', (e) => {
         const items = suggestionsContainer.querySelectorAll('.suggestion-item');
-        if (items.length === 0) return;
+        if (suggestionsContainer.style.display === 'none' || items.length === 0) return;
 
         switch (e.key) {
             case 'ArrowDown':
                 e.preventDefault();
-                if (activeSuggestionIndex < items.length - 1) {
-                    activeSuggestionIndex++;
-                    updateActiveSuggestion(items);
-                }
+                activeSuggestionIndex = (activeSuggestionIndex < items.length - 1) ? activeSuggestionIndex + 1 : 0;
+                updateActiveSuggestion(items);
                 break;
             case 'ArrowUp':
                 e.preventDefault();
-                if (activeSuggestionIndex > 0) {
-                    activeSuggestionIndex--;
-                    updateActiveSuggestion(items);
-                }
+                activeSuggestionIndex = (activeSuggestionIndex > 0) ? activeSuggestionIndex - 1 : items.length - 1;
+                updateActiveSuggestion(items);
                 break;
             case 'Enter':
-                if (activeSuggestionIndex > -1) {
-                    e.preventDefault();
+                 if (activeSuggestionIndex > -1) {
+                    e.preventDefault(); // Prevent the main 'Enter' listener from creating a token with the partial input
                     selectSuggestion(items[activeSuggestionIndex].textContent);
                 }
                 break;
             case 'Escape':
+                e.preventDefault();
                 suggestionsContainer.style.display = 'none';
                 break;
         }
@@ -1636,7 +1750,7 @@ document.addEventListener('galleryLoaded', () => {
 
     // Hide the suggestions when clicking anywhere else on the page.
     document.addEventListener('click', (e) => {
-        if (!searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+        if (!searchInputContainer.contains(e.target) && !suggestionsContainer.contains(e.target)) {
             suggestionsContainer.style.display = 'none';
         }
     });
