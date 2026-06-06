@@ -1273,18 +1273,17 @@ input, select, textarea {
 /* The main wrapper that looks like an input field */
 .search-wrapper {
     display: flex;
-    flex-wrap: nowrap; /* Prevents wrapping */
+    flex-wrap: nowrap;
     align-items: center;
     border-radius: 20px;
     background-color: rgba(255, 255, 255, 0.05);
-    padding: 2px 12px 2px 30px;
+    padding: 0 12px 0 30px; /* Removed vertical padding */
     width: 26.5em;
-    height: 36px;
-    min-height: 24px;
+    height: 36px; /* Locks height to 36px */
     cursor: text;
     transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
     font-size: 0.65rem;
-    overflow-x: auto; /* Enables horizontal scrolling */
+    overflow-x: auto;
 }
 
 .search-wrapper:hover {
@@ -1295,9 +1294,7 @@ input, select, textarea {
     background: rgba(255, 255, 255, 0.075);
     border: solid 1px #a3adaf;
     box-shadow: 0 0 0 0.5px #a3adaf;
-    /* This padding (top, right, bottom, left) now matches the
-       unfocused state, minus 1px on each side for the border. */
-    padding: 1px 11px 1px 29px;
+    padding: 0 11px 0 29px; /* Offset for 1px border to prevent layout shifting */
 }
 
 /* The actual text input, styled to be invisible within the wrapper */
@@ -1305,13 +1302,13 @@ input, select, textarea {
     flex-grow: 1;
     border: none !important;
     background: transparent !important;
-    padding: 4px 0 4px 1px !important;
+    padding: 0 0 0 1px !important; /* Removed vertical padding */
     margin: 0 !important;
     outline: none !important;
     color: #ffffff !important;
     box-shadow: none !important;
     border-radius: 0 !important;
-    height: auto !important;
+    height: 100% !important; /* Fills container height */
     width: auto !important;
     min-width: 120px;
     line-height: 1.4 !important;
