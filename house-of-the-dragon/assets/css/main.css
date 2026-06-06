@@ -1279,7 +1279,7 @@ input, select, textarea {
     background-color: rgba(255, 255, 255, 0.05);
     padding: 2px 12px 2px 30px;
     width: 26.5em;
-    height: 36px;
+    min-height: 24px;
     cursor: text;
     transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
     font-size: 0.65rem;
