@@ -1846,6 +1846,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentSidebarWidth = null;
     let pendingSidebarWidth = null;
     let resizeFrame = null;
+    let resizeCursorState = null;
 
     function getSidebarBounds() {
         const styles = getComputedStyle(sidebar);
@@ -1872,6 +1873,20 @@ document.addEventListener('DOMContentLoaded', () => {
         handle.setAttribute('aria-valuemin', String(bounds.min));
         handle.setAttribute('aria-valuemax', String(bounds.max));
         handle.setAttribute('aria-valuenow', String(Math.round(nextWidth)));
+    }
+
+    function setSidebarResizeCursor(width, bounds) {
+        const nextState = width > bounds.max ? 'max' : 'free';
+
+        if (nextState === resizeCursorState) return;
+
+        document.body.classList.toggle('is-sidebar-resize-maxed', nextState === 'max');
+        resizeCursorState = nextState;
+    }
+
+    function resetSidebarResizeCursor() {
+        document.body.classList.remove('is-sidebar-resize-maxed');
+        resizeCursorState = null;
     }
 
     function queueSidebarWidth(width, bounds) {
@@ -1908,7 +1923,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function onPointerMove(moveEvent) {
             if (moveEvent.pointerId !== pointerId) return;
-            queueSidebarWidth(startWidth + moveEvent.clientX - startX, dragBounds);
+
+            const nextWidth = startWidth + moveEvent.clientX - startX;
+            setSidebarResizeCursor(nextWidth, dragBounds);
+            queueSidebarWidth(nextWidth, dragBounds);
         }
 
         function onPointerUp(upEvent) {
@@ -1916,6 +1934,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             flushQueuedSidebarWidth(dragBounds);
             document.body.classList.remove('is-resizing-sidebar');
+            resetSidebarResizeCursor();
             handle.releasePointerCapture(pointerId);
             document.removeEventListener('pointermove', onPointerMove);
             document.removeEventListener('pointerup', onPointerUp);

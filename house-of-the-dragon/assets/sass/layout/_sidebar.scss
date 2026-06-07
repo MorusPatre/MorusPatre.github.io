@@ -87,6 +87,14 @@ body.is-resizing-sidebar {
 	}
 }
 
+body.is-resizing-sidebar.is-sidebar-resize-maxed {
+	cursor: w-resize !important;
+
+	* {
+		cursor: w-resize !important;
+	}
+}
+
 #app-shell {
 	> #wrapper {
 		@include vendor('flex', '1 1 auto');

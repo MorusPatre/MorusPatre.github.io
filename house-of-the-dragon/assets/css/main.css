@@ -2337,6 +2337,14 @@ body.is-resizing-sidebar * {
     cursor: col-resize !important;
 }
 
+body.is-resizing-sidebar.is-sidebar-resize-maxed {
+    cursor: w-resize !important;
+}
+
+body.is-resizing-sidebar.is-sidebar-resize-maxed * {
+    cursor: w-resize !important;
+}
+
 #app-shell > #wrapper {
     flex: 1 1 auto;
     min-width: 0;
