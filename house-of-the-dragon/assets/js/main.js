@@ -1832,3 +1832,97 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
+
+document.addEventListener('DOMContentLoaded', () => {
+    const sidebar = document.getElementById('finder-sidebar');
+    const handle = sidebar ? sidebar.querySelector('.sidebar-resize-handle') : null;
+
+    if (!sidebar || !handle) return;
+
+    const root = document.documentElement;
+    const getNumber = (value, fallback) => {
+        const parsed = parseFloat(value);
+        return Number.isFinite(parsed) ? parsed : fallback;
+    };
+
+    function getSidebarBounds() {
+        const styles = getComputedStyle(sidebar);
+        const min = getNumber(styles.getPropertyValue('--sidebar-min-width'), 176);
+        const max = getNumber(styles.getPropertyValue('--sidebar-max-width'), 420);
+        const viewportMax = Math.max(min, Math.min(max, window.innerWidth - 320));
+
+        return { min, max: viewportMax };
+    }
+
+    function clampWidth(width) {
+        const { min, max } = getSidebarBounds();
+        return Math.min(Math.max(width, min), max);
+    }
+
+    function setSidebarWidth(width) {
+        const nextWidth = clampWidth(width);
+        const bounds = getSidebarBounds();
+
+        root.style.setProperty('--sidebar-width', `${nextWidth}px`);
+        handle.setAttribute('aria-valuemin', String(bounds.min));
+        handle.setAttribute('aria-valuemax', String(bounds.max));
+        handle.setAttribute('aria-valuenow', String(Math.round(nextWidth)));
+    }
+
+    handle.addEventListener('pointerdown', (event) => {
+        if (event.button !== 0) return;
+
+        event.preventDefault();
+
+        const startX = event.clientX;
+        const startWidth = sidebar.getBoundingClientRect().width;
+        const pointerId = event.pointerId;
+
+        document.body.classList.add('is-resizing-sidebar');
+        handle.setPointerCapture(pointerId);
+
+        function onPointerMove(moveEvent) {
+            if (moveEvent.pointerId !== pointerId) return;
+            setSidebarWidth(startWidth + moveEvent.clientX - startX);
+        }
+
+        function onPointerUp(upEvent) {
+            if (upEvent.pointerId !== pointerId) return;
+
+            document.body.classList.remove('is-resizing-sidebar');
+            handle.releasePointerCapture(pointerId);
+            document.removeEventListener('pointermove', onPointerMove);
+            document.removeEventListener('pointerup', onPointerUp);
+            document.removeEventListener('pointercancel', onPointerUp);
+        }
+
+        document.addEventListener('pointermove', onPointerMove);
+        document.addEventListener('pointerup', onPointerUp);
+        document.addEventListener('pointercancel', onPointerUp);
+    });
+
+    handle.addEventListener('keydown', (event) => {
+        const currentWidth = sidebar.getBoundingClientRect().width;
+        const step = event.shiftKey ? 36 : 12;
+
+        if (event.key === 'ArrowLeft') {
+            event.preventDefault();
+            setSidebarWidth(currentWidth - step);
+        } else if (event.key === 'ArrowRight') {
+            event.preventDefault();
+            setSidebarWidth(currentWidth + step);
+        } else if (event.key === 'Home') {
+            event.preventDefault();
+            setSidebarWidth(getSidebarBounds().min);
+        } else if (event.key === 'End') {
+            event.preventDefault();
+            setSidebarWidth(getSidebarBounds().max);
+        }
+    });
+
+    window.addEventListener('resize', () => {
+        setSidebarWidth(sidebar.getBoundingClientRect().width);
+    });
+
+    setSidebarWidth(sidebar.getBoundingClientRect().width);
+});

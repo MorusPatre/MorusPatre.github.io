@@ -2250,3 +2250,138 @@ html, body {
     opacity: 1;
     transform: scale(1);
 }
+
+/*
+============================================
+Finder-Style Sidebar
+============================================
+*/
+
+:root {
+    --sidebar-width: 240px;
+    --sidebar-min-width: 176px;
+    --sidebar-max-width: 420px;
+    --sidebar-gutter: 8px;
+}
+
+#app-shell {
+    display: flex;
+    align-items: stretch;
+    min-height: 100vh;
+    width: 100%;
+    position: relative;
+    z-index: 3;
+}
+
+#finder-sidebar {
+    flex: 0 0 var(--sidebar-width);
+    width: var(--sidebar-width);
+    min-width: var(--sidebar-min-width);
+    max-width: min(var(--sidebar-max-width), calc(100vw - 320px));
+    height: calc(100vh - (var(--sidebar-gutter) * 2));
+    margin: var(--sidebar-gutter) 0 var(--sidebar-gutter) var(--sidebar-gutter);
+    position: sticky;
+    top: var(--sidebar-gutter);
+    z-index: 11;
+    overflow: hidden;
+    background-color: rgba(25, 25, 25, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
+    cursor: default;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+#finder-sidebar::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.015));
+}
+
+.sidebar-resize-handle {
+    position: absolute;
+    top: 0;
+    right: -4px;
+    width: 8px;
+    height: 100%;
+    z-index: 2;
+    cursor: col-resize;
+    touch-action: none;
+    outline: none;
+}
+
+.sidebar-resize-handle::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 3px;
+    width: 1px;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.08);
+    transition: background-color 0.2s ease-in-out, width 0.2s ease-in-out;
+}
+
+#finder-sidebar:hover .sidebar-resize-handle::after,
+.sidebar-resize-handle:focus-visible::after,
+body.is-resizing-sidebar .sidebar-resize-handle::after {
+    width: 2px;
+    background-color: rgba(255, 255, 255, 0.24);
+}
+
+body.is-resizing-sidebar {
+    cursor: col-resize;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+#app-shell > #wrapper {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
+    padding-top: 0;
+}
+
+#app-shell #header {
+    position: sticky;
+    top: 0;
+    left: auto;
+    flex: 0 0 2.5rem;
+}
+
+#app-shell #photo-gallery {
+    margin-top: 2.5rem;
+}
+
+@media screen and (max-width: 736px) {
+
+    :root {
+        --sidebar-width: 72px;
+        --sidebar-min-width: 64px;
+        --sidebar-max-width: 180px;
+        --sidebar-gutter: 6px;
+    }
+
+    #app-shell > #wrapper {
+        padding-top: 0;
+        padding-right: 1rem;
+        padding-bottom: 0.5rem;
+        padding-left: 1rem;
+    }
+
+    #app-shell #photo-gallery {
+        margin-top: 1.5rem;
+        padding-right: 1rem;
+        padding-left: 1rem;
+    }
+
+}
