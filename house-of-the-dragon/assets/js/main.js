@@ -1836,6 +1836,7 @@ document.addEventListener('keydown', (e) => {
 document.addEventListener('DOMContentLoaded', () => {
     const sidebar = document.getElementById('finder-sidebar');
     const handle = sidebar ? sidebar.querySelector('.sidebar-resize-handle') : null;
+    const toggle = document.getElementById('sidebar-toggle');
 
     if (!sidebar || !handle) return;
 
@@ -1847,6 +1848,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let pendingSidebarWidth = null;
     let resizeFrame = null;
     let resizeCursorState = null;
+    let lastExpandedWidth = null;
 
     function getSidebarBounds() {
         const styles = getComputedStyle(sidebar);
@@ -1873,6 +1875,31 @@ document.addEventListener('DOMContentLoaded', () => {
         handle.setAttribute('aria-valuemin', String(bounds.min));
         handle.setAttribute('aria-valuemax', String(bounds.max));
         handle.setAttribute('aria-valuenow', String(Math.round(nextWidth)));
+    }
+
+    function isSidebarCollapsed() {
+        return document.body.classList.contains('is-sidebar-collapsed');
+    }
+
+    function setSidebarCollapsed(collapsed) {
+        const bounds = getSidebarBounds();
+
+        if (collapsed) {
+            lastExpandedWidth = currentSidebarWidth || clampWidth(sidebar.getBoundingClientRect().width, bounds);
+            document.body.classList.add('is-sidebar-collapsed');
+            sidebar.setAttribute('aria-hidden', 'true');
+            handle.setAttribute('tabindex', '-1');
+            toggle && toggle.setAttribute('aria-expanded', 'false');
+            toggle && toggle.setAttribute('aria-label', 'Open sidebar');
+            return;
+        }
+
+        document.body.classList.remove('is-sidebar-collapsed');
+        sidebar.removeAttribute('aria-hidden');
+        handle.setAttribute('tabindex', '0');
+        setSidebarWidth(lastExpandedWidth || currentSidebarWidth || bounds.min, bounds);
+        toggle && toggle.setAttribute('aria-expanded', 'true');
+        toggle && toggle.setAttribute('aria-label', 'Close sidebar');
     }
 
     function setSidebarResizeCursor(width, bounds) {
@@ -1909,7 +1936,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     handle.addEventListener('pointerdown', (event) => {
-        if (event.button !== 0) return;
+        if (event.button !== 0 || isSidebarCollapsed()) return;
 
         event.preventDefault();
 
@@ -1947,6 +1974,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     handle.addEventListener('keydown', (event) => {
+        if (isSidebarCollapsed()) return;
+
         const bounds = getSidebarBounds();
         const currentWidth = clampWidth(sidebar.getBoundingClientRect().width, bounds);
         const step = event.shiftKey ? 36 : 12;
@@ -1967,10 +1996,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     window.addEventListener('resize', () => {
+        if (isSidebarCollapsed()) return;
+
         const bounds = getSidebarBounds();
         setSidebarWidth(sidebar.getBoundingClientRect().width, bounds);
     });
 
     const initialBounds = getSidebarBounds();
     setSidebarWidth(sidebar.getBoundingClientRect().width, initialBounds);
+
+    if (toggle) {
+        toggle.addEventListener('click', () => {
+            setSidebarCollapsed(!isSidebarCollapsed());
+        });
+    }
 });

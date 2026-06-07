@@ -13,6 +13,9 @@ Finder-Style Sidebar
 	--sidebar-max-width: 420px;
 	--sidebar-gutter: 8px;
 	--sidebar-radius: 20px;
+	--sidebar-toggle-size: 28px;
+	--sidebar-toggle-left: calc(var(--sidebar-gutter) + 12px);
+	--top-bar-height: 2.5rem;
 }
 
 #app-shell {
@@ -47,6 +50,46 @@ Finder-Style Sidebar
 	-moz-user-select: none;
 	-ms-user-select: none;
 	user-select: none;
+}
+
+.sidebar-toggle {
+	position: fixed;
+	top: calc((var(--top-bar-height) - var(--sidebar-toggle-size)) / 2);
+	left: var(--sidebar-toggle-left);
+	z-index: 12;
+	width: var(--sidebar-toggle-size);
+	height: var(--sidebar-toggle-size);
+	display: grid;
+	place-items: center;
+	padding: 0;
+	border: 0;
+	border-radius: 7px;
+	background: transparent;
+	color: rgba(255, 255, 255, 0.72);
+	cursor: default;
+	-webkit-appearance: none;
+	appearance: none;
+
+	svg {
+		width: 18px;
+		height: 18px;
+		display: block;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 1.8;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+	}
+
+	&:hover,
+	&:focus-visible {
+		background: rgba(255, 255, 255, 0.1);
+		color: rgba(255, 255, 255, 0.9);
+	}
+
+	&:focus {
+		outline: none;
+	}
 }
 
 .sidebar-resize-handle {
@@ -92,6 +135,27 @@ body.is-resizing-sidebar.is-sidebar-resize-maxed {
 
 	* {
 		cursor: w-resize !important;
+	}
+}
+
+body.is-sidebar-collapsed {
+	#finder-sidebar {
+		@include vendor('flex-basis', '0px');
+		width: 0;
+		min-width: 0;
+		max-width: 0;
+		margin-left: 0;
+		border-width: 0;
+		border-color: transparent;
+		background-color: transparent;
+		backdrop-filter: none;
+		-webkit-backdrop-filter: none;
+		box-shadow: none;
+		pointer-events: none;
+	}
+
+	.sidebar-resize-handle {
+		display: none;
 	}
 }
 
@@ -144,6 +208,8 @@ body.is-resizing-sidebar.is-sidebar-resize-maxed {
 		--sidebar-min-width: 64px;
 		--sidebar-max-width: 180px;
 		--sidebar-gutter: 6px;
+		--sidebar-toggle-size: 26px;
+		--sidebar-toggle-left: calc(var(--sidebar-gutter) + 8px);
 	}
 
 	#app-shell {
