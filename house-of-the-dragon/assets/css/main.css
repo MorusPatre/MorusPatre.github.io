@@ -2265,6 +2265,7 @@ Finder-Style Sidebar
     --sidebar-min-width: 176px;
     --sidebar-max-width: 420px;
     --sidebar-gutter: 8px;
+    --sidebar-radius: 12px;
 }
 
 #app-shell {
@@ -2312,7 +2313,7 @@ body.is-article-visible #app-shell::before {
     backdrop-filter: var(--chrome-material-blur);
     -webkit-backdrop-filter: var(--chrome-material-blur);
     border: 1px solid var(--chrome-material-border);
-    border-radius: 8px;
+    border-radius: var(--sidebar-radius);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
     cursor: default;
     -webkit-user-select: none;
