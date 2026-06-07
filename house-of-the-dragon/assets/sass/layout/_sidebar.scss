@@ -28,28 +28,27 @@ Finder-Style Sidebar
 }
 
 #finder-sidebar {
-	@include vendor('flex', '0 0 var(--sidebar-width)');
-	width: var(--sidebar-width);
-	min-width: var(--sidebar-min-width);
-	max-width: min(var(--sidebar-max-width), calc(100vw - 320px));
-	height: calc(100vh - (var(--sidebar-gutter) * 2));
-	margin: var(--sidebar-gutter) 0 var(--sidebar-gutter) var(--sidebar-gutter);
-	position: sticky;
-	top: var(--sidebar-gutter);
-	z-index: 11;
-	overflow: hidden;
-	background-color: var(--chrome-material-bg);
-	backdrop-filter: var(--chrome-material-blur);
-	-webkit-backdrop-filter: var(--chrome-material-blur);
-	border: 1px solid var(--chrome-material-border);
-	border-radius: var(--sidebar-radius);
-	corner-shape: squircle;
-	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
-	cursor: default;
-	-webkit-user-select: none;
-	-moz-user-select: none;
-	-ms-user-select: none;
-	user-select: none;
+    @include vendor('flex', '0 0 var(--sidebar-width)');
+    width: var(--sidebar-width);
+    min-width: var(--sidebar-min-width);
+    max-width: min(var(--sidebar-max-width), calc(100vw - 320px));
+    height: calc(100vh - (var(--sidebar-gutter) * 2));
+    margin: var(--sidebar-gutter) 0 var(--sidebar-gutter) var(--sidebar-gutter);
+    position: sticky;
+    top: var(--sidebar-gutter);
+    z-index: 11;
+    background-color: var(--chrome-material-bg);
+    backdrop-filter: var(--chrome-material-blur);
+    -webkit-backdrop-filter: var(--chrome-material-blur);
+    border: 1px solid var(--chrome-material-border);
+    border-radius: var(--sidebar-radius);
+    corner-shape: squircle;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
+    cursor: default;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 .sidebar-toggle {
