@@ -2283,7 +2283,7 @@ Finder-Style Sidebar
     left: 0;
     width: 100vw;
     height: 2.5rem;
-    z-index: 9;
+    z-index: 2;
     pointer-events: none;
     background-color: var(--chrome-material-bg);
     backdrop-filter: var(--chrome-material-blur);
