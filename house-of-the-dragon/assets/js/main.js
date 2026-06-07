@@ -1839,11 +1839,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!sidebar || !handle) return;
 
-    const root = document.documentElement;
     const getNumber = (value, fallback) => {
         const parsed = parseFloat(value);
         return Number.isFinite(parsed) ? parsed : fallback;
     };
+    let currentSidebarWidth = null;
+    let pendingSidebarWidth = null;
+    let resizeFrame = null;
 
     function getSidebarBounds() {
         const styles = getComputedStyle(sidebar);
@@ -1854,19 +1856,41 @@ document.addEventListener('DOMContentLoaded', () => {
         return { min, max: viewportMax };
     }
 
-    function clampWidth(width) {
-        const { min, max } = getSidebarBounds();
+    function clampWidth(width, bounds = getSidebarBounds()) {
+        const { min, max } = bounds;
         return Math.min(Math.max(width, min), max);
     }
 
-    function setSidebarWidth(width) {
-        const nextWidth = clampWidth(width);
-        const bounds = getSidebarBounds();
+    function setSidebarWidth(width, bounds = getSidebarBounds()) {
+        const nextWidth = clampWidth(width, bounds);
 
-        root.style.setProperty('--sidebar-width', `${nextWidth}px`);
+        if (nextWidth !== currentSidebarWidth) {
+            sidebar.style.setProperty('--sidebar-width', `${nextWidth}px`);
+            currentSidebarWidth = nextWidth;
+        }
+
         handle.setAttribute('aria-valuemin', String(bounds.min));
         handle.setAttribute('aria-valuemax', String(bounds.max));
         handle.setAttribute('aria-valuenow', String(Math.round(nextWidth)));
+    }
+
+    function queueSidebarWidth(width, bounds) {
+        pendingSidebarWidth = width;
+
+        if (resizeFrame !== null) return;
+
+        resizeFrame = requestAnimationFrame(() => {
+            resizeFrame = null;
+            setSidebarWidth(pendingSidebarWidth, bounds);
+        });
+    }
+
+    function flushQueuedSidebarWidth(bounds) {
+        if (resizeFrame === null) return;
+
+        cancelAnimationFrame(resizeFrame);
+        resizeFrame = null;
+        setSidebarWidth(pendingSidebarWidth, bounds);
     }
 
     handle.addEventListener('pointerdown', (event) => {
@@ -1875,7 +1899,8 @@ document.addEventListener('DOMContentLoaded', () => {
         event.preventDefault();
 
         const startX = event.clientX;
-        const startWidth = sidebar.getBoundingClientRect().width;
+        const dragBounds = getSidebarBounds();
+        const startWidth = clampWidth(sidebar.getBoundingClientRect().width, dragBounds);
         const pointerId = event.pointerId;
 
         document.body.classList.add('is-resizing-sidebar');
@@ -1883,12 +1908,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function onPointerMove(moveEvent) {
             if (moveEvent.pointerId !== pointerId) return;
-            setSidebarWidth(startWidth + moveEvent.clientX - startX);
+            queueSidebarWidth(startWidth + moveEvent.clientX - startX, dragBounds);
         }
 
         function onPointerUp(upEvent) {
             if (upEvent.pointerId !== pointerId) return;
 
+            flushQueuedSidebarWidth(dragBounds);
             document.body.classList.remove('is-resizing-sidebar');
             handle.releasePointerCapture(pointerId);
             document.removeEventListener('pointermove', onPointerMove);
@@ -1902,27 +1928,30 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     handle.addEventListener('keydown', (event) => {
-        const currentWidth = sidebar.getBoundingClientRect().width;
+        const bounds = getSidebarBounds();
+        const currentWidth = clampWidth(sidebar.getBoundingClientRect().width, bounds);
         const step = event.shiftKey ? 36 : 12;
 
         if (event.key === 'ArrowLeft') {
             event.preventDefault();
-            setSidebarWidth(currentWidth - step);
+            setSidebarWidth(currentWidth - step, bounds);
         } else if (event.key === 'ArrowRight') {
             event.preventDefault();
-            setSidebarWidth(currentWidth + step);
+            setSidebarWidth(currentWidth + step, bounds);
         } else if (event.key === 'Home') {
             event.preventDefault();
-            setSidebarWidth(getSidebarBounds().min);
+            setSidebarWidth(bounds.min, bounds);
         } else if (event.key === 'End') {
             event.preventDefault();
-            setSidebarWidth(getSidebarBounds().max);
+            setSidebarWidth(bounds.max, bounds);
         }
     });
 
     window.addEventListener('resize', () => {
-        setSidebarWidth(sidebar.getBoundingClientRect().width);
+        const bounds = getSidebarBounds();
+        setSidebarWidth(sidebar.getBoundingClientRect().width, bounds);
     });
 
-    setSidebarWidth(sidebar.getBoundingClientRect().width);
+    const initialBounds = getSidebarBounds();
+    setSidebarWidth(sidebar.getBoundingClientRect().width, initialBounds);
 });
