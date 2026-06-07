@@ -13,6 +13,10 @@ Finder-Style Sidebar
 	--sidebar-max-width: 420px;
 	--sidebar-gutter: 8px;
 	--sidebar-radius: 16px;
+	--sidebar-radius-step-1: 12px;
+	--sidebar-radius-step-2: 8px;
+	--sidebar-radius-step-3: 4px;
+	--sidebar-radius-step-4: 1px;
 }
 
 #app-shell {
@@ -40,6 +44,37 @@ Finder-Style Sidebar
 	-webkit-backdrop-filter: var(--chrome-material-blur);
 	border: 1px solid var(--chrome-material-border);
 	border-radius: var(--sidebar-radius);
+	corner-shape: squircle;
+	clip-path: polygon(
+		0 var(--sidebar-radius),
+		0 var(--sidebar-radius-step-1),
+		var(--sidebar-radius-step-4) var(--sidebar-radius-step-2),
+		var(--sidebar-radius-step-3) var(--sidebar-radius-step-3),
+		var(--sidebar-radius-step-2) var(--sidebar-radius-step-4),
+		var(--sidebar-radius-step-1) 0,
+		var(--sidebar-radius) 0,
+		calc(100% - var(--sidebar-radius)) 0,
+		calc(100% - var(--sidebar-radius-step-1)) 0,
+		calc(100% - var(--sidebar-radius-step-2)) var(--sidebar-radius-step-4),
+		calc(100% - var(--sidebar-radius-step-3)) var(--sidebar-radius-step-3),
+		calc(100% - var(--sidebar-radius-step-4)) var(--sidebar-radius-step-2),
+		100% var(--sidebar-radius-step-1),
+		100% var(--sidebar-radius),
+		100% calc(100% - var(--sidebar-radius)),
+		100% calc(100% - var(--sidebar-radius-step-1)),
+		calc(100% - var(--sidebar-radius-step-4)) calc(100% - var(--sidebar-radius-step-2)),
+		calc(100% - var(--sidebar-radius-step-3)) calc(100% - var(--sidebar-radius-step-3)),
+		calc(100% - var(--sidebar-radius-step-2)) calc(100% - var(--sidebar-radius-step-4)),
+		calc(100% - var(--sidebar-radius-step-1)) 100%,
+		calc(100% - var(--sidebar-radius)) 100%,
+		var(--sidebar-radius) 100%,
+		var(--sidebar-radius-step-1) 100%,
+		var(--sidebar-radius-step-2) calc(100% - var(--sidebar-radius-step-4)),
+		var(--sidebar-radius-step-3) calc(100% - var(--sidebar-radius-step-3)),
+		var(--sidebar-radius-step-4) calc(100% - var(--sidebar-radius-step-2)),
+		0 calc(100% - var(--sidebar-radius-step-1)),
+		0 calc(100% - var(--sidebar-radius))
+	);
 	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
 	cursor: default;
 	-webkit-user-select: none;
