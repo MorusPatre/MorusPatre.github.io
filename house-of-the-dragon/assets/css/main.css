@@ -2326,11 +2326,15 @@ Finder-Style Sidebar
 }
 
 body.is-resizing-sidebar {
-    cursor: col-resize;
+    cursor: col-resize !important;
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
+}
+
+body.is-resizing-sidebar * {
+    cursor: col-resize !important;
 }
 
 #app-shell > #wrapper {
