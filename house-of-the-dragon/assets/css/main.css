@@ -2265,10 +2265,10 @@ Finder-Style Sidebar
     --sidebar-min-width: 176px;
     --sidebar-max-width: 420px;
     --sidebar-gutter: 8px;
-    --sidebar-radius: 20px;
-    --sidebar-radius-step-1: 15px;
-    --sidebar-radius-step-2: 10px;
-    --sidebar-radius-step-3: 5px;
+    --sidebar-radius: 18px;
+    --sidebar-radius-step-1: 13.5px;
+    --sidebar-radius-step-2: 9px;
+    --sidebar-radius-step-3: 4.5px;
     --sidebar-radius-step-4: 1px;
 }
 
