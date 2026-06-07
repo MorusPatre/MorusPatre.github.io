@@ -2325,12 +2325,6 @@ Finder-Style Sidebar
     transition: background-color 0.2s ease-in-out, width 0.2s ease-in-out;
 }
 
-.sidebar-resize-handle:focus-visible::after,
-body.is-resizing-sidebar .sidebar-resize-handle::after {
-    width: 2px;
-    background-color: rgba(255, 255, 255, 0.24);
-}
-
 body.is-resizing-sidebar {
     cursor: col-resize;
     -webkit-user-select: none;
