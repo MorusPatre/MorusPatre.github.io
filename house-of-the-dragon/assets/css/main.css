@@ -2318,8 +2318,11 @@ Finder-Style Sidebar
     border: 0;
     border-radius: 7px;
     background: transparent;
+    box-shadow: none;
     color: rgba(255, 255, 255, 0.72);
     cursor: default;
+    line-height: 1;
+    min-width: 0;
     -webkit-appearance: none;
     appearance: none;
 }
@@ -2335,7 +2338,9 @@ Finder-Style Sidebar
     stroke-linejoin: round;
 }
 
-.sidebar-toggle:hover, .sidebar-toggle:focus-visible {
+.sidebar-toggle:hover, .sidebar-toggle:focus-visible, .sidebar-toggle:active {
+    background: transparent;
+    box-shadow: none;
     color: rgba(255, 255, 255, 0.9);
 }
 
