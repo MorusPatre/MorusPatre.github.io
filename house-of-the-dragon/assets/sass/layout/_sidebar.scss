@@ -85,11 +85,16 @@ Finder-Style Sidebar
 	}
 
 	&:hover,
-	&:focus-visible,
-	&:active {
-		background: transparent;
+	&:focus-visible {
+		background: rgba(255, 255, 255, 0.1);
 		box-shadow: none;
 		color: rgba(255, 255, 255, 0.9);
+	}
+
+	&:active {
+		background: rgba(255, 255, 255, 0.14);
+		box-shadow: none;
+		color: rgba(255, 255, 255, 0.95);
 	}
 
 	&:focus {
