@@ -2344,7 +2344,6 @@ body.is-article-visible #app-shell::before {
     transition: background-color 0.2s ease-in-out, width 0.2s ease-in-out;
 }
 
-#finder-sidebar:hover .sidebar-resize-handle::after,
 .sidebar-resize-handle:focus-visible::after,
 body.is-resizing-sidebar .sidebar-resize-handle::after {
     width: 2px;
