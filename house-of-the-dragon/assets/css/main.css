@@ -2277,27 +2277,6 @@ Finder-Style Sidebar
     z-index: 3;
 }
 
-#app-shell::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 2.5rem;
-    z-index: 2;
-    pointer-events: none;
-    background-color: var(--chrome-material-bg);
-    backdrop-filter: var(--chrome-material-blur);
-    -webkit-backdrop-filter: var(--chrome-material-blur);
-    transition: transform 0.325s ease-in-out, filter 0.325s ease-in-out, opacity 0.325s ease-in-out;
-}
-
-body.is-article-visible #app-shell::before {
-    transform: scale(0.95);
-    filter: blur(0.1rem);
-    opacity: 0;
-}
-
 #finder-sidebar {
     flex: 0 0 var(--sidebar-width);
     width: var(--sidebar-width);
@@ -2375,6 +2354,25 @@ body.is-resizing-sidebar {
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
     border-bottom: 1px solid var(--chrome-material-border);
+    isolation: isolate;
+}
+
+#app-shell #header::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 2.5rem;
+    z-index: 0;
+    pointer-events: none;
+    background-color: var(--chrome-material-bg);
+    backdrop-filter: var(--chrome-material-blur);
+    -webkit-backdrop-filter: var(--chrome-material-blur);
+}
+
+#app-shell #header > * {
+    z-index: 1;
 }
 
 #app-shell #photo-gallery {
