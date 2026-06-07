@@ -5,6 +5,9 @@ Finder-Style Sidebar
 */
 
 :root {
+	--chrome-material-bg: rgba(25, 25, 25, 0.8);
+	--chrome-material-blur: blur(12px);
+	--chrome-material-border: rgba(255, 255, 255, 0.1);
 	--sidebar-width: 240px;
 	--sidebar-min-width: 176px;
 	--sidebar-max-width: 420px;
@@ -18,6 +21,31 @@ Finder-Style Sidebar
 	width: 100%;
 	position: relative;
 	z-index: 3;
+
+	&:before {
+		content: '';
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100vw;
+		height: 2.5rem;
+		z-index: 9;
+		pointer-events: none;
+		background-color: var(--chrome-material-bg);
+		backdrop-filter: var(--chrome-material-blur);
+		-webkit-backdrop-filter: var(--chrome-material-blur);
+		@include vendor('transition', (
+			'transform #{_duration(article)} ease-in-out',
+			'filter #{_duration(article)} ease-in-out',
+			'opacity #{_duration(article)} ease-in-out',
+		));
+	}
+}
+
+body.is-article-visible #app-shell:before {
+	@include vendor('transform', 'scale(0.95)');
+	@include vendor('filter', 'blur(0.1rem)');
+	opacity: 0;
 }
 
 #finder-sidebar {
@@ -31,10 +59,10 @@ Finder-Style Sidebar
 	top: var(--sidebar-gutter);
 	z-index: 11;
 	overflow: hidden;
-	background-color: rgba(25, 25, 25, 0.8);
-	backdrop-filter: blur(12px);
-	-webkit-backdrop-filter: blur(12px);
-	border: 1px solid rgba(255, 255, 255, 0.1);
+	background-color: var(--chrome-material-bg);
+	backdrop-filter: var(--chrome-material-blur);
+	-webkit-backdrop-filter: var(--chrome-material-blur);
+	border: 1px solid var(--chrome-material-border);
 	border-radius: 8px;
 	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
 	cursor: default;
@@ -42,15 +70,6 @@ Finder-Style Sidebar
 	-moz-user-select: none;
 	-ms-user-select: none;
 	user-select: none;
-
-	&:before {
-		content: '';
-		position: absolute;
-		inset: 0;
-		border-radius: inherit;
-		pointer-events: none;
-		background: linear-gradient(to bottom, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.015));
-	}
 }
 
 .sidebar-resize-handle {
@@ -107,6 +126,10 @@ body.is-resizing-sidebar {
 		top: 0;
 		left: auto;
 		@include vendor('flex', '0 0 2.5rem');
+		background-color: transparent;
+		backdrop-filter: none;
+		-webkit-backdrop-filter: none;
+		border-bottom: 1px solid var(--chrome-material-border);
 	}
 
 	#photo-gallery {
