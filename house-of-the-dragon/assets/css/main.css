@@ -2266,8 +2266,7 @@ Finder-Style Sidebar
     --sidebar-max-width: 420px;
     --sidebar-gutter: 8px;
     --sidebar-radius: 20px;
-    --sidebar-toggle-width: 31px;
-    --sidebar-toggle-height: 28px;
+    --sidebar-toggle-size: 28px;
     --sidebar-toggle-left: calc(var(--sidebar-gutter) + 12px);
     --top-bar-height: 2.5rem;
 }
@@ -2308,11 +2307,11 @@ Finder-Style Sidebar
 
 .sidebar-toggle {
     position: fixed;
-    top: calc((var(--top-bar-height) - var(--sidebar-toggle-height)) / 2);
+    top: calc((var(--top-bar-height) - var(--sidebar-toggle-size)) / 2);
     left: var(--sidebar-toggle-left);
     z-index: 12;
-    width: var(--sidebar-toggle-width);
-    height: var(--sidebar-toggle-height);
+    width: var(--sidebar-toggle-size);
+    height: var(--sidebar-toggle-size);
     display: grid;
     place-items: center;
     padding: 0;
@@ -2322,34 +2321,24 @@ Finder-Style Sidebar
     box-shadow: none;
     color: rgba(255, 255, 255, 0.72);
     cursor: default;
-    line-height: 1;
-    min-width: 0;
     -webkit-appearance: none;
     appearance: none;
 }
 
 .sidebar-toggle svg {
-    width: 24px;
-    height: 24px;
+    width: 18px;
+    height: 18px;
     display: block;
     fill: none;
     stroke: currentColor;
     stroke-width: 1.8;
     stroke-linecap: round;
     stroke-linejoin: round;
-    transform: translateX(-0.5px);
 }
 
 .sidebar-toggle:hover, .sidebar-toggle:focus-visible {
     background: rgba(255, 255, 255, 0.1);
-    box-shadow: none;
     color: rgba(255, 255, 255, 0.9);
-}
-
-.sidebar-toggle:active {
-    background: rgba(255, 255, 255, 0.14);
-    box-shadow: none;
-    color: rgba(255, 255, 255, 0.95);
 }
 
 .sidebar-toggle:focus {
@@ -2466,6 +2455,7 @@ body.is-sidebar-collapsed .sidebar-resize-handle {
         --sidebar-min-width: 64px;
         --sidebar-max-width: 180px;
         --sidebar-gutter: 6px;
+        --sidebar-toggle-size: 26px;
         --sidebar-toggle-left: calc(var(--sidebar-gutter) + 8px);
     }
 
