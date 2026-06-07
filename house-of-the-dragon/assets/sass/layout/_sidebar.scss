@@ -71,8 +71,8 @@ Finder-Style Sidebar
 	appearance: none;
 
 	svg {
-		width: 18px;
-		height: 18px;
+		width: 19px;
+		height: 19px;
 		display: block;
 		fill: none;
 		stroke: currentColor;
@@ -83,7 +83,6 @@ Finder-Style Sidebar
 
 	&:hover,
 	&:focus-visible {
-		background: rgba(255, 255, 255, 0.1);
 		color: rgba(255, 255, 255, 0.9);
 	}
 
