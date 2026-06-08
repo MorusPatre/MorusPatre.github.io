@@ -769,7 +769,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Refactored Marquee and Auto-Scroll Functions ---
 
+    const MARQUEE_VIEWPORT_EDGE_SNAP = 1;
     const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+    const snapToViewportEdge = (value, min, max) => {
+        const clampedValue = clamp(value, min, max);
+
+        if (clampedValue <= min + MARQUEE_VIEWPORT_EDGE_SNAP) return min;
+        if (clampedValue >= max - MARQUEE_VIEWPORT_EDGE_SNAP) return max;
+
+        return clampedValue;
+    };
 
     function getViewportBounds() {
         const viewport = window.visualViewport;
@@ -795,8 +805,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const viewportBounds = getViewportBounds();
 
         return {
-            x: clamp(clientX, viewportBounds.left, viewportBounds.right) - galleryRect.left,
-            y: clamp(clientY, viewportBounds.top, viewportBounds.bottom) - galleryRect.top
+            x: snapToViewportEdge(clientX, viewportBounds.left, viewportBounds.right) - galleryRect.left,
+            y: snapToViewportEdge(clientY, viewportBounds.top, viewportBounds.bottom) - galleryRect.top
         };
     }
 
