@@ -769,6 +769,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Refactored Marquee and Auto-Scroll Functions ---
 
+    const MARQUEE_SCROLL_EDGE_OVERSCAN = 1;
     const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
     function getViewportBounds() {
@@ -818,13 +819,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const selectionTop = isDraggingDown ? startPos.y : currentPoint.y;
         const selectionRight = isDraggingRight ? currentPoint.x + 1 : startPos.x + 1;
         const selectionBottom = isDraggingDown ? currentPoint.y + 1 : startPos.y + 1;
+        const isAutoScrollFrame = scrollSpeedY !== 0;
         const isSelectionPastViewportY =
             selectionTop < viewportRect.top ||
             selectionBottom > viewportRect.bottom;
         const visibleLeft = clamp(selectionLeft, viewportRect.left, viewportRect.right);
         const visibleRight = clamp(selectionRight, viewportRect.left, viewportRect.right);
-        const visibleTop = isSelectionPastViewportY ? selectionTop : clamp(selectionTop, viewportRect.top, viewportRect.bottom);
-        const visibleBottom = isSelectionPastViewportY ? selectionBottom : clamp(selectionBottom, viewportRect.top, viewportRect.bottom);
+        const visibleTop = isAutoScrollFrame
+            ? selectionTop - MARQUEE_SCROLL_EDGE_OVERSCAN
+            : (isSelectionPastViewportY ? selectionTop : clamp(selectionTop, viewportRect.top, viewportRect.bottom));
+        const visibleBottom = isAutoScrollFrame
+            ? selectionBottom + MARQUEE_SCROLL_EDGE_OVERSCAN
+            : (isSelectionPastViewportY ? selectionBottom : clamp(selectionBottom, viewportRect.top, viewportRect.bottom));
 
         const selectionRect = {
             x: selectionLeft,
