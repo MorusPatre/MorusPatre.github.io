@@ -1849,6 +1849,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let resizeFrame = null;
     let resizeCursorState = null;
     let lastExpandedWidth = null;
+    const dragCollapseThreshold = 80;
 
     function getSidebarBounds() {
         const styles = getComputedStyle(sidebar);
@@ -1881,23 +1882,26 @@ document.addEventListener('DOMContentLoaded', () => {
         return document.body.classList.contains('is-sidebar-collapsed');
     }
 
-    function setSidebarCollapsed(collapsed) {
+    function setSidebarCollapsed(collapsed, restoreWidth = null) {
         const bounds = getSidebarBounds();
 
         if (collapsed) {
-            lastExpandedWidth = currentSidebarWidth || clampWidth(sidebar.getBoundingClientRect().width, bounds);
+            if (!isSidebarCollapsed()) {
+                lastExpandedWidth = currentSidebarWidth || clampWidth(sidebar.getBoundingClientRect().width, bounds);
+            }
             document.body.classList.add('is-sidebar-collapsed');
             sidebar.setAttribute('aria-hidden', 'true');
             handle.setAttribute('tabindex', '-1');
+            handle.setAttribute('aria-valuenow', '0');
             toggle && toggle.setAttribute('aria-expanded', 'false');
             toggle && toggle.setAttribute('aria-label', 'Open sidebar');
             return;
         }
 
+        setSidebarWidth(restoreWidth !== null ? restoreWidth : lastExpandedWidth || currentSidebarWidth || bounds.min, bounds);
         document.body.classList.remove('is-sidebar-collapsed');
         sidebar.removeAttribute('aria-hidden');
         handle.setAttribute('tabindex', '0');
-        setSidebarWidth(lastExpandedWidth || currentSidebarWidth || bounds.min, bounds);
         toggle && toggle.setAttribute('aria-expanded', 'true');
         toggle && toggle.setAttribute('aria-label', 'Close sidebar');
     }
@@ -1935,6 +1939,15 @@ document.addEventListener('DOMContentLoaded', () => {
         setSidebarWidth(pendingSidebarWidth, bounds);
     }
 
+    function cancelQueuedSidebarWidth() {
+        if (resizeFrame !== null) {
+            cancelAnimationFrame(resizeFrame);
+            resizeFrame = null;
+        }
+
+        pendingSidebarWidth = null;
+    }
+
     handle.addEventListener('pointerdown', (event) => {
         if (event.button !== 0 || isSidebarCollapsed()) return;
 
@@ -1953,16 +1966,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const nextWidth = startWidth + moveEvent.clientX - startX;
             setSidebarResizeCursor(nextWidth, dragBounds);
+
+            if (nextWidth < dragCollapseThreshold) {
+                cancelQueuedSidebarWidth();
+                setSidebarCollapsed(true);
+                return;
+            }
+
+            if (isSidebarCollapsed()) {
+                setSidebarCollapsed(false, nextWidth);
+            }
+
             queueSidebarWidth(nextWidth, dragBounds);
         }
 
         function onPointerUp(upEvent) {
             if (upEvent.pointerId !== pointerId) return;
 
-            flushQueuedSidebarWidth(dragBounds);
+            if (!isSidebarCollapsed()) {
+                flushQueuedSidebarWidth(dragBounds);
+            } else {
+                cancelQueuedSidebarWidth();
+            }
             document.body.classList.remove('is-resizing-sidebar');
             resetSidebarResizeCursor();
-            handle.releasePointerCapture(pointerId);
+            if (handle.hasPointerCapture(pointerId)) {
+                handle.releasePointerCapture(pointerId);
+            }
             document.removeEventListener('pointermove', onPointerMove);
             document.removeEventListener('pointerup', onPointerUp);
             document.removeEventListener('pointercancel', onPointerUp);
