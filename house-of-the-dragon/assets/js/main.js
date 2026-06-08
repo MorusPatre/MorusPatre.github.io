@@ -814,26 +814,33 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentPoint = getClampedMarqueePoint(clientX, clientY, galleryRect);
         const isDraggingRight = currentPoint.x >= startPos.x;
         const isDraggingDown = currentPoint.y >= startPos.y;
-        const marqueeLeft = isDraggingRight ? startPos.x : currentPoint.x;
-        const marqueeTop = isDraggingDown ? startPos.y : currentPoint.y;
-        const marqueeRight = isDraggingRight ? currentPoint.x + 1 : startPos.x + 1;
-        const marqueeBottom = isDraggingDown ? currentPoint.y + 1 : startPos.y + 1;
-        const clampedLeft = clamp(marqueeLeft, viewportRect.left, viewportRect.right);
-        const clampedTop = clamp(marqueeTop, viewportRect.top, viewportRect.bottom);
-        const clampedRight = clamp(marqueeRight, viewportRect.left, viewportRect.right);
-        const clampedBottom = clamp(marqueeBottom, viewportRect.top, viewportRect.bottom);
+        const selectionLeft = isDraggingRight ? startPos.x : currentPoint.x;
+        const selectionTop = isDraggingDown ? startPos.y : currentPoint.y;
+        const selectionRight = isDraggingRight ? currentPoint.x + 1 : startPos.x + 1;
+        const selectionBottom = isDraggingDown ? currentPoint.y + 1 : startPos.y + 1;
+        const visibleLeft = clamp(selectionLeft, viewportRect.left, viewportRect.right);
+        const visibleTop = clamp(selectionTop, viewportRect.top, viewportRect.bottom);
+        const visibleRight = clamp(selectionRight, viewportRect.left, viewportRect.right);
+        const visibleBottom = clamp(selectionBottom, viewportRect.top, viewportRect.bottom);
 
-        const marqueeRect = {
-            x: clampedLeft,
-            y: clampedTop,
-            w: Math.max(0, clampedRight - clampedLeft),
-            h: Math.max(0, clampedBottom - clampedTop)
+        const selectionRect = {
+            x: selectionLeft,
+            y: selectionTop,
+            w: Math.max(0, selectionRight - selectionLeft),
+            h: Math.max(0, selectionBottom - selectionTop)
         };
 
-        marquee.style.left = `${marqueeRect.x}px`;
-        marquee.style.top = `${marqueeRect.y}px`;
-        marquee.style.width = `${marqueeRect.w}px`;
-        marquee.style.height = `${marqueeRect.h}px`;
+        const visibleMarqueeRect = {
+            x: visibleLeft,
+            y: visibleTop,
+            w: Math.max(0, visibleRight - visibleLeft),
+            h: Math.max(0, visibleBottom - visibleTop)
+        };
+
+        marquee.style.left = `${visibleMarqueeRect.x}px`;
+        marquee.style.top = `${visibleMarqueeRect.y}px`;
+        marquee.style.width = `${visibleMarqueeRect.w}px`;
+        marquee.style.height = `${visibleMarqueeRect.h}px`;
 
         for (const item of items) {
             if (item.style.display === 'none') continue;
@@ -847,10 +854,10 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             const intersects =
-                marqueeRect.x < relativeItemRect.right &&
-                marqueeRect.x + marqueeRect.w > relativeItemRect.left &&
-                marqueeRect.y < relativeItemRect.bottom &&
-                marqueeRect.y + marqueeRect.h > relativeItemRect.top;
+                selectionRect.x < relativeItemRect.right &&
+                selectionRect.x + selectionRect.w > relativeItemRect.left &&
+                selectionRect.y < relativeItemRect.bottom &&
+                selectionRect.y + selectionRect.h > relativeItemRect.top;
 
             if (isModifier) {
                 setSelection(item, intersects ? !preMarqueeSelectedItems.has(item) : preMarqueeSelectedItems.has(item));
