@@ -1938,6 +1938,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const nextWidth = clampWidth(width, bounds);
 
         if (nextWidth !== currentSidebarWidth) {
+            document.documentElement.style.setProperty('--sidebar-width', `${nextWidth}px`);
             sidebar.style.setProperty('--sidebar-width', `${nextWidth}px`);
             currentSidebarWidth = nextWidth;
         }
