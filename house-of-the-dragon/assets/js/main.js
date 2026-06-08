@@ -769,17 +769,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Refactored Marquee and Auto-Scroll Functions ---
 
-    const MARQUEE_VIEWPORT_EDGE_SNAP = 1;
     const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
-
-    const snapToViewportEdge = (value, min, max) => {
-        const clampedValue = clamp(value, min, max);
-
-        if (clampedValue <= min + MARQUEE_VIEWPORT_EDGE_SNAP) return min;
-        if (clampedValue >= max - MARQUEE_VIEWPORT_EDGE_SNAP) return max;
-
-        return clampedValue;
-    };
 
     function getViewportBounds() {
         const viewport = window.visualViewport;
@@ -805,8 +795,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const viewportBounds = getViewportBounds();
 
         return {
-            x: snapToViewportEdge(clientX, viewportBounds.left, viewportBounds.right) - galleryRect.left,
-            y: snapToViewportEdge(clientY, viewportBounds.top, viewportBounds.bottom) - galleryRect.top
+            x: clamp(clientX, viewportBounds.left, viewportBounds.right) - galleryRect.left,
+            y: clamp(clientY, viewportBounds.top, viewportBounds.bottom) - galleryRect.top
         };
     }
 
@@ -814,17 +804,30 @@ document.addEventListener('DOMContentLoaded', () => {
         marquee.style.visibility = 'visible';
 
         const galleryRect = gallery.getBoundingClientRect();
+        const viewportBounds = getViewportBounds();
+        const viewportRect = {
+            left: viewportBounds.left - galleryRect.left,
+            top: viewportBounds.top - galleryRect.top,
+            right: viewportBounds.right - galleryRect.left,
+            bottom: viewportBounds.bottom - galleryRect.top
+        };
         const currentPoint = getClampedMarqueePoint(clientX, clientY, galleryRect);
-        const marqueeLeft = Math.min(startPos.x, currentPoint.x);
-        const marqueeTop = Math.min(startPos.y, currentPoint.y);
-        const marqueeRight = Math.max(startPos.x, currentPoint.x);
-        const marqueeBottom = Math.max(startPos.y, currentPoint.y);
+        const isDraggingRight = currentPoint.x >= startPos.x;
+        const isDraggingDown = currentPoint.y >= startPos.y;
+        const marqueeLeft = isDraggingRight ? startPos.x : currentPoint.x;
+        const marqueeTop = isDraggingDown ? startPos.y : currentPoint.y;
+        const marqueeRight = isDraggingRight ? currentPoint.x + 1 : startPos.x + 1;
+        const marqueeBottom = isDraggingDown ? currentPoint.y + 1 : startPos.y + 1;
+        const clampedLeft = clamp(marqueeLeft, viewportRect.left, viewportRect.right);
+        const clampedTop = clamp(marqueeTop, viewportRect.top, viewportRect.bottom);
+        const clampedRight = clamp(marqueeRight, viewportRect.left, viewportRect.right);
+        const clampedBottom = clamp(marqueeBottom, viewportRect.top, viewportRect.bottom);
 
         const marqueeRect = {
-            x: marqueeLeft,
-            y: marqueeTop,
-            w: marqueeRight - marqueeLeft,
-            h: marqueeBottom - marqueeTop
+            x: clampedLeft,
+            y: clampedTop,
+            w: Math.max(0, clampedRight - clampedLeft),
+            h: Math.max(0, clampedBottom - clampedTop)
         };
 
         marquee.style.left = `${marqueeRect.x}px`;
