@@ -2451,7 +2451,7 @@ Finder-Style Sidebar
 .sidebar-resize-handle {
     position: absolute;
     top: 0;
-    right: -4px;
+    right: -5px;
     width: 8px;
     height: 100%;
     z-index: 2;
