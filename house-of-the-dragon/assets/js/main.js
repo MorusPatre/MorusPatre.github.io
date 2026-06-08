@@ -821,14 +821,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const selectionRight = isDraggingRight ? currentPoint.x + 1 : startPos.x + 1;
         const selectionBottom = isDraggingDown ? currentPoint.y + 1 : startPos.y + 1;
         const isAutoScrollingUp = scrollSpeedY < 0;
-        const isReturningDownAfterUpScroll = scrollSpeedY > 0 && hasAutoScrolledUpDuringMarquee;
         const isSelectionPastViewportTop = selectionTop < viewportRect.top;
+        const isSelectionAtOrPastViewportBottom = selectionBottom >= viewportRect.bottom;
+        const shouldOverscanBottom =
+            isAutoScrollingUp ||
+            (hasAutoScrolledUpDuringMarquee && isSelectionAtOrPastViewportBottom);
         const visibleLeft = clamp(selectionLeft, viewportRect.left, viewportRect.right);
         const visibleRight = clamp(selectionRight, viewportRect.left, viewportRect.right);
         const visibleTop = isAutoScrollingUp
             ? selectionTop - MARQUEE_SCROLL_EDGE_OVERSCAN
             : (isSelectionPastViewportTop ? selectionTop : clamp(selectionTop, viewportRect.top, viewportRect.bottom));
-        const visibleBottom = isAutoScrollingUp || isReturningDownAfterUpScroll
+        const visibleBottom = shouldOverscanBottom
             ? selectionBottom + MARQUEE_SCROLL_EDGE_OVERSCAN
             : clamp(selectionBottom, viewportRect.top, viewportRect.bottom);
 
