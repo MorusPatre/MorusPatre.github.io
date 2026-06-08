@@ -18,10 +18,11 @@ Finder-Style Sidebar
 		to right,
 		#000 0,
 		#000 calc(100% - var(--sidebar-blur-feather)),
-		rgba(0, 0, 0, 0.98) calc(100% - 86px),
-		rgba(0, 0, 0, 0.9) calc(100% - 69px),
-		rgba(0, 0, 0, 0.72) calc(100% - 45px),
-		rgba(0, 0, 0, 0.42) calc(100% - 21px),
+		rgba(0, 0, 0, 0.995) calc(100% - 84px),
+		rgba(0, 0, 0, 0.97) calc(100% - 64px),
+		rgba(0, 0, 0, 0.91) calc(100% - 42px),
+		rgba(0, 0, 0, 0.78) calc(100% - 20px),
+		rgba(0, 0, 0, 0.62) calc(100% - 8px),
 		transparent 100%
 	);
 	--sidebar-radius: 20px;
