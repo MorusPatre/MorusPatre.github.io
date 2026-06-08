@@ -818,10 +818,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const selectionTop = isDraggingDown ? startPos.y : currentPoint.y;
         const selectionRight = isDraggingRight ? currentPoint.x + 1 : startPos.x + 1;
         const selectionBottom = isDraggingDown ? currentPoint.y + 1 : startPos.y + 1;
+        const isSelectionPastViewportY =
+            selectionTop < viewportRect.top ||
+            selectionBottom > viewportRect.bottom;
         const visibleLeft = clamp(selectionLeft, viewportRect.left, viewportRect.right);
-        const visibleTop = clamp(selectionTop, viewportRect.top, viewportRect.bottom);
         const visibleRight = clamp(selectionRight, viewportRect.left, viewportRect.right);
-        const visibleBottom = clamp(selectionBottom, viewportRect.top, viewportRect.bottom);
+        const visibleTop = isSelectionPastViewportY ? selectionTop : clamp(selectionTop, viewportRect.top, viewportRect.bottom);
+        const visibleBottom = isSelectionPastViewportY ? selectionBottom : clamp(selectionBottom, viewportRect.top, viewportRect.bottom);
 
         const selectionRect = {
             x: selectionLeft,
