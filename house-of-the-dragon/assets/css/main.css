@@ -90,7 +90,7 @@ input, select, textarea {
     }
 
     body {
-        background: #1f1b18;
+        background: #0f0e0c;
     }
 
 /* Type */
@@ -1101,13 +1101,6 @@ input, select, textarea {
             -webkit-transition-delay: 0.75s;
             -ms-transition-delay: 0.75s;
             transition-delay: 0.75s;
-            background-image: linear-gradient(to top, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url("../../images/overlay.png"); /* MODIFIED */
-            background-size: auto,
- 256px 256px;
-            background-position: center,
- center;
-            background-repeat: no-repeat,
- repeat;
             z-index: 2;
         }
 
@@ -1120,9 +1113,9 @@ input, select, textarea {
             -webkit-transition: -webkit-transform 0.325s ease-in-out, -webkit-filter 0.325s ease-in-out;
             -ms-transition: -ms-transform 0.325s ease-in-out, -ms-filter 0.325s ease-in-out;
             transition: transform 0.325s ease-in-out, filter 0.325s ease-in-out;
-            background-color: #1f1b18; /* MODIFIED */
+            background-color: #0f0e0c;
             z-index: 1;
-            }
+        }
 
         body.is-article-visible #bg:after {
             -moz-transform: scale(1.0825);
