@@ -71,7 +71,7 @@ Finder-Style Sidebar
 	height: 100%;
 	overflow-y: auto;
 	padding: 3.8rem 16px 1.6rem 1rem;
-	text-align: right;
+	text-align: left;
 	scrollbar-width: none;
 
 	&::-webkit-scrollbar {
@@ -100,14 +100,14 @@ Finder-Style Sidebar
 .sidebar-option-list {
 	@include vendor('display', 'flex');
 	@include vendor('flex-direction', 'column');
-	@include vendor('align-items', 'flex-end');
+	@include vendor('align-items', 'flex-start');
 	gap: 0.18rem;
 }
 
 .sidebar-option-list--inline {
 	@include vendor('flex-direction', 'row');
 	@include vendor('flex-wrap', 'wrap');
-	@include vendor('justify-content', 'flex-end');
+	@include vendor('justify-content', 'flex-start');
 	gap: 0.26rem 0.34rem;
 }
 
@@ -129,7 +129,7 @@ Finder-Style Sidebar
 	font-weight: 300;
 	letter-spacing: 0;
 	line-height: 1.25;
-	text-align: right;
+	text-align: left;
 	text-transform: none;
 	white-space: normal;
 	cursor: default;
