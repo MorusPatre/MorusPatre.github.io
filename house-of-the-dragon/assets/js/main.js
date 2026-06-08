@@ -570,6 +570,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Auto-scroll state variables ---
     let isAutoScrolling = false;
     let scrollSpeedY = 0;
+    let hasAutoScrolledUpDuringMarquee = false;
     let lastClientX = 0;
     let lastClientY = 0;
     let lastClientModifierKey = false;
@@ -820,13 +821,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const selectionRight = isDraggingRight ? currentPoint.x + 1 : startPos.x + 1;
         const selectionBottom = isDraggingDown ? currentPoint.y + 1 : startPos.y + 1;
         const isAutoScrollingUp = scrollSpeedY < 0;
+        const isReturningDownAfterUpScroll = scrollSpeedY > 0 && hasAutoScrolledUpDuringMarquee;
         const isSelectionPastViewportTop = selectionTop < viewportRect.top;
         const visibleLeft = clamp(selectionLeft, viewportRect.left, viewportRect.right);
         const visibleRight = clamp(selectionRight, viewportRect.left, viewportRect.right);
         const visibleTop = isAutoScrollingUp
             ? selectionTop - MARQUEE_SCROLL_EDGE_OVERSCAN
             : (isSelectionPastViewportTop ? selectionTop : clamp(selectionTop, viewportRect.top, viewportRect.bottom));
-        const visibleBottom = isAutoScrollingUp
+        const visibleBottom = isAutoScrollingUp || isReturningDownAfterUpScroll
             ? selectionBottom + MARQUEE_SCROLL_EDGE_OVERSCAN
             : clamp(selectionBottom, viewportRect.top, viewportRect.bottom);
 
@@ -905,6 +907,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         hasDragged = false;
         isMarquee = true;
+        hasAutoScrolledUpDuringMarquee = false;
         mouseDownItem = e.target.closest('figure');
 
         const galleryRect = gallery.getBoundingClientRect();
@@ -942,6 +945,10 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             scrollSpeedY = 0;
         }
+
+        if (scrollSpeedY < 0) {
+            hasAutoScrolledUpDuringMarquee = true;
+        }
     
         if (scrollSpeedY !== 0 && !isAutoScrolling) {
             isAutoScrolling = true;
@@ -954,6 +961,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const endDragAction = (e) => {
         isAutoScrolling = false;
         scrollSpeedY = 0;
+        hasAutoScrolledUpDuringMarquee = false;
 
         document.body.classList.remove('is-marquee-dragging');
         if (!isMarquee) return;
