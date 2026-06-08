@@ -1849,7 +1849,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let resizeFrame = null;
     let resizeCursorState = null;
     let lastExpandedWidth = null;
-    const dragCollapseThreshold = 80;
+    const dragCollapseThreshold = 65;
 
     function getSidebarBounds() {
         const styles = getComputedStyle(sidebar);
