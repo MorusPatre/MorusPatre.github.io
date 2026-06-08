@@ -39,6 +39,18 @@ Finder-Style Sidebar
 		background-color: rgba(15, 14, 12, 0.01);
 		backdrop-filter: var(--chrome-material-blur);
 		-webkit-backdrop-filter: var(--chrome-material-blur);
+		-webkit-mask-image:
+			linear-gradient(to right, transparent 0, #000 var(--sidebar-gutter), #000 100%),
+			linear-gradient(to bottom, transparent 0, #000 var(--sidebar-gutter), #000 calc(100% - var(--sidebar-gutter)), transparent 100%);
+		-webkit-mask-composite: source-in;
+		-webkit-mask-repeat: no-repeat;
+		-webkit-mask-size: 100% 100%;
+		mask-image:
+			linear-gradient(to right, transparent 0, #000 var(--sidebar-gutter), #000 100%),
+			linear-gradient(to bottom, transparent 0, #000 var(--sidebar-gutter), #000 calc(100% - var(--sidebar-gutter)), transparent 100%);
+		mask-composite: intersect;
+		mask-repeat: no-repeat;
+		mask-size: 100% 100%;
 		@include vendor('transition', (
 			'width 260ms cubic-bezier(0.22, 1, 0.36, 1)',
 			'opacity 180ms ease-out'
