@@ -29,6 +29,73 @@
             </button>
 
             <aside id="finder-sidebar" aria-label="Sidebar">
+                <div class="sidebar-content">
+                    <section class="sidebar-filter-section sidebar-filter-section--placeholder" aria-label="Category">
+                        <h2 class="sidebar-filter-heading">Category:</h2>
+                        <div class="sidebar-option-list">
+                            <button class="sidebar-option sidebar-option--emphasis is-active" type="button" aria-disabled="true">All categories</button>
+                            <button class="sidebar-option" type="button" aria-disabled="true">Publicity still</button>
+                            <button class="sidebar-option" type="button" aria-disabled="true">Promo</button>
+                            <button class="sidebar-option" type="button" aria-disabled="true">Behind-the-scenes</button>
+                            <button class="sidebar-option" type="button" aria-disabled="true">Pre-production</button>
+                            <button class="sidebar-option" type="button" aria-disabled="true">Official screen capture</button>
+                        </div>
+                    </section>
+
+                    <section class="sidebar-filter-section" aria-label="Season">
+                        <h2 class="sidebar-filter-heading">Season:</h2>
+                        <div class="sidebar-option-list sidebar-option-list--inline" role="group" aria-label="Season filter">
+                            <button class="sidebar-option sidebar-option--emphasis is-active" type="button" data-sidebar-filter="season" data-sidebar-value="all" aria-pressed="true">All</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="season" data-sidebar-value="1" aria-pressed="false">01</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="season" data-sidebar-value="2" aria-pressed="false">02</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="season" data-sidebar-value="3" aria-pressed="false">03</button>
+                        </div>
+                    </section>
+
+                    <section class="sidebar-filter-section" aria-label="Episode">
+                        <h2 class="sidebar-filter-heading">Episode:</h2>
+                        <div class="sidebar-option-list sidebar-option-list--inline" role="group" aria-label="Episode filter">
+                            <button class="sidebar-option sidebar-option--emphasis is-active" type="button" data-sidebar-filter="episode" data-sidebar-value="all" aria-pressed="true">All</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="episode" data-sidebar-value="1" aria-pressed="false">01</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="episode" data-sidebar-value="2" aria-pressed="false">02</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="episode" data-sidebar-value="3" aria-pressed="false">03</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="episode" data-sidebar-value="4" aria-pressed="false">04</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="episode" data-sidebar-value="5" aria-pressed="false">05</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="episode" data-sidebar-value="6" aria-pressed="false">06</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="episode" data-sidebar-value="7" aria-pressed="false">07</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="episode" data-sidebar-value="8" aria-pressed="false">08</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="episode" data-sidebar-value="9" aria-pressed="false">09</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="episode" data-sidebar-value="10" aria-pressed="false">10</button>
+                        </div>
+                    </section>
+
+                    <section class="sidebar-filter-section" aria-label="Cast and crew">
+                        <h2 class="sidebar-filter-heading">Cast &amp; Crew:</h2>
+                        <div class="sidebar-option-list" role="group" aria-label="Cast and crew filter">
+                            <button class="sidebar-option sidebar-option--emphasis is-active" type="button" data-sidebar-filter="person" data-sidebar-value="all" aria-pressed="true">All people</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="person" data-sidebar-value="Milly Alcock" aria-pressed="false">Milly Alcock</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="person" data-sidebar-value="Matt Smith" aria-pressed="false">Matt Smith</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="person" data-sidebar-value="Emma D'Arcy" aria-pressed="false">Emma D'Arcy</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="person" data-sidebar-value="Paddy Considine" aria-pressed="false">Paddy Considine</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="person" data-sidebar-value="Olivia Cooke" aria-pressed="false">Olivia Cooke</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="person" data-sidebar-value="Fabien Frankel" aria-pressed="false">Fabien Frankel</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="person" data-sidebar-value="Emily Carey" aria-pressed="false">Emily Carey</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="person" data-sidebar-value="Rhys Ifans" aria-pressed="false">Rhys Ifans</button>
+                            <span class="sidebar-option sidebar-option--emphasis sidebar-option--muted" aria-disabled="true">No others</span>
+                        </div>
+                    </section>
+
+                    <section class="sidebar-filter-section sidebar-filter-section--placeholder" aria-label="Sort by">
+                        <h2 class="sidebar-filter-heading">Sort by:</h2>
+                        <div class="sidebar-option-list">
+                            <button class="sidebar-option is-active" type="button" aria-disabled="true">Popularity</button>
+                            <button class="sidebar-option" type="button" aria-disabled="true">Date</button>
+                            <button class="sidebar-option" type="button" aria-disabled="true">Set</button>
+                            <button class="sidebar-option" type="button" aria-disabled="true">Episode</button>
+                        </div>
+                    </section>
+                </div>
+
                 <div class="sidebar-resize-handle"
                      role="separator"
                      aria-label="Resize sidebar"

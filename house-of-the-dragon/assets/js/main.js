@@ -387,6 +387,89 @@
 
 })(jQuery);
 
+const hotdGalleryFilters = {
+    searchTerms: [],
+    sidebar: {
+        season: 'all',
+        episode: 'all',
+        person: 'all'
+    }
+};
+
+window.hotdGalleryFilters = hotdGalleryFilters;
+
+function simplifyGallerySearchText(text) {
+    if (!text) return '';
+    return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function buildGallerySearchTerms(text) {
+    const simplifiedQuery = simplifyGallerySearchText(text.toLowerCase());
+    const phraseRegex = /\b(s\d+e\d+|season\s*\d+|episode\s*\d+|s\d+|e\d+)\b/g;
+    const phraseTerms = simplifiedQuery.match(phraseRegex) || [];
+    const remainingText = simplifiedQuery.replace(phraseRegex, '').trim();
+    const wordTerms = remainingText.split(' ').filter(term => term.length > 0);
+
+    return [...phraseTerms, ...wordTerms];
+}
+
+function normalizeGalleryFilterValue(value) {
+    return String(value || '').trim().toLowerCase();
+}
+
+function matchesGalleryNumberFilter(actual, expected) {
+    return expected === 'all' || Number(actual) === Number(expected);
+}
+
+function matchesGalleryPersonFilter(img, selectedPerson) {
+    if (selectedPerson === 'all') return true;
+
+    const normalizedPerson = normalizeGalleryFilterValue(selectedPerson);
+    const sources = [img.dataset.cast, img.dataset.crew, img.dataset.castAndCrew];
+
+    return sources.some(source => {
+        if (!source) return false;
+
+        return source.split(',').some(name => normalizeGalleryFilterValue(name) === normalizedPerson);
+    });
+}
+
+function applyGalleryFilters(options = {}) {
+    const gallery = document.getElementById('photo-gallery');
+    if (!gallery) return;
+
+    const state = window.hotdGalleryFilters || hotdGalleryFilters;
+    const sidebar = state.sidebar || hotdGalleryFilters.sidebar;
+    const searchTerms = state.searchTerms || [];
+    const galleryItems = gallery.querySelectorAll('figure');
+
+    galleryItems.forEach(item => {
+        const img = item.querySelector('img');
+
+        if (!img) {
+            item.style.display = 'none';
+            return;
+        }
+
+        const searchData = simplifyGallerySearchText((img.dataset.search || '').toLowerCase());
+        const matchesSearch = searchTerms.every(term => searchData.includes(term));
+        const matchesSidebar =
+            matchesGalleryNumberFilter(img.dataset.season, sidebar.season || 'all') &&
+            matchesGalleryNumberFilter(img.dataset.episode, sidebar.episode || 'all') &&
+            matchesGalleryPersonFilter(img, sidebar.person || 'all');
+
+        item.style.display = matchesSearch && matchesSidebar ? 'flex' : 'none';
+    });
+
+    if (options.scroll) {
+        window.scrollTo(0, 0);
+    }
+
+    window.dispatchEvent(new CustomEvent('galleryFiltered'));
+}
+
+window.applyGalleryFilters = applyGalleryFilters;
+
 
 document.addEventListener('DOMContentLoaded', () => {
     const wrapper = document.getElementById('wrapper');
@@ -418,11 +501,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function simplifySearchText(text) {
-        if (!text) return "";
-        return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    }
-    
     // This is the core function that filters the gallery
     function runSearch() {
         // Build the query string from pills and the current input value
@@ -433,7 +511,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         const fullQueryText = pillQueries.join(' ') + ' ' + searchInput.value;
-        const simplifiedQuery = simplifySearchText(fullQueryText.toLowerCase());
 
         // Show/hide clear button based on whether there's any query
         if (fullQueryText.trim().length > 0) {
@@ -444,29 +521,7 @@ document.addEventListener('DOMContentLoaded', () => {
             searchWrapper.style.paddingRight = '';
         }
         
-        const galleryItems = gallery.querySelectorAll('figure');
-        const phraseRegex = /\b(s\d+e\d+|season\s*\d+|episode\s*\d+|s\d+|e\d+)\b/g;
-        const phraseTerms = simplifiedQuery.match(phraseRegex) || [];
-        const remainingText = simplifiedQuery.replace(phraseRegex, '').trim();
-        const wordTerms = remainingText.split(' ').filter(term => term.length > 0);
-        const searchTerms = [...phraseTerms, ...wordTerms];
-
-        galleryItems.forEach(function(item) {
-            const img = item.querySelector('img');
-            if (!img || !img.dataset.search) {
-                item.style.display = 'none';
-                return;
-            }
-
-            const searchData = img.dataset.search.toLowerCase();
-            const isMatch = searchTerms.every(term => searchData.includes(term));
-
-            if (isMatch) {
-                item.style.display = 'flex';
-            } else {
-                item.style.display = 'none';
-            }
-        });
+        hotdGalleryFilters.searchTerms = buildGallerySearchTerms(fullQueryText);
 
         // If there are pills, hide the placeholder
         if (pills.length > 0) {
@@ -475,8 +530,7 @@ document.addEventListener('DOMContentLoaded', () => {
             searchInput.placeholder = 'Search by filename, actor, character, season, episode etc...';
         }
 
-        window.scrollTo(0, 0);
-        window.dispatchEvent(new CustomEvent('galleryFiltered'));
+        applyGalleryFilters({ scroll: true });
     }
 
     // Original search input listener, now just calls runSearch
@@ -1606,22 +1660,11 @@ document.addEventListener('galleryLoaded', () => {
         
         const fullQueryText = pillQueries.join(' ') + ' ' + searchInput.value;
         
-        // This is a simplified version of your original search function
-        const simplifiedQuery = fullQueryText.toLowerCase().trim();
-        const searchTerms = simplifiedQuery.split(' ').filter(term => term.length > 0);
-        
-        const galleryFigures = document.querySelectorAll('#photo-gallery figure');
-        galleryFigures.forEach(function(item) {
-            const img = item.querySelector('img');
-            const searchData = (img.dataset.search || "").toLowerCase();
-            const isMatch = searchTerms.every(term => searchData.includes(term));
-            item.style.display = isMatch ? 'flex' : 'none';
-        });
+        hotdGalleryFilters.searchTerms = buildGallerySearchTerms(fullQueryText);
 
         // Update placeholder based on pills
         searchInput.placeholder = pills.length > 0 ? '' : 'Search by filename, character, actor, etc...';
-        
-        window.dispatchEvent(new CustomEvent('galleryFiltered'));
+        applyGalleryFilters();
     }
 
     // --- Pill Creation and Management ---
@@ -1796,6 +1839,32 @@ document.addEventListener('galleryLoaded', () => {
             suggestionsContainer.style.display = 'none';
         }
     });
+});
+
+document.addEventListener('galleryLoaded', () => {
+    const sidebar = document.getElementById('finder-sidebar');
+    if (!sidebar) return;
+
+    const filterButtons = sidebar.querySelectorAll('[data-sidebar-filter]');
+
+    filterButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const filter = button.dataset.sidebarFilter;
+            const value = button.dataset.sidebarValue;
+
+            hotdGalleryFilters.sidebar[filter] = value;
+
+            sidebar.querySelectorAll(`[data-sidebar-filter="${filter}"]`).forEach(option => {
+                const isActive = option === button;
+                option.classList.toggle('is-active', isActive);
+                option.setAttribute('aria-pressed', String(isActive));
+            });
+
+            applyGalleryFilters({ scroll: true });
+        });
+    });
+
+    applyGalleryFilters();
 });
 
 

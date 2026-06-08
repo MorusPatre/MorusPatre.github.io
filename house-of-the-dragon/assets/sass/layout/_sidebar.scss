@@ -67,6 +67,98 @@ Finder-Style Sidebar
 	will-change: flex-basis, width, min-width, margin-left, opacity, transform;
 }
 
+.sidebar-content {
+	height: 100%;
+	overflow-y: auto;
+	padding: 4.25rem 18px 2rem 1.1rem;
+	text-align: right;
+	scrollbar-width: none;
+
+	&::-webkit-scrollbar {
+		display: none;
+	}
+}
+
+.sidebar-filter-section {
+	margin: 0 0 2.05rem;
+
+	&:last-child {
+		margin-bottom: 0;
+	}
+}
+
+.sidebar-filter-heading {
+	margin: 0 0 0.55rem;
+	color: rgba(255, 255, 255, 0.9);
+	font-size: 1.05rem;
+	font-weight: 600;
+	letter-spacing: 0;
+	line-height: 1.2;
+	text-transform: none;
+}
+
+.sidebar-option-list {
+	@include vendor('display', 'flex');
+	@include vendor('flex-direction', 'column');
+	@include vendor('align-items', 'flex-end');
+	gap: 0.28rem;
+}
+
+.sidebar-option-list--inline {
+	@include vendor('flex-direction', 'row');
+	@include vendor('flex-wrap', 'wrap');
+	@include vendor('justify-content', 'flex-end');
+	gap: 0.36rem 0.42rem;
+}
+
+#finder-sidebar .sidebar-option {
+	display: inline-block;
+	width: auto;
+	min-width: 0;
+	min-height: 0;
+	margin: 0;
+	padding: 0.1rem 0.42rem;
+	border: 0;
+	border-radius: 7px;
+	background: transparent;
+	box-shadow: none;
+	color: rgba(255, 255, 255, 0.68) !important;
+	font: inherit;
+	font-size: 0.9rem;
+	font-weight: 300;
+	letter-spacing: 0;
+	line-height: 1.25;
+	text-align: right;
+	text-transform: none;
+	white-space: normal;
+	cursor: default;
+	-webkit-appearance: none;
+	appearance: none;
+	@include vendor('transition', (
+		'background-color #{_duration(transition)} ease-in-out',
+		'color #{_duration(transition)} ease-in-out'
+	));
+
+	&:hover,
+	&:focus-visible,
+	&.is-active {
+		background: rgba(255, 255, 255, 0.16);
+		color: rgba(255, 255, 255, 0.92) !important;
+	}
+
+	&:focus {
+		outline: none;
+	}
+}
+
+.sidebar-option--emphasis {
+	font-style: italic !important;
+}
+
+.sidebar-option--muted {
+	color: rgba(255, 255, 255, 0.56) !important;
+}
+
 .sidebar-toggle {
 	position: fixed;
 	top: calc((var(--top-bar-height) - var(--sidebar-toggle-size)) / 2);
@@ -250,5 +342,26 @@ body.is-sidebar-collapsed {
 			padding-right: 1rem;
 			padding-left: 1rem;
 		}
+	}
+
+	.sidebar-content {
+		padding: 3.5rem 0.2rem 1rem;
+	}
+
+	.sidebar-filter-section {
+		margin-bottom: 1.25rem;
+	}
+
+	.sidebar-filter-heading {
+		font-size: 0.72rem;
+	}
+
+	#finder-sidebar .sidebar-option {
+		padding: 0.05rem 0.18rem;
+		font-size: 0.62rem;
+	}
+
+	.sidebar-option-list--inline {
+		gap: 0.18rem;
 	}
 }
