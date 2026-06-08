@@ -766,31 +766,65 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     };
-    
+
     // --- Refactored Marquee and Auto-Scroll Functions ---
+
+    const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+    function getViewportBounds() {
+        const viewport = window.visualViewport;
+
+        if (viewport) {
+            return {
+                left: viewport.offsetLeft,
+                top: viewport.offsetTop,
+                right: viewport.offsetLeft + viewport.width,
+                bottom: viewport.offsetTop + viewport.height
+            };
+        }
+
+        return {
+            left: 0,
+            top: 0,
+            right: window.innerWidth,
+            bottom: window.innerHeight
+        };
+    }
+
+    function getClampedMarqueePoint(clientX, clientY, galleryRect) {
+        const viewportBounds = getViewportBounds();
+
+        return {
+            x: clamp(clientX, viewportBounds.left, viewportBounds.right) - galleryRect.left,
+            y: clamp(clientY, viewportBounds.top, viewportBounds.bottom) - galleryRect.top
+        };
+    }
 
     function updateMarqueeAndSelection(clientX, clientY, isModifier) {
         marquee.style.visibility = 'visible';
-    
+
         const galleryRect = gallery.getBoundingClientRect();
-        let rawX = clientX - galleryRect.left;
-        let rawY = clientY - galleryRect.top;
-    
+        const currentPoint = getClampedMarqueePoint(clientX, clientY, galleryRect);
+        const marqueeLeft = Math.min(startPos.x, currentPoint.x);
+        const marqueeTop = Math.min(startPos.y, currentPoint.y);
+        const marqueeRight = Math.max(startPos.x, currentPoint.x);
+        const marqueeBottom = Math.max(startPos.y, currentPoint.y);
+
         const marqueeRect = {
-            x: Math.round(Math.min(startPos.x, rawX)),
-            y: Math.round(Math.min(startPos.y, rawY)),
-            w: Math.round(Math.abs(startPos.x - rawX)),
-            h: Math.round(Math.abs(startPos.y - rawY))
+            x: marqueeLeft,
+            y: marqueeTop,
+            w: marqueeRight - marqueeLeft,
+            h: marqueeBottom - marqueeTop
         };
-    
+
         marquee.style.left = `${marqueeRect.x}px`;
         marquee.style.top = `${marqueeRect.y}px`;
         marquee.style.width = `${marqueeRect.w}px`;
         marquee.style.height = `${marqueeRect.h}px`;
-    
+
         for (const item of items) {
             if (item.style.display === 'none') continue;
-    
+
             const itemRect = item.getBoundingClientRect();
             const relativeItemRect = {
                 left: itemRect.left - galleryRect.left,
@@ -798,13 +832,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 right: itemRect.right - galleryRect.left,
                 bottom: itemRect.bottom - galleryRect.top
             };
-    
+
             const intersects =
                 marqueeRect.x < relativeItemRect.right &&
                 marqueeRect.x + marqueeRect.w > relativeItemRect.left &&
                 marqueeRect.y < relativeItemRect.bottom &&
                 marqueeRect.y + marqueeRect.h > relativeItemRect.top;
-    
+
             if (isModifier) {
                 setSelection(item, intersects ? !preMarqueeSelectedItems.has(item) : preMarqueeSelectedItems.has(item));
             } else {
@@ -812,16 +846,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     }
-    
+
     function autoScrollLoop() {
         if (!isMarquee || !isAutoScrolling) {
             isAutoScrolling = false;
             return;
         }
-    
+
         window.scrollBy(0, Math.round(scrollSpeedY));
         updateMarqueeAndSelection(lastClientX, lastClientY, lastClientModifierKey);
-    
+
         requestAnimationFrame(autoScrollLoop);
     }
 
@@ -833,7 +867,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (e.button !== 0 || header.contains(e.target) || footer.contains(e.target)) {
-            isMarquee = false; 
+            isMarquee = false;
             return;
         }
 
@@ -847,10 +881,7 @@ document.addEventListener('DOMContentLoaded', () => {
         mouseDownItem = e.target.closest('figure');
 
         const galleryRect = gallery.getBoundingClientRect();
-        startPos = {
-            x: e.clientX - galleryRect.left,
-            y: e.clientY - galleryRect.top,
-        };
+        startPos = getClampedMarqueePoint(e.clientX, e.clientY, galleryRect);
 
         preMarqueeSelectedItems = new Set(selectedItems);
     });
