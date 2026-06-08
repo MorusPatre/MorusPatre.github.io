@@ -6,6 +6,7 @@ Finder-Style Sidebar
 
 :root {
 	--chrome-material-bg: rgba(25, 25, 25, 0.8);
+	--top-bar-material-bg: rgba(31, 27, 24, 0.8);
 	--chrome-material-blur: blur(12px);
 	--chrome-material-border: rgba(255, 255, 255, 0.1);
 	--sidebar-width: 240px;
@@ -307,7 +308,7 @@ body.is-sidebar-collapsed {
 			height: 2.5rem;
 			z-index: 0;
 			pointer-events: none;
-			background-color: var(--chrome-material-bg);
+			background-color: var(--top-bar-material-bg);
 			backdrop-filter: var(--chrome-material-blur);
 			-webkit-backdrop-filter: var(--chrome-material-blur);
 		}
