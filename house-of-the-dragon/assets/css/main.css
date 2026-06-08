@@ -2260,7 +2260,6 @@ Finder-Style Sidebar
     --sidebar-max-width: 420px;
     --sidebar-gutter: 8px;
     --sidebar-blur-feather: 96px;
-    --sidebar-window-edge-feather: 2px;
     --sidebar-blur-mask: linear-gradient(
         to right,
         #000 0,
@@ -2270,19 +2269,6 @@ Finder-Style Sidebar
         rgba(0, 0, 0, 0.86) calc(100% - 42px),
         rgba(0, 0, 0, 0.68) calc(100% - 20px),
         rgba(0, 0, 0, 0.48) calc(100% - 8px),
-        transparent 100%
-    );
-    --sidebar-left-edge-mask: linear-gradient(
-        to right,
-        transparent 0,
-        #000 var(--sidebar-window-edge-feather),
-        #000 100%
-    );
-    --sidebar-y-edge-mask: linear-gradient(
-        to bottom,
-        transparent 0,
-        #000 var(--sidebar-window-edge-feather),
-        #000 calc(100% - var(--sidebar-window-edge-feather)),
         transparent 100%
     );
     --sidebar-radius: 20px;
@@ -2312,12 +2298,10 @@ Finder-Style Sidebar
     background-color: rgba(15, 14, 12, 0.01);
     backdrop-filter: var(--chrome-material-blur);
     -webkit-backdrop-filter: var(--chrome-material-blur);
-    -webkit-mask-image: var(--sidebar-blur-mask), var(--sidebar-left-edge-mask), var(--sidebar-y-edge-mask);
-    -webkit-mask-composite: source-in, source-in;
+    -webkit-mask-image: var(--sidebar-blur-mask);
     -webkit-mask-repeat: no-repeat;
     -webkit-mask-size: 100% 100%;
-    mask-image: var(--sidebar-blur-mask), var(--sidebar-left-edge-mask), var(--sidebar-y-edge-mask);
-    mask-composite: intersect, intersect;
+    mask-image: var(--sidebar-blur-mask);
     mask-repeat: no-repeat;
     mask-size: 100% 100%;
     -moz-transition: width 260ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease-out;
