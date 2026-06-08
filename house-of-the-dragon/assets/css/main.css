@@ -2260,7 +2260,7 @@ Finder-Style Sidebar
     --sidebar-max-width: 420px;
     --sidebar-gutter: 8px;
     --sidebar-blur-feather: 96px;
-    --sidebar-window-edge-feather: 4px;
+    --sidebar-window-edge-feather: 2px;
     --sidebar-blur-mask: linear-gradient(
         to right,
         #000 0,
