@@ -13,6 +13,7 @@ Finder-Style Sidebar
 	--sidebar-min-width: 176px;
 	--sidebar-max-width: 420px;
 	--sidebar-gutter: 8px;
+	--sidebar-blur-feather: 72px;
 	--sidebar-radius: 20px;
 	--sidebar-toggle-size: 28px;
 	--sidebar-toggle-left: calc(var(--sidebar-gutter) + 12px);
@@ -39,10 +40,10 @@ Finder-Style Sidebar
 		background-color: rgba(15, 14, 12, 0.01);
 		backdrop-filter: var(--chrome-material-blur);
 		-webkit-backdrop-filter: var(--chrome-material-blur);
-		-webkit-mask-image: linear-gradient(to right, #000 0, #000 calc(100% - var(--sidebar-gutter)), transparent 100%);
+		-webkit-mask-image: linear-gradient(to right, #000 0, #000 calc(100% - var(--sidebar-blur-feather)), transparent 100%);
 		-webkit-mask-repeat: no-repeat;
 		-webkit-mask-size: 100% 100%;
-		mask-image: linear-gradient(to right, #000 0, #000 calc(100% - var(--sidebar-gutter)), transparent 100%);
+		mask-image: linear-gradient(to right, #000 0, #000 calc(100% - var(--sidebar-blur-feather)), transparent 100%);
 		mask-repeat: no-repeat;
 		mask-size: 100% 100%;
 		@include vendor('transition', (
