@@ -571,7 +571,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let isAutoScrolling = false;
     let scrollSpeedY = 0;
     let hasAutoScrolledUpDuringMarquee = false;
-    let marqueeUpScrollReturnY = 0;
+    let marqueeStartScrollY = 0;
     let lastClientX = 0;
     let lastClientY = 0;
     let lastClientModifierKey = false;
@@ -805,15 +805,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateMarqueeUpScrollState() {
         if (scrollSpeedY < 0) {
-            const currentScrollY = window.scrollY;
-            marqueeUpScrollReturnY = hasAutoScrolledUpDuringMarquee
-                ? Math.max(marqueeUpScrollReturnY, currentScrollY)
-                : currentScrollY;
-            hasAutoScrolledUpDuringMarquee = true;
+            hasAutoScrolledUpDuringMarquee = window.scrollY < marqueeStartScrollY;
             return;
         }
 
-        if (hasAutoScrolledUpDuringMarquee && window.scrollY > marqueeUpScrollReturnY) {
+        if (hasAutoScrolledUpDuringMarquee && window.scrollY >= marqueeStartScrollY) {
             hasAutoScrolledUpDuringMarquee = false;
         }
     }
@@ -840,8 +836,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const isSelectionPastViewportTop = selectionTop < viewportRect.top;
         const isSelectionAtOrPastViewportBottom = selectionBottom >= viewportRect.bottom;
         const shouldOverscanBottom =
-            isAutoScrollingUp ||
-            (hasAutoScrolledUpDuringMarquee && isSelectionAtOrPastViewportBottom);
+            hasAutoScrolledUpDuringMarquee && isSelectionAtOrPastViewportBottom;
         const visibleLeft = clamp(selectionLeft, viewportRect.left, viewportRect.right);
         const visibleRight = clamp(selectionRight, viewportRect.left, viewportRect.right);
         const visibleTop = isAutoScrollingUp
@@ -928,7 +923,7 @@ document.addEventListener('DOMContentLoaded', () => {
         hasDragged = false;
         isMarquee = true;
         hasAutoScrolledUpDuringMarquee = false;
-        marqueeUpScrollReturnY = window.scrollY;
+        marqueeStartScrollY = window.scrollY;
         mouseDownItem = e.target.closest('figure');
 
         const galleryRect = gallery.getBoundingClientRect();
@@ -980,7 +975,7 @@ document.addEventListener('DOMContentLoaded', () => {
         isAutoScrolling = false;
         scrollSpeedY = 0;
         hasAutoScrolledUpDuringMarquee = false;
-        marqueeUpScrollReturnY = 0;
+        marqueeStartScrollY = 0;
 
         document.body.classList.remove('is-marquee-dragging');
         if (!isMarquee) return;
