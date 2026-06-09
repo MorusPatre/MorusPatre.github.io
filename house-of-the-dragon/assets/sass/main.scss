@@ -5,7 +5,17 @@
 @import 'libs/breakpoints';
 @import 'fontawesome-all.min.css';
 @import url('https://fonts.googleapis.com/css?family=Source+Sans+Pro:300italic,600italic,300,600');
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&display=swap');
+
+@font-face {
+	font-family: 'Game of Thrones';
+	src: local('Game of Thrones'),
+		local('GameofThrones'),
+		url('../webfonts/game-of-thrones.ttf') format('truetype');
+	font-style: normal;
+	font-weight: 400;
+	font-display: swap;
+}
 
 /*
 	Dimension by HTML5 UP

@@ -1,5 +1,15 @@
 @import url("https://fonts.googleapis.com/css?family=Source+Sans+Pro:300italic,600italic,300,600");
-@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&display=swap");
+
+@font-face {
+    font-family: 'Game of Thrones';
+    src: local('Game of Thrones'),
+        local('GameofThrones'),
+        url('../webfonts/game-of-thrones.ttf') format('truetype');
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+}
 
 html, body, div, span, applet, object,
 iframe, h1, h2, h3, h4, h5, h6, p, blockquote,
@@ -2375,7 +2385,7 @@ Finder-Style Sidebar
     color: rgba(255, 255, 255, 0.9);
     font-family: 'Game of Thrones', 'Cinzel', 'Trajan Pro', serif;
     font-size: 0.82rem;
-    font-weight: 600;
+    font-weight: 400;
     letter-spacing: 0;
     line-height: 1.2;
     text-transform: uppercase;
@@ -2615,12 +2625,16 @@ body.is-sidebar-collapsed #app-shell::before {
 @media screen and (max-width: 736px) {
 
     :root {
-        --sidebar-width: 88px;
-        --sidebar-min-width: 80px;
+        --sidebar-width: 96px;
+        --sidebar-min-width: 96px;
         --sidebar-max-width: 200px;
         --sidebar-gutter: 6px;
         --sidebar-toggle-size: 26px;
         --sidebar-toggle-left: calc(var(--sidebar-gutter) + 8px);
+    }
+
+    #finder-sidebar {
+        max-width: var(--sidebar-max-width);
     }
 
     #app-shell > #wrapper {
