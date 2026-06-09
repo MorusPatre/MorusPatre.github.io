@@ -571,6 +571,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let isAutoScrolling = false;
     let scrollSpeedY = 0;
     let hasAutoScrolledUpDuringMarquee = false;
+    let marqueeUpScrollReturnY = 0;
     let lastClientX = 0;
     let lastClientY = 0;
     let lastClientModifierKey = false;
@@ -802,6 +803,21 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
+    function updateMarqueeUpScrollState() {
+        if (scrollSpeedY < 0) {
+            const currentScrollY = window.scrollY;
+            marqueeUpScrollReturnY = hasAutoScrolledUpDuringMarquee
+                ? Math.max(marqueeUpScrollReturnY, currentScrollY)
+                : currentScrollY;
+            hasAutoScrolledUpDuringMarquee = true;
+            return;
+        }
+
+        if (hasAutoScrolledUpDuringMarquee && window.scrollY > marqueeUpScrollReturnY) {
+            hasAutoScrolledUpDuringMarquee = false;
+        }
+    }
+
     function updateMarqueeAndSelection(clientX, clientY, isModifier) {
         marquee.style.visibility = 'visible';
 
@@ -886,6 +902,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         window.scrollBy(0, Math.round(scrollSpeedY));
+        updateMarqueeUpScrollState();
         updateMarqueeAndSelection(lastClientX, lastClientY, lastClientModifierKey);
 
         requestAnimationFrame(autoScrollLoop);
@@ -911,6 +928,7 @@ document.addEventListener('DOMContentLoaded', () => {
         hasDragged = false;
         isMarquee = true;
         hasAutoScrolledUpDuringMarquee = false;
+        marqueeUpScrollReturnY = window.scrollY;
         mouseDownItem = e.target.closest('figure');
 
         const galleryRect = gallery.getBoundingClientRect();
@@ -929,11 +947,9 @@ document.addEventListener('DOMContentLoaded', () => {
         lastClientX = e.clientX;
         lastClientY = e.clientY;
         lastClientModifierKey = e.metaKey || e.ctrlKey || e.shiftKey;
-        
-        updateMarqueeAndSelection(e.clientX, e.clientY, lastClientModifierKey);
 
         const viewportHeight = window.innerHeight;
-        const scrollThreshold = 60; 
+        const scrollThreshold = 60;
         const minScrollSpeed = 2;
         const maxScrollSpeed = 30;
     
@@ -949,10 +965,9 @@ document.addEventListener('DOMContentLoaded', () => {
             scrollSpeedY = 0;
         }
 
-        if (scrollSpeedY < 0) {
-            hasAutoScrolledUpDuringMarquee = true;
-        }
-    
+        updateMarqueeUpScrollState();
+        updateMarqueeAndSelection(e.clientX, e.clientY, lastClientModifierKey);
+
         if (scrollSpeedY !== 0 && !isAutoScrolling) {
             isAutoScrolling = true;
             autoScrollLoop();
@@ -965,6 +980,7 @@ document.addEventListener('DOMContentLoaded', () => {
         isAutoScrolling = false;
         scrollSpeedY = 0;
         hasAutoScrolledUpDuringMarquee = false;
+        marqueeUpScrollReturnY = 0;
 
         document.body.classList.remove('is-marquee-dragging');
         if (!isMarquee) return;
