@@ -132,8 +132,8 @@ Finder-Style Sidebar
 	margin: 0 0 0.42rem;
 	color: rgba(255, 255, 255, 0.9);
 	font-family: 'Game of Thrones', 'Cinzel', 'Trajan Pro', serif;
-	font-size: 0.7rem;
-	font-weight: 400;
+	font-size: 0.82rem;
+	font-weight: 600;
 	letter-spacing: 0;
 	line-height: 1.2;
 	text-transform: uppercase;
@@ -373,16 +373,12 @@ body.is-sidebar-collapsed {
 
 @include breakpoint('<=small') {
 	:root {
-		--sidebar-width: 96px;
-		--sidebar-min-width: 96px;
+		--sidebar-width: 88px;
+		--sidebar-min-width: 80px;
 		--sidebar-max-width: 200px;
 		--sidebar-gutter: 6px;
 		--sidebar-toggle-size: 26px;
 		--sidebar-toggle-left: calc(var(--sidebar-gutter) + 8px);
-	}
-
-	#finder-sidebar {
-		max-width: var(--sidebar-max-width);
 	}
 
 	#app-shell {
@@ -409,7 +405,7 @@ body.is-sidebar-collapsed {
 	}
 
 	.sidebar-filter-heading {
-		font-size: 0.46rem;
+		font-size: 0.54rem;
 	}
 
 	#finder-sidebar .sidebar-option {
