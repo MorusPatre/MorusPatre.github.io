@@ -789,10 +789,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const MARQUEE_SCROLL_EDGE_OVERSCAN = 1;
     const MARQUEE_WINDOW_EDGE_TOLERANCE = 0;
-    const MARQUEE_EDGE_GLOW_SIZE = 36;
-    const MARQUEE_WINDOW_EDGE_HIGHLIGHT_WIDTH = MARQUEE_EDGE_GLOW_SIZE;
-    const MARQUEE_BOTTOM_EDGE_HIGHLIGHT_HEIGHT = MARQUEE_EDGE_GLOW_SIZE;
-    const MARQUEE_GLOW_ENDPOINT_OVERDRAW = MARQUEE_EDGE_GLOW_SIZE;
+    const MARQUEE_WINDOW_EDGE_HIGHLIGHT_WIDTH = 12;
+    const MARQUEE_BOTTOM_EDGE_HIGHLIGHT_HEIGHT = 24;
+    const MARQUEE_GLOW_OUTSET = 18;
     const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
     function getViewportBounds() {
@@ -862,9 +861,9 @@ document.addEventListener('DOMContentLoaded', () => {
         clip.style.height = `${clipRect.bottom - clipRect.top}px`;
 
         highlight.style.left = `${marqueeViewportRect.left - clipRect.left}px`;
-        highlight.style.top = `${marqueeViewportRect.top - clipRect.top - MARQUEE_GLOW_ENDPOINT_OVERDRAW}px`;
+        highlight.style.top = `${marqueeViewportRect.top - clipRect.top}px`;
         highlight.style.width = `${marqueeViewportRect.width}px`;
-        highlight.style.height = `${marqueeViewportRect.height + (MARQUEE_GLOW_ENDPOINT_OVERDRAW * 2)}px`;
+        highlight.style.height = `${marqueeViewportRect.height}px`;
     }
 
     function updateMarqueeBottomHighlightLayer(clip, highlight, clipRect, marqueeViewportRect, clipContainerRect) {
@@ -876,10 +875,10 @@ document.addEventListener('DOMContentLoaded', () => {
         clip.style.width = `${clipRect.right - clipRect.left}px`;
         clip.style.height = `${clipRect.bottom - clipRect.top}px`;
 
-        highlight.style.left = `${marqueeViewportRect.left - clipRect.left - MARQUEE_GLOW_ENDPOINT_OVERDRAW}px`;
-        highlight.style.top = `${marqueeBottom - clipRect.top - MARQUEE_EDGE_GLOW_SIZE}px`;
-        highlight.style.width = `${marqueeViewportRect.width + (MARQUEE_GLOW_ENDPOINT_OVERDRAW * 2)}px`;
-        highlight.style.height = `${MARQUEE_EDGE_GLOW_SIZE}px`;
+        highlight.style.left = `${marqueeViewportRect.left - clipRect.left}px`;
+        highlight.style.top = `${marqueeBottom - clipRect.top - 1}px`;
+        highlight.style.width = `${marqueeViewportRect.width}px`;
+        highlight.style.height = '0px';
     }
 
     function updateSidebarMarqueeHighlight(galleryRect, visibleMarqueeRect) {
@@ -905,9 +904,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const clipContainer = appShell || document.body;
         const clipContainerRect = clipContainer.getBoundingClientRect();
 
-        const leftEdgeRight = Math.min(zone.right, zone.left + MARQUEE_WINDOW_EDGE_HIGHLIGHT_WIDTH);
-        const leftEdgeTop = Math.max(marqueeViewportRect.top, zone.top);
-        const leftEdgeBottom = Math.min(marqueeBottom, zone.bottom);
+        const leftEdgeRight = Math.min(zone.right, zone.left + MARQUEE_WINDOW_EDGE_HIGHLIGHT_WIDTH + MARQUEE_GLOW_OUTSET);
+        const leftEdgeTop = Math.max(marqueeViewportRect.top - MARQUEE_GLOW_OUTSET, zone.top);
+        const leftEdgeBottom = Math.min(marqueeBottom + MARQUEE_GLOW_OUTSET, zone.bottom);
 
         if (isOnWindowLeftEdge && leftEdgeRight > zone.left && leftEdgeBottom > leftEdgeTop) {
             updateMarqueeHighlightLayer(
@@ -926,9 +925,9 @@ document.addEventListener('DOMContentLoaded', () => {
             hideMarqueeHighlightLayer(marqueeSidebarClip, marqueeSidebarHighlight);
         }
 
-        const bottomEdgeTop = Math.max(zone.top, zone.bottom - MARQUEE_BOTTOM_EDGE_HIGHLIGHT_HEIGHT);
-        const bottomEdgeLeft = Math.max(marqueeViewportRect.left, zone.left);
-        const bottomEdgeRight = Math.min(marqueeRight, zone.right);
+        const bottomEdgeTop = Math.max(zone.top, zone.bottom - MARQUEE_BOTTOM_EDGE_HIGHLIGHT_HEIGHT - MARQUEE_GLOW_OUTSET);
+        const bottomEdgeLeft = Math.max(marqueeViewportRect.left - MARQUEE_GLOW_OUTSET, zone.left);
+        const bottomEdgeRight = Math.min(marqueeRight + MARQUEE_GLOW_OUTSET, zone.right);
 
         if (isOnWindowBottomEdge && bottomEdgeRight > bottomEdgeLeft && zone.bottom > bottomEdgeTop) {
             updateMarqueeBottomHighlightLayer(
