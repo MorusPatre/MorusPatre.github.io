@@ -1621,7 +1621,8 @@ Styling for the Finder-Style Photo Gallery
     z-index: 9; /* Changed from 10 to 9 */
 }
 
-#marquee-sidebar-clip {
+#marquee-sidebar-clip,
+#marquee-sidebar-bottom-clip {
     position: absolute;
     top: 0;
     left: 0;
@@ -1633,7 +1634,8 @@ Styling for the Finder-Style Photo Gallery
     z-index: 9;
 }
 
-#marquee-sidebar-highlight {
+#marquee-sidebar-highlight,
+#marquee-sidebar-bottom-highlight {
     position: absolute;
     box-sizing: border-box;
     border: 1px solid rgba(255, 255, 255, 0.96);

@@ -556,12 +556,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const marquee = document.getElementById('marquee');
     const marqueeSidebarClip = document.createElement('div');
     const marqueeSidebarHighlight = document.createElement('div');
+    const marqueeSidebarBottomClip = document.createElement('div');
+    const marqueeSidebarBottomHighlight = document.createElement('div');
 
     marqueeSidebarClip.id = 'marquee-sidebar-clip';
     marqueeSidebarClip.setAttribute('aria-hidden', 'true');
     marqueeSidebarHighlight.id = 'marquee-sidebar-highlight';
     marqueeSidebarClip.appendChild(marqueeSidebarHighlight);
+    marqueeSidebarBottomClip.id = 'marquee-sidebar-bottom-clip';
+    marqueeSidebarBottomClip.setAttribute('aria-hidden', 'true');
+    marqueeSidebarBottomHighlight.id = 'marquee-sidebar-bottom-highlight';
+    marqueeSidebarBottomClip.appendChild(marqueeSidebarBottomHighlight);
     (appShell || document.body).appendChild(marqueeSidebarClip);
+    (appShell || document.body).appendChild(marqueeSidebarBottomClip);
     const items = gallery.getElementsByTagName('figure');
 
     let selectedItems = new Set();
@@ -831,12 +838,30 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
+    function hideMarqueeHighlightLayer(clip, highlight) {
+        clip.style.visibility = 'hidden';
+        clip.style.width = '0px';
+        clip.style.height = '0px';
+        highlight.style.width = '0px';
+        highlight.style.height = '0px';
+    }
+
     function hideSidebarMarqueeHighlight() {
-        marqueeSidebarClip.style.visibility = 'hidden';
-        marqueeSidebarClip.style.width = '0px';
-        marqueeSidebarClip.style.height = '0px';
-        marqueeSidebarHighlight.style.width = '0px';
-        marqueeSidebarHighlight.style.height = '0px';
+        hideMarqueeHighlightLayer(marqueeSidebarClip, marqueeSidebarHighlight);
+        hideMarqueeHighlightLayer(marqueeSidebarBottomClip, marqueeSidebarBottomHighlight);
+    }
+
+    function updateMarqueeHighlightLayer(clip, highlight, clipRect, marqueeViewportRect, clipContainerRect) {
+        clip.style.visibility = 'visible';
+        clip.style.left = `${clipRect.left - clipContainerRect.left}px`;
+        clip.style.top = `${clipRect.top - clipContainerRect.top}px`;
+        clip.style.width = `${clipRect.right - clipRect.left}px`;
+        clip.style.height = `${clipRect.bottom - clipRect.top}px`;
+
+        highlight.style.left = `${marqueeViewportRect.left - clipRect.left}px`;
+        highlight.style.top = `${marqueeViewportRect.top - clipRect.top}px`;
+        highlight.style.width = `${marqueeViewportRect.width}px`;
+        highlight.style.height = `${marqueeViewportRect.height}px`;
     }
 
     function updateSidebarMarqueeHighlight(galleryRect, visibleMarqueeRect) {
@@ -857,30 +882,52 @@ document.addEventListener('DOMContentLoaded', () => {
         const marqueeBottom = marqueeViewportRect.top + marqueeViewportRect.height;
         const isOnWindowLeftEdge =
             Math.abs(marqueeViewportRect.left - zone.left) <= MARQUEE_WINDOW_EDGE_TOLERANCE;
-        const edgeHighlightRight = Math.min(zone.right, zone.left + MARQUEE_WINDOW_EDGE_HIGHLIGHT_WIDTH);
-        const overlapLeft = Math.max(marqueeViewportRect.left, zone.left);
-        const overlapTop = Math.max(marqueeViewportRect.top, zone.top);
-        const overlapRight = Math.min(marqueeRight, edgeHighlightRight);
-        const overlapBottom = Math.min(marqueeBottom, zone.bottom);
-
-        if (!isOnWindowLeftEdge || overlapRight <= overlapLeft || overlapBottom <= overlapTop) {
-            hideSidebarMarqueeHighlight();
-            return;
-        }
-
+        const isOnWindowBottomEdge =
+            Math.abs(marqueeBottom - zone.bottom) <= MARQUEE_WINDOW_EDGE_TOLERANCE;
         const clipContainer = appShell || document.body;
         const clipContainerRect = clipContainer.getBoundingClientRect();
 
-        marqueeSidebarClip.style.visibility = 'visible';
-        marqueeSidebarClip.style.left = `${zone.left - clipContainerRect.left}px`;
-        marqueeSidebarClip.style.top = `${overlapTop - clipContainerRect.top}px`;
-        marqueeSidebarClip.style.width = `${edgeHighlightRight - zone.left}px`;
-        marqueeSidebarClip.style.height = `${overlapBottom - overlapTop}px`;
+        const leftEdgeRight = Math.min(zone.right, zone.left + MARQUEE_WINDOW_EDGE_HIGHLIGHT_WIDTH);
+        const leftEdgeTop = Math.max(marqueeViewportRect.top, zone.top);
+        const leftEdgeBottom = Math.min(marqueeBottom, zone.bottom);
 
-        marqueeSidebarHighlight.style.left = `${marqueeViewportRect.left - zone.left}px`;
-        marqueeSidebarHighlight.style.top = `${marqueeViewportRect.top - overlapTop}px`;
-        marqueeSidebarHighlight.style.width = `${marqueeViewportRect.width}px`;
-        marqueeSidebarHighlight.style.height = `${marqueeViewportRect.height}px`;
+        if (isOnWindowLeftEdge && leftEdgeRight > zone.left && leftEdgeBottom > leftEdgeTop) {
+            updateMarqueeHighlightLayer(
+                marqueeSidebarClip,
+                marqueeSidebarHighlight,
+                {
+                    left: zone.left,
+                    top: leftEdgeTop,
+                    right: leftEdgeRight,
+                    bottom: leftEdgeBottom
+                },
+                marqueeViewportRect,
+                clipContainerRect
+            );
+        } else {
+            hideMarqueeHighlightLayer(marqueeSidebarClip, marqueeSidebarHighlight);
+        }
+
+        const bottomEdgeTop = Math.max(zone.top, zone.bottom - MARQUEE_WINDOW_EDGE_HIGHLIGHT_WIDTH);
+        const bottomEdgeLeft = Math.max(marqueeViewportRect.left, zone.left);
+        const bottomEdgeRight = Math.min(marqueeRight, zone.right);
+
+        if (isOnWindowBottomEdge && bottomEdgeRight > bottomEdgeLeft && zone.bottom > bottomEdgeTop) {
+            updateMarqueeHighlightLayer(
+                marqueeSidebarBottomClip,
+                marqueeSidebarBottomHighlight,
+                {
+                    left: bottomEdgeLeft,
+                    top: bottomEdgeTop,
+                    right: bottomEdgeRight,
+                    bottom: zone.bottom
+                },
+                marqueeViewportRect,
+                clipContainerRect
+            );
+        } else {
+            hideMarqueeHighlightLayer(marqueeSidebarBottomClip, marqueeSidebarBottomHighlight);
+        }
     }
 
     function getClampedMarqueePoint(clientX, clientY, galleryRect) {
