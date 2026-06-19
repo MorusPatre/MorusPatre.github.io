@@ -1641,10 +1641,10 @@ Styling for the Finder-Style Photo Gallery
     position: absolute;
     pointer-events: none;
     visibility: hidden;
-    background: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.05);
     box-shadow:
-        0 0 10px 2px rgba(255, 255, 255, 0.46),
-        0 0 24px 6px rgba(255, 255, 255, 0.24);
+        0 0 8px 1px rgba(255, 255, 255, 0.28),
+        0 0 20px 4px rgba(255, 255, 255, 0.12);
 }
 
 /* FINAL FIX: Prevents object-highlighting on the search input during a drag */
