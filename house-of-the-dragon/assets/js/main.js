@@ -554,6 +554,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const marquee = document.getElementById('marquee');
     const items = gallery.getElementsByTagName('figure');
+    const marqueeGlowRoot = document.documentElement;
 
     let selectedItems = new Set();
     let isMarquee = false;
@@ -773,6 +774,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const MARQUEE_SCROLL_EDGE_OVERSCAN = 1;
     const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+    const MARQUEE_EDGE_EPSILON = 0.5;
+
+    function hideMarqueeSidebarGlow() {
+        marqueeGlowRoot.style.setProperty('--marquee-sidebar-glow-opacity', '0');
+        marqueeGlowRoot.style.setProperty('--marquee-sidebar-glow-height', '0px');
+    }
+
+    function updateMarqueeSidebarGlow(visibleMarqueeRect, galleryRect, isAtViewportLeft) {
+        const shouldShow =
+            isAtViewportLeft &&
+            visibleMarqueeRect.w > 0 &&
+            visibleMarqueeRect.h > 0 &&
+            !document.body.classList.contains('is-sidebar-collapsed');
+
+        marqueeGlowRoot.style.setProperty('--marquee-sidebar-glow-top', `${galleryRect.top + visibleMarqueeRect.y}px`);
+        marqueeGlowRoot.style.setProperty('--marquee-sidebar-glow-height', `${visibleMarqueeRect.h}px`);
+        marqueeGlowRoot.style.setProperty('--marquee-sidebar-glow-opacity', shouldShow ? '1' : '0');
+    }
 
     function getViewportBounds() {
         const viewport = window.visualViewport;
@@ -864,6 +883,11 @@ document.addEventListener('DOMContentLoaded', () => {
         marquee.style.top = `${visibleMarqueeRect.y}px`;
         marquee.style.width = `${visibleMarqueeRect.w}px`;
         marquee.style.height = `${visibleMarqueeRect.h}px`;
+        updateMarqueeSidebarGlow(
+            visibleMarqueeRect,
+            galleryRect,
+            visibleMarqueeRect.x <= viewportRect.left + MARQUEE_EDGE_EPSILON
+        );
 
         for (const item of items) {
             if (item.style.display === 'none') continue;
@@ -978,6 +1002,7 @@ document.addEventListener('DOMContentLoaded', () => {
         marqueeStartScrollY = 0;
 
         document.body.classList.remove('is-marquee-dragging');
+        hideMarqueeSidebarGlow();
         if (!isMarquee) return;
 
         if (!hasDragged) {

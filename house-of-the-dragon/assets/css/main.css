@@ -2276,6 +2276,11 @@ Finder-Style Sidebar
     --sidebar-toggle-size: 28px;
     --sidebar-toggle-left: calc(var(--sidebar-gutter) + 12px);
     --top-bar-height: 2.5rem;
+    --marquee-sidebar-glow-top: 0px;
+    --marquee-sidebar-glow-height: 0px;
+    --marquee-sidebar-glow-opacity: 0;
+    --marquee-sidebar-glow-color: rgba(226, 236, 240, 0.58);
+    --marquee-sidebar-glow-halo: rgba(178, 198, 205, 0.52);
 }
 
 #app-shell {
@@ -2309,6 +2314,31 @@ Finder-Style Sidebar
     -webkit-transition: width 260ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease-out;
     -ms-transition: width 260ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease-out;
     transition: width 260ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease-out;
+}
+
+#app-shell::after {
+    content: '';
+    position: fixed;
+    top: var(--marquee-sidebar-glow-top);
+    left: 0;
+    width: calc(var(--sidebar-gutter) + var(--sidebar-width));
+    height: var(--marquee-sidebar-glow-height);
+    z-index: 12;
+    pointer-events: none;
+    opacity: var(--marquee-sidebar-glow-opacity);
+    background: linear-gradient(to bottom, var(--marquee-sidebar-glow-color), var(--marquee-sidebar-glow-color)) left top/1px 100% no-repeat, linear-gradient(to right, var(--marquee-sidebar-glow-color), rgba(226, 236, 240, 0.28) 44%, transparent 100%) left top/100% 1px no-repeat, linear-gradient(to right, var(--marquee-sidebar-glow-color), rgba(226, 236, 240, 0.28) 44%, transparent 100%) left bottom/100% 1px no-repeat;
+    clip-path: inset(-24px 0 -24px 0);
+    filter: drop-shadow(0 0 5px var(--marquee-sidebar-glow-halo)) drop-shadow(0 0 14px rgba(178, 198, 205, 0.34));
+    -webkit-mask-image: var(--sidebar-blur-mask);
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-size: 100% 100%;
+    mask-image: var(--sidebar-blur-mask);
+    mask-repeat: no-repeat;
+    mask-size: 100% 100%;
+    -moz-transition: opacity 120ms ease-out;
+    -webkit-transition: opacity 120ms ease-out;
+    -ms-transition: opacity 120ms ease-out;
+    transition: opacity 120ms ease-out;
 }
 
 #finder-sidebar {
@@ -2515,7 +2545,7 @@ body.is-resizing-sidebar {
     user-select: none;
 }
 
-body.is-resizing-sidebar #finder-sidebar, body.is-resizing-sidebar #app-shell::before {
+body.is-resizing-sidebar #finder-sidebar, body.is-resizing-sidebar #app-shell::before, body.is-resizing-sidebar #app-shell::after {
     -moz-transition: none;
     -webkit-transition: none;
     -ms-transition: none;
@@ -2560,9 +2590,13 @@ body.is-sidebar-collapsed #app-shell::before {
     opacity: 0;
 }
 
+body.is-sidebar-collapsed #app-shell::after {
+    opacity: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
 
-    #finder-sidebar, #app-shell::before {
+    #finder-sidebar, #app-shell::before, #app-shell::after {
         -moz-transition: none;
         -webkit-transition: none;
         -ms-transition: none;
