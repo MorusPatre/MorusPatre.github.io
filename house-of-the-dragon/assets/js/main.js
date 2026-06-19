@@ -917,9 +917,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 marqueeSidebarBottomClip,
                 marqueeSidebarBottomHighlight,
                 {
-                    left: bottomEdgeLeft,
+                    left: zone.left,
                     top: bottomEdgeTop,
-                    right: bottomEdgeRight,
+                    right: zone.right,
                     bottom: zone.bottom
                 },
                 marqueeViewportRect,

@@ -1643,6 +1643,15 @@ Styling for the Finder-Style Photo Gallery
     pointer-events: none;
 }
 
+#marquee-sidebar-bottom-clip {
+    -webkit-mask-image: var(--sidebar-blur-mask);
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-size: 100% 100%;
+    mask-image: var(--sidebar-blur-mask);
+    mask-repeat: no-repeat;
+    mask-size: 100% 100%;
+}
+
 /* FINAL FIX: Prevents object-highlighting on the search input during a drag */
 body.is-marquee-dragging #search-input {
     pointer-events: none;
