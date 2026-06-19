@@ -1642,11 +1642,11 @@ Styling for the Finder-Style Photo Gallery
 }
 
 #marquee-sidebar-highlight {
-    border: 2px solid rgba(255, 255, 255, 1);
+    border: 1px solid rgba(255, 255, 255, 1);
 }
 
 #marquee-sidebar-bottom-highlight {
-    border-top: 2px solid rgba(255, 255, 255, 1);
+    border-top: 1px solid rgba(255, 255, 255, 1);
 }
 
 #marquee-sidebar-bottom-clip {
