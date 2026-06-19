@@ -791,6 +791,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const MARQUEE_WINDOW_EDGE_TOLERANCE = 0;
     const MARQUEE_WINDOW_EDGE_HIGHLIGHT_WIDTH = 12;
     const MARQUEE_BOTTOM_EDGE_HIGHLIGHT_HEIGHT = 24;
+    const MARQUEE_HIGHLIGHT_STROKE_WIDTH = 2;
     const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
     function getViewportBounds() {
@@ -875,7 +876,7 @@ document.addEventListener('DOMContentLoaded', () => {
         clip.style.height = `${clipRect.bottom - clipRect.top}px`;
 
         highlight.style.left = `${marqueeViewportRect.left - clipRect.left}px`;
-        highlight.style.top = `${marqueeBottom - clipRect.top - 1}px`;
+        highlight.style.top = `${marqueeBottom - clipRect.top - MARQUEE_HIGHLIGHT_STROKE_WIDTH}px`;
         highlight.style.width = `${marqueeViewportRect.width}px`;
         highlight.style.height = '0px';
     }
