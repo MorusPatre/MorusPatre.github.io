@@ -1642,17 +1642,27 @@ Styling for the Finder-Style Photo Gallery
 }
 
 #marquee-sidebar-highlight {
-    border-left: 1px solid rgba(255, 255, 255, 0.24);
-    box-shadow:
-        0 0 8px rgba(255, 255, 255, 0.68),
-        0 0 18px rgba(255, 255, 255, 0.4);
+    border-left: 1px solid rgba(255, 255, 255, 0.32);
+    background: linear-gradient(
+        to right,
+        rgba(255, 255, 255, 0.52) 0,
+        rgba(255, 255, 255, 0.32) 4px,
+        rgba(255, 255, 255, 0.18) 14px,
+        rgba(255, 255, 255, 0.06) 26px,
+        transparent 36px
+    );
 }
 
 #marquee-sidebar-bottom-highlight {
-    border-top: 1px solid rgba(255, 255, 255, 0.24);
-    box-shadow:
-        0 -2px 8px rgba(255, 255, 255, 0.68),
-        0 -6px 18px rgba(255, 255, 255, 0.4);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.32);
+    background: linear-gradient(
+        to top,
+        rgba(255, 255, 255, 0.52) 0,
+        rgba(255, 255, 255, 0.32) 4px,
+        rgba(255, 255, 255, 0.18) 14px,
+        rgba(255, 255, 255, 0.06) 26px,
+        transparent 36px
+    );
 }
 
 #marquee-sidebar-bottom-clip {

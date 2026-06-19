@@ -789,9 +789,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const MARQUEE_SCROLL_EDGE_OVERSCAN = 1;
     const MARQUEE_WINDOW_EDGE_TOLERANCE = 0;
-    const MARQUEE_WINDOW_EDGE_HIGHLIGHT_WIDTH = 12;
-    const MARQUEE_BOTTOM_EDGE_HIGHLIGHT_HEIGHT = 24;
-    const MARQUEE_GLOW_ENDPOINT_OVERDRAW = 28;
+    const MARQUEE_EDGE_GLOW_SIZE = 36;
+    const MARQUEE_WINDOW_EDGE_HIGHLIGHT_WIDTH = MARQUEE_EDGE_GLOW_SIZE;
+    const MARQUEE_BOTTOM_EDGE_HIGHLIGHT_HEIGHT = MARQUEE_EDGE_GLOW_SIZE;
+    const MARQUEE_GLOW_ENDPOINT_OVERDRAW = MARQUEE_EDGE_GLOW_SIZE;
     const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
     function getViewportBounds() {
@@ -876,9 +877,9 @@ document.addEventListener('DOMContentLoaded', () => {
         clip.style.height = `${clipRect.bottom - clipRect.top}px`;
 
         highlight.style.left = `${marqueeViewportRect.left - clipRect.left - MARQUEE_GLOW_ENDPOINT_OVERDRAW}px`;
-        highlight.style.top = `${marqueeBottom - clipRect.top - 1}px`;
+        highlight.style.top = `${marqueeBottom - clipRect.top - MARQUEE_EDGE_GLOW_SIZE}px`;
         highlight.style.width = `${marqueeViewportRect.width + (MARQUEE_GLOW_ENDPOINT_OVERDRAW * 2)}px`;
-        highlight.style.height = '0px';
+        highlight.style.height = `${MARQUEE_EDGE_GLOW_SIZE}px`;
     }
 
     function updateSidebarMarqueeHighlight(galleryRect, visibleMarqueeRect) {
