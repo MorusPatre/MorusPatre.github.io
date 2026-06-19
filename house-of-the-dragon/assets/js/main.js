@@ -552,6 +552,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!gallery || !wrapper) return;
 
+    const appShell = document.getElementById('app-shell');
     const marquee = document.getElementById('marquee');
     const marqueeSidebarClip = document.createElement('div');
     const marqueeSidebarHighlight = document.createElement('div');
@@ -560,7 +561,7 @@ document.addEventListener('DOMContentLoaded', () => {
     marqueeSidebarClip.setAttribute('aria-hidden', 'true');
     marqueeSidebarHighlight.id = 'marquee-sidebar-highlight';
     marqueeSidebarClip.appendChild(marqueeSidebarHighlight);
-    document.body.appendChild(marqueeSidebarClip);
+    (appShell || document.body).appendChild(marqueeSidebarClip);
     const items = gallery.getElementsByTagName('figure');
 
     let selectedItems = new Set();
