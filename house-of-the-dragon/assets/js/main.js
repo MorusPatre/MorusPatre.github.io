@@ -788,7 +788,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Refactored Marquee and Auto-Scroll Functions ---
 
     const MARQUEE_SCROLL_EDGE_OVERSCAN = 1;
-    const MARQUEE_WINDOW_EDGE_TOLERANCE = 1;
+    const MARQUEE_WINDOW_EDGE_TOLERANCE = 0;
     const MARQUEE_WINDOW_EDGE_HIGHLIGHT_WIDTH = 12;
     const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
