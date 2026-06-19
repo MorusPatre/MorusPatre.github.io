@@ -781,6 +781,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Refactored Marquee and Auto-Scroll Functions ---
 
     const MARQUEE_SCROLL_EDGE_OVERSCAN = 1;
+    const MARQUEE_WINDOW_EDGE_TOLERANCE = 1;
+    const MARQUEE_WINDOW_EDGE_HIGHLIGHT_WIDTH = 12;
     const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
     function getViewportBounds() {
@@ -853,12 +855,15 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         const marqueeRight = marqueeViewportRect.left + marqueeViewportRect.width;
         const marqueeBottom = marqueeViewportRect.top + marqueeViewportRect.height;
+        const isOnWindowLeftEdge =
+            Math.abs(marqueeViewportRect.left - zone.left) <= MARQUEE_WINDOW_EDGE_TOLERANCE;
+        const edgeHighlightRight = Math.min(zone.right, zone.left + MARQUEE_WINDOW_EDGE_HIGHLIGHT_WIDTH);
         const overlapLeft = Math.max(marqueeViewportRect.left, zone.left);
         const overlapTop = Math.max(marqueeViewportRect.top, zone.top);
-        const overlapRight = Math.min(marqueeRight, zone.right);
+        const overlapRight = Math.min(marqueeRight, edgeHighlightRight);
         const overlapBottom = Math.min(marqueeBottom, zone.bottom);
 
-        if (overlapRight <= overlapLeft || overlapBottom <= overlapTop) {
+        if (!isOnWindowLeftEdge || overlapRight <= overlapLeft || overlapBottom <= overlapTop) {
             hideSidebarMarqueeHighlight();
             return;
         }
@@ -868,12 +873,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         marqueeSidebarClip.style.visibility = 'visible';
         marqueeSidebarClip.style.left = `${zone.left - clipContainerRect.left}px`;
-        marqueeSidebarClip.style.top = `${zone.top - clipContainerRect.top}px`;
-        marqueeSidebarClip.style.width = `${zone.right - zone.left}px`;
-        marqueeSidebarClip.style.height = `${zone.bottom - zone.top}px`;
+        marqueeSidebarClip.style.top = `${overlapTop - clipContainerRect.top}px`;
+        marqueeSidebarClip.style.width = `${edgeHighlightRight - zone.left}px`;
+        marqueeSidebarClip.style.height = `${overlapBottom - overlapTop}px`;
 
         marqueeSidebarHighlight.style.left = `${marqueeViewportRect.left - zone.left}px`;
-        marqueeSidebarHighlight.style.top = `${marqueeViewportRect.top - zone.top}px`;
+        marqueeSidebarHighlight.style.top = `${marqueeViewportRect.top - overlapTop}px`;
         marqueeSidebarHighlight.style.width = `${marqueeViewportRect.width}px`;
         marqueeSidebarHighlight.style.height = `${marqueeViewportRect.height}px`;
     }
