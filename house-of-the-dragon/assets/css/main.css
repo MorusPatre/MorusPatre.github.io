@@ -1638,16 +1638,19 @@ Styling for the Finder-Style Photo Gallery
 #marquee-sidebar-bottom-highlight {
     position: absolute;
     box-sizing: border-box;
-    border: 1px solid rgba(255, 255, 255, 0.96);
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.68);
+    border: 1px solid rgba(255, 255, 255, 1);
+    box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.72),
+        0 0 8px rgba(255, 255, 255, 0.86),
+        0 0 18px rgba(255, 255, 255, 0.52);
     pointer-events: none;
 }
 
 #marquee-sidebar-bottom-clip {
-    -webkit-mask-image: var(--sidebar-blur-mask);
+    -webkit-mask-image: var(--marquee-sidebar-highlight-mask);
     -webkit-mask-repeat: no-repeat;
     -webkit-mask-size: 100% 100%;
-    mask-image: var(--sidebar-blur-mask);
+    mask-image: var(--marquee-sidebar-highlight-mask);
     mask-repeat: no-repeat;
     mask-size: 100% 100%;
 }
@@ -2301,6 +2304,17 @@ Finder-Style Sidebar
         rgba(0, 0, 0, 0.86) calc(100% - 42px),
         rgba(0, 0, 0, 0.68) calc(100% - 20px),
         rgba(0, 0, 0, 0.48) calc(100% - 8px),
+        transparent 100%
+    );
+    --marquee-sidebar-highlight-feather: 112px;
+    --marquee-sidebar-highlight-mask: linear-gradient(
+        to right,
+        #000 0,
+        #000 max(0px, calc(100% - var(--marquee-sidebar-highlight-feather))),
+        rgba(0, 0, 0, 0.7) calc(100% - 80px),
+        rgba(0, 0, 0, 0.5) calc(100% - 54px),
+        rgba(0, 0, 0, 0.28) calc(100% - 24px),
+        rgba(0, 0, 0, 0.1) calc(100% - 8px),
         transparent 100%
     );
     --sidebar-radius: 20px;
