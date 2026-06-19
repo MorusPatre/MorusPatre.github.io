@@ -786,6 +786,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const MARQUEE_SCROLL_EDGE_OVERSCAN = 1;
     const MARQUEE_WINDOW_EDGE_TOLERANCE = 1;
+    const MARQUEE_EDGE_GLOW_BLEED = 18;
     const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
     function getViewportBounds() {
@@ -897,9 +898,9 @@ document.addEventListener('DOMContentLoaded', () => {
             updateMarqueeGlowLine(
                 marqueeSidebarLeftGlow,
                 marqueeViewportRect.left - zone.left,
-                marqueeViewportRect.top - zone.top,
+                marqueeViewportRect.top - zone.top - MARQUEE_EDGE_GLOW_BLEED,
                 1,
-                marqueeViewportRect.height
+                marqueeViewportRect.height + (MARQUEE_EDGE_GLOW_BLEED * 2)
             );
         } else {
             hideMarqueeGlowLine(marqueeSidebarLeftGlow);
@@ -908,9 +909,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isOnWindowBottomEdge) {
             updateMarqueeGlowLine(
                 marqueeSidebarBottomGlow,
-                marqueeViewportRect.left - zone.left,
+                marqueeViewportRect.left - zone.left - MARQUEE_EDGE_GLOW_BLEED,
                 marqueeBottom - zone.top - 1,
-                marqueeViewportRect.width,
+                marqueeViewportRect.width + (MARQUEE_EDGE_GLOW_BLEED * 2),
                 1
             );
         } else {
