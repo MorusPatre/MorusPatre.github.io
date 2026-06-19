@@ -2308,14 +2308,13 @@ Finder-Style Sidebar
         rgba(0, 0, 0, 0.48) calc(100% - 8px),
         transparent 100%
     );
-    --marquee-sidebar-highlight-feather: 112px;
     --marquee-sidebar-highlight-mask: linear-gradient(
         to right,
         #000 0,
-        #000 max(38%, calc(100% - var(--marquee-sidebar-highlight-feather))),
-        rgba(0, 0, 0, 0.94) max(54%, calc(100% - 80px)),
-        rgba(0, 0, 0, 0.76) max(75%, calc(100% - 42px)),
-        rgba(0, 0, 0, 0.36) max(91%, calc(100% - 12px)),
+        #000 calc(100% - 28px),
+        rgba(0, 0, 0, 0.98) calc(100% - 20px),
+        rgba(0, 0, 0, 0.88) calc(100% - 12px),
+        rgba(0, 0, 0, 0.46) calc(100% - 4px),
         transparent 100%
     );
     --sidebar-radius: 20px;
