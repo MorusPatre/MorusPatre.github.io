@@ -781,7 +781,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Refactored Marquee and Auto-Scroll Functions ---
 
     const MARQUEE_SCROLL_EDGE_OVERSCAN = 1;
-    const MARQUEE_SIDEBAR_EDGE_HIGHLIGHT_WIDTH = 4;
     const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
     function getViewportBounds() {
@@ -852,13 +851,11 @@ document.addEventListener('DOMContentLoaded', () => {
             width: visibleMarqueeRect.w,
             height: visibleMarqueeRect.h
         };
-        const edgeRight = zone.right;
-        const edgeLeft = Math.max(zone.left, edgeRight - MARQUEE_SIDEBAR_EDGE_HIGHLIGHT_WIDTH);
         const marqueeRight = marqueeViewportRect.left + marqueeViewportRect.width;
         const marqueeBottom = marqueeViewportRect.top + marqueeViewportRect.height;
-        const overlapLeft = Math.max(marqueeViewportRect.left, edgeLeft);
+        const overlapLeft = Math.max(marqueeViewportRect.left, zone.left);
         const overlapTop = Math.max(marqueeViewportRect.top, zone.top);
-        const overlapRight = Math.min(marqueeRight, edgeRight);
+        const overlapRight = Math.min(marqueeRight, zone.right);
         const overlapBottom = Math.min(marqueeBottom, zone.bottom);
 
         if (overlapRight <= overlapLeft || overlapBottom <= overlapTop) {
@@ -870,12 +867,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const clipContainerRect = clipContainer.getBoundingClientRect();
 
         marqueeSidebarClip.style.visibility = 'visible';
-        marqueeSidebarClip.style.left = `${edgeLeft - clipContainerRect.left}px`;
+        marqueeSidebarClip.style.left = `${zone.left - clipContainerRect.left}px`;
         marqueeSidebarClip.style.top = `${zone.top - clipContainerRect.top}px`;
-        marqueeSidebarClip.style.width = `${edgeRight - edgeLeft}px`;
+        marqueeSidebarClip.style.width = `${zone.right - zone.left}px`;
         marqueeSidebarClip.style.height = `${zone.bottom - zone.top}px`;
 
-        marqueeSidebarHighlight.style.left = `${marqueeViewportRect.left - edgeLeft}px`;
+        marqueeSidebarHighlight.style.left = `${marqueeViewportRect.left - zone.left}px`;
         marqueeSidebarHighlight.style.top = `${marqueeViewportRect.top - zone.top}px`;
         marqueeSidebarHighlight.style.width = `${marqueeViewportRect.width}px`;
         marqueeSidebarHighlight.style.height = `${marqueeViewportRect.height}px`;
