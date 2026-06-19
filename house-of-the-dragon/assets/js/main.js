@@ -553,6 +553,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!gallery || !wrapper) return;
 
     const marquee = document.getElementById('marquee');
+    const marqueeSidebarClip = document.createElement('div');
+    const marqueeSidebarHighlight = document.createElement('div');
+
+    marqueeSidebarClip.id = 'marquee-sidebar-clip';
+    marqueeSidebarClip.setAttribute('aria-hidden', 'true');
+    marqueeSidebarHighlight.id = 'marquee-sidebar-highlight';
+    marqueeSidebarClip.appendChild(marqueeSidebarHighlight);
+    document.body.appendChild(marqueeSidebarClip);
     const items = gallery.getElementsByTagName('figure');
 
     let selectedItems = new Set();
@@ -794,6 +802,78 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
+    function getSidebarMarqueeZone() {
+        if (document.body.classList.contains('is-sidebar-collapsed')) {
+            return null;
+        }
+
+        const sidebarEl = document.getElementById('finder-sidebar');
+        if (!sidebarEl) {
+            return null;
+        }
+
+        const sidebarRect = sidebarEl.getBoundingClientRect();
+        const viewportBounds = getViewportBounds();
+        const zoneRight = Math.min(sidebarRect.right, viewportBounds.right);
+
+        if (sidebarRect.width <= 0 || zoneRight <= viewportBounds.left) {
+            return null;
+        }
+
+        return {
+            left: viewportBounds.left,
+            top: viewportBounds.top,
+            right: zoneRight,
+            bottom: viewportBounds.bottom
+        };
+    }
+
+    function hideSidebarMarqueeHighlight() {
+        marqueeSidebarClip.style.visibility = 'hidden';
+        marqueeSidebarClip.style.width = '0px';
+        marqueeSidebarClip.style.height = '0px';
+        marqueeSidebarHighlight.style.width = '0px';
+        marqueeSidebarHighlight.style.height = '0px';
+    }
+
+    function updateSidebarMarqueeHighlight(galleryRect, visibleMarqueeRect) {
+        const zone = getSidebarMarqueeZone();
+
+        if (!zone || visibleMarqueeRect.w <= 0 || visibleMarqueeRect.h <= 0) {
+            hideSidebarMarqueeHighlight();
+            return;
+        }
+
+        const marqueeViewportRect = {
+            left: galleryRect.left + visibleMarqueeRect.x,
+            top: galleryRect.top + visibleMarqueeRect.y,
+            width: visibleMarqueeRect.w,
+            height: visibleMarqueeRect.h
+        };
+        const marqueeRight = marqueeViewportRect.left + marqueeViewportRect.width;
+        const marqueeBottom = marqueeViewportRect.top + marqueeViewportRect.height;
+        const overlapLeft = Math.max(marqueeViewportRect.left, zone.left);
+        const overlapTop = Math.max(marqueeViewportRect.top, zone.top);
+        const overlapRight = Math.min(marqueeRight, zone.right);
+        const overlapBottom = Math.min(marqueeBottom, zone.bottom);
+
+        if (overlapRight <= overlapLeft || overlapBottom <= overlapTop) {
+            hideSidebarMarqueeHighlight();
+            return;
+        }
+
+        marqueeSidebarClip.style.visibility = 'visible';
+        marqueeSidebarClip.style.left = `${zone.left}px`;
+        marqueeSidebarClip.style.top = `${zone.top}px`;
+        marqueeSidebarClip.style.width = `${zone.right - zone.left}px`;
+        marqueeSidebarClip.style.height = `${zone.bottom - zone.top}px`;
+
+        marqueeSidebarHighlight.style.left = `${marqueeViewportRect.left - zone.left}px`;
+        marqueeSidebarHighlight.style.top = `${marqueeViewportRect.top - zone.top}px`;
+        marqueeSidebarHighlight.style.width = `${marqueeViewportRect.width}px`;
+        marqueeSidebarHighlight.style.height = `${marqueeViewportRect.height}px`;
+    }
+
     function getClampedMarqueePoint(clientX, clientY, galleryRect) {
         const viewportBounds = getViewportBounds();
 
@@ -864,6 +944,7 @@ document.addEventListener('DOMContentLoaded', () => {
         marquee.style.top = `${visibleMarqueeRect.y}px`;
         marquee.style.width = `${visibleMarqueeRect.w}px`;
         marquee.style.height = `${visibleMarqueeRect.h}px`;
+        updateSidebarMarqueeHighlight(galleryRect, visibleMarqueeRect);
 
         for (const item of items) {
             if (item.style.display === 'none') continue;
@@ -978,6 +1059,7 @@ document.addEventListener('DOMContentLoaded', () => {
         marqueeStartScrollY = 0;
 
         document.body.classList.remove('is-marquee-dragging');
+        hideSidebarMarqueeHighlight();
         if (!isMarquee) return;
 
         if (!hasDragged) {
@@ -1036,6 +1118,7 @@ document.addEventListener('DOMContentLoaded', () => {
         marquee.style.visibility = 'hidden';
         marquee.style.width = '0px';
         marquee.style.height = '0px';
+        hideSidebarMarqueeHighlight();
         preMarqueeSelectedItems.clear();
     };
 

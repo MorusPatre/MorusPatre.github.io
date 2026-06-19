@@ -1621,6 +1621,26 @@ Styling for the Finder-Style Photo Gallery
     z-index: 9; /* Changed from 10 to 9 */
 }
 
+#marquee-sidebar-clip {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    pointer-events: none;
+    visibility: hidden;
+    z-index: 13;
+}
+
+#marquee-sidebar-highlight {
+    position: absolute;
+    box-sizing: border-box;
+    border: 1px solid rgba(255, 255, 255, 0.88);
+    box-shadow: 0 0 14px rgba(255, 255, 255, 0.58), inset 0 0 8px rgba(255, 255, 255, 0.24);
+    pointer-events: none;
+}
+
 /* FINAL FIX: Prevents object-highlighting on the search input during a drag */
 body.is-marquee-dragging #search-input {
     pointer-events: none;
