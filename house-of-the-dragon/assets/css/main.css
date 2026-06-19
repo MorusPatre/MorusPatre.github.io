@@ -1631,7 +1631,7 @@ Styling for the Finder-Style Photo Gallery
     overflow: hidden;
     pointer-events: none;
     visibility: hidden;
-    z-index: 9;
+    z-index: 12;
 }
 
 #marquee-sidebar-highlight,
@@ -1642,18 +1642,24 @@ Styling for the Finder-Style Photo Gallery
 }
 
 #marquee-sidebar-highlight {
-    border: 1px solid rgba(255, 255, 255, 1);
+    border-left: 1px solid rgba(255, 255, 255, 0.24);
+    box-shadow:
+        0 0 8px rgba(255, 255, 255, 0.68),
+        0 0 18px rgba(255, 255, 255, 0.4);
 }
 
 #marquee-sidebar-bottom-highlight {
-    border-top: 1px solid rgba(255, 255, 255, 1);
+    border-top: 1px solid rgba(255, 255, 255, 0.24);
+    box-shadow:
+        0 -2px 8px rgba(255, 255, 255, 0.68),
+        0 -6px 18px rgba(255, 255, 255, 0.4);
 }
 
 #marquee-sidebar-bottom-clip {
-    -webkit-mask-image: var(--marquee-sidebar-highlight-mask);
+    -webkit-mask-image: var(--marquee-sidebar-glow-mask);
     -webkit-mask-repeat: no-repeat;
     -webkit-mask-size: 100% 100%;
-    mask-image: var(--marquee-sidebar-highlight-mask);
+    mask-image: var(--marquee-sidebar-glow-mask);
     mask-repeat: no-repeat;
     mask-size: 100% 100%;
 }
@@ -2309,13 +2315,12 @@ Finder-Style Sidebar
         rgba(0, 0, 0, 0.48) calc(100% - 8px),
         transparent 100%
     );
-    --marquee-sidebar-highlight-mask: linear-gradient(
+    --marquee-sidebar-glow-mask: linear-gradient(
         to right,
         #000 0,
-        #000 max(38%, calc(100% - 112px)),
-        rgba(0, 0, 0, 0.94) max(54%, calc(100% - 80px)),
-        rgba(0, 0, 0, 0.76) max(75%, calc(100% - 42px)),
-        rgba(0, 0, 0, 0.36) max(91%, calc(100% - 12px)),
+        #000 max(44%, calc(100% - 72px)),
+        rgba(0, 0, 0, 0.78) max(68%, calc(100% - 44px)),
+        rgba(0, 0, 0, 0.34) max(88%, calc(100% - 14px)),
         transparent 100%
     );
     --sidebar-radius: 20px;
