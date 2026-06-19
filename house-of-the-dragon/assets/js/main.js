@@ -863,9 +863,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        const clipContainer = appShell || document.body;
+        const clipContainerRect = clipContainer.getBoundingClientRect();
+
         marqueeSidebarClip.style.visibility = 'visible';
-        marqueeSidebarClip.style.left = `${zone.left}px`;
-        marqueeSidebarClip.style.top = `${zone.top}px`;
+        marqueeSidebarClip.style.left = `${zone.left - clipContainerRect.left}px`;
+        marqueeSidebarClip.style.top = `${zone.top - clipContainerRect.top}px`;
         marqueeSidebarClip.style.width = `${zone.right - zone.left}px`;
         marqueeSidebarClip.style.height = `${zone.bottom - zone.top}px`;
 

@@ -1622,7 +1622,7 @@ Styling for the Finder-Style Photo Gallery
 }
 
 #marquee-sidebar-clip {
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
     width: 0;
