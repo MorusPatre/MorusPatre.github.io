@@ -789,8 +789,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const MARQUEE_SCROLL_EDGE_OVERSCAN = 1;
     const MARQUEE_WINDOW_EDGE_TOLERANCE = 0;
-    const MARQUEE_LEFT_EDGE_GLOW_WIDTH = 44;
+    const MARQUEE_WINDOW_EDGE_HIGHLIGHT_WIDTH = 12;
     const MARQUEE_BOTTOM_EDGE_HIGHLIGHT_HEIGHT = 24;
+    const MARQUEE_GLOW_ENDPOINT_OVERDRAW = 28;
     const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
     function getViewportBounds() {
@@ -860,9 +861,9 @@ document.addEventListener('DOMContentLoaded', () => {
         clip.style.height = `${clipRect.bottom - clipRect.top}px`;
 
         highlight.style.left = `${marqueeViewportRect.left - clipRect.left}px`;
-        highlight.style.top = `${marqueeViewportRect.top - clipRect.top}px`;
+        highlight.style.top = `${marqueeViewportRect.top - clipRect.top - MARQUEE_GLOW_ENDPOINT_OVERDRAW}px`;
         highlight.style.width = `${marqueeViewportRect.width}px`;
-        highlight.style.height = `${marqueeViewportRect.height}px`;
+        highlight.style.height = `${marqueeViewportRect.height + (MARQUEE_GLOW_ENDPOINT_OVERDRAW * 2)}px`;
     }
 
     function updateMarqueeBottomHighlightLayer(clip, highlight, clipRect, marqueeViewportRect, clipContainerRect) {
@@ -874,9 +875,9 @@ document.addEventListener('DOMContentLoaded', () => {
         clip.style.width = `${clipRect.right - clipRect.left}px`;
         clip.style.height = `${clipRect.bottom - clipRect.top}px`;
 
-        highlight.style.left = `${marqueeViewportRect.left - clipRect.left}px`;
+        highlight.style.left = `${marqueeViewportRect.left - clipRect.left - MARQUEE_GLOW_ENDPOINT_OVERDRAW}px`;
         highlight.style.top = `${marqueeBottom - clipRect.top - 1}px`;
-        highlight.style.width = `${marqueeViewportRect.width}px`;
+        highlight.style.width = `${marqueeViewportRect.width + (MARQUEE_GLOW_ENDPOINT_OVERDRAW * 2)}px`;
         highlight.style.height = '0px';
     }
 
@@ -903,7 +904,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const clipContainer = appShell || document.body;
         const clipContainerRect = clipContainer.getBoundingClientRect();
 
-        const leftEdgeRight = Math.min(zone.right, zone.left + MARQUEE_LEFT_EDGE_GLOW_WIDTH);
+        const leftEdgeRight = Math.min(zone.right, zone.left + MARQUEE_WINDOW_EDGE_HIGHLIGHT_WIDTH);
         const leftEdgeTop = Math.max(marqueeViewportRect.top, zone.top);
         const leftEdgeBottom = Math.min(marqueeBottom, zone.bottom);
 
@@ -933,9 +934,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 marqueeSidebarBottomClip,
                 marqueeSidebarBottomHighlight,
                 {
-                    left: zone.left,
+                    left: bottomEdgeLeft,
                     top: bottomEdgeTop,
-                    right: zone.right,
+                    right: bottomEdgeRight,
                     bottom: zone.bottom
                 },
                 marqueeViewportRect,
