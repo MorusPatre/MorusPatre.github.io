@@ -552,23 +552,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!gallery || !wrapper) return;
 
-    const appShell = document.getElementById('app-shell');
     const marquee = document.getElementById('marquee');
-    const marqueeSidebarClip = document.createElement('div');
-    const marqueeSidebarHighlight = document.createElement('div');
-    const marqueeSidebarBottomClip = document.createElement('div');
-    const marqueeSidebarBottomHighlight = document.createElement('div');
-
-    marqueeSidebarClip.id = 'marquee-sidebar-clip';
-    marqueeSidebarClip.setAttribute('aria-hidden', 'true');
-    marqueeSidebarHighlight.id = 'marquee-sidebar-highlight';
-    marqueeSidebarClip.appendChild(marqueeSidebarHighlight);
-    marqueeSidebarBottomClip.id = 'marquee-sidebar-bottom-clip';
-    marqueeSidebarBottomClip.setAttribute('aria-hidden', 'true');
-    marqueeSidebarBottomHighlight.id = 'marquee-sidebar-bottom-highlight';
-    marqueeSidebarBottomClip.appendChild(marqueeSidebarBottomHighlight);
-    (appShell || document.body).appendChild(marqueeSidebarClip);
-    (appShell || document.body).appendChild(marqueeSidebarBottomClip);
     const items = gallery.getElementsByTagName('figure');
 
     let selectedItems = new Set();
@@ -788,10 +772,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Refactored Marquee and Auto-Scroll Functions ---
 
     const MARQUEE_SCROLL_EDGE_OVERSCAN = 1;
-    const MARQUEE_WINDOW_EDGE_TOLERANCE = 0;
-    const MARQUEE_WINDOW_EDGE_HIGHLIGHT_WIDTH = 12;
-    const MARQUEE_BOTTOM_EDGE_HIGHLIGHT_HEIGHT = 24;
-    const MARQUEE_GLOW_OUTSET = 18;
     const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
     function getViewportBounds() {
@@ -812,139 +792,6 @@ document.addEventListener('DOMContentLoaded', () => {
             right: window.innerWidth,
             bottom: window.innerHeight
         };
-    }
-
-    function getSidebarMarqueeZone() {
-        if (document.body.classList.contains('is-sidebar-collapsed')) {
-            return null;
-        }
-
-        const sidebarEl = document.getElementById('finder-sidebar');
-        if (!sidebarEl) {
-            return null;
-        }
-
-        const sidebarRect = sidebarEl.getBoundingClientRect();
-        const viewportBounds = getViewportBounds();
-        const zoneRight = Math.min(sidebarRect.right, viewportBounds.right);
-
-        if (sidebarRect.width <= 0 || zoneRight <= viewportBounds.left) {
-            return null;
-        }
-
-        return {
-            left: viewportBounds.left,
-            top: viewportBounds.top,
-            right: zoneRight,
-            bottom: viewportBounds.bottom
-        };
-    }
-
-    function hideMarqueeHighlightLayer(clip, highlight) {
-        clip.style.visibility = 'hidden';
-        clip.style.width = '0px';
-        clip.style.height = '0px';
-        highlight.style.width = '0px';
-        highlight.style.height = '0px';
-    }
-
-    function hideSidebarMarqueeHighlight() {
-        hideMarqueeHighlightLayer(marqueeSidebarClip, marqueeSidebarHighlight);
-        hideMarqueeHighlightLayer(marqueeSidebarBottomClip, marqueeSidebarBottomHighlight);
-    }
-
-    function updateMarqueeHighlightLayer(clip, highlight, clipRect, marqueeViewportRect, clipContainerRect) {
-        clip.style.visibility = 'visible';
-        clip.style.left = `${clipRect.left - clipContainerRect.left}px`;
-        clip.style.top = `${clipRect.top - clipContainerRect.top}px`;
-        clip.style.width = `${clipRect.right - clipRect.left}px`;
-        clip.style.height = `${clipRect.bottom - clipRect.top}px`;
-
-        highlight.style.left = `${marqueeViewportRect.left - clipRect.left}px`;
-        highlight.style.top = `${marqueeViewportRect.top - clipRect.top}px`;
-        highlight.style.width = `${marqueeViewportRect.width}px`;
-        highlight.style.height = `${marqueeViewportRect.height}px`;
-    }
-
-    function updateMarqueeBottomHighlightLayer(clip, highlight, clipRect, marqueeViewportRect, clipContainerRect) {
-        const marqueeBottom = marqueeViewportRect.top + marqueeViewportRect.height;
-
-        clip.style.visibility = 'visible';
-        clip.style.left = `${clipRect.left - clipContainerRect.left}px`;
-        clip.style.top = `${clipRect.top - clipContainerRect.top}px`;
-        clip.style.width = `${clipRect.right - clipRect.left}px`;
-        clip.style.height = `${clipRect.bottom - clipRect.top}px`;
-
-        highlight.style.left = `${marqueeViewportRect.left - clipRect.left}px`;
-        highlight.style.top = `${marqueeBottom - clipRect.top - 1}px`;
-        highlight.style.width = `${marqueeViewportRect.width}px`;
-        highlight.style.height = '0px';
-    }
-
-    function updateSidebarMarqueeHighlight(galleryRect, visibleMarqueeRect) {
-        const zone = getSidebarMarqueeZone();
-
-        if (!zone || visibleMarqueeRect.w <= 0 || visibleMarqueeRect.h <= 0) {
-            hideSidebarMarqueeHighlight();
-            return;
-        }
-
-        const marqueeViewportRect = {
-            left: galleryRect.left + visibleMarqueeRect.x,
-            top: galleryRect.top + visibleMarqueeRect.y,
-            width: visibleMarqueeRect.w,
-            height: visibleMarqueeRect.h
-        };
-        const marqueeRight = marqueeViewportRect.left + marqueeViewportRect.width;
-        const marqueeBottom = marqueeViewportRect.top + marqueeViewportRect.height;
-        const isOnWindowLeftEdge =
-            Math.abs(marqueeViewportRect.left - zone.left) <= MARQUEE_WINDOW_EDGE_TOLERANCE;
-        const isOnWindowBottomEdge =
-            Math.abs(marqueeBottom - zone.bottom) <= MARQUEE_WINDOW_EDGE_TOLERANCE;
-        const clipContainer = appShell || document.body;
-        const clipContainerRect = clipContainer.getBoundingClientRect();
-
-        const leftEdgeRight = Math.min(zone.right, zone.left + MARQUEE_WINDOW_EDGE_HIGHLIGHT_WIDTH + MARQUEE_GLOW_OUTSET);
-        const leftEdgeTop = Math.max(marqueeViewportRect.top - MARQUEE_GLOW_OUTSET, zone.top);
-        const leftEdgeBottom = Math.min(marqueeBottom + MARQUEE_GLOW_OUTSET, zone.bottom);
-
-        if (isOnWindowLeftEdge && leftEdgeRight > zone.left && leftEdgeBottom > leftEdgeTop) {
-            updateMarqueeHighlightLayer(
-                marqueeSidebarClip,
-                marqueeSidebarHighlight,
-                {
-                    left: zone.left,
-                    top: leftEdgeTop,
-                    right: leftEdgeRight,
-                    bottom: leftEdgeBottom
-                },
-                marqueeViewportRect,
-                clipContainerRect
-            );
-        } else {
-            hideMarqueeHighlightLayer(marqueeSidebarClip, marqueeSidebarHighlight);
-        }
-
-        const bottomEdgeTop = Math.max(zone.top, zone.bottom - MARQUEE_BOTTOM_EDGE_HIGHLIGHT_HEIGHT - MARQUEE_GLOW_OUTSET);
-        const bottomEdgeLeft = Math.max(marqueeViewportRect.left - MARQUEE_GLOW_OUTSET, zone.left);
-        const bottomEdgeRight = Math.min(marqueeRight + MARQUEE_GLOW_OUTSET, zone.right);
-
-        if (isOnWindowBottomEdge && bottomEdgeRight > bottomEdgeLeft && zone.bottom > bottomEdgeTop) {
-            updateMarqueeBottomHighlightLayer(
-                marqueeSidebarBottomClip,
-                marqueeSidebarBottomHighlight,
-                {
-                    left: bottomEdgeLeft,
-                    top: bottomEdgeTop,
-                    right: bottomEdgeRight,
-                    bottom: zone.bottom
-                },
-                marqueeViewportRect,
-                clipContainerRect
-            );
-        } else {
-            hideMarqueeHighlightLayer(marqueeSidebarBottomClip, marqueeSidebarBottomHighlight);
-        }
     }
 
     function getClampedMarqueePoint(clientX, clientY, galleryRect) {
@@ -1017,7 +864,6 @@ document.addEventListener('DOMContentLoaded', () => {
         marquee.style.top = `${visibleMarqueeRect.y}px`;
         marquee.style.width = `${visibleMarqueeRect.w}px`;
         marquee.style.height = `${visibleMarqueeRect.h}px`;
-        updateSidebarMarqueeHighlight(galleryRect, visibleMarqueeRect);
 
         for (const item of items) {
             if (item.style.display === 'none') continue;
@@ -1132,7 +978,6 @@ document.addEventListener('DOMContentLoaded', () => {
         marqueeStartScrollY = 0;
 
         document.body.classList.remove('is-marquee-dragging');
-        hideSidebarMarqueeHighlight();
         if (!isMarquee) return;
 
         if (!hasDragged) {
@@ -1191,7 +1036,6 @@ document.addEventListener('DOMContentLoaded', () => {
         marquee.style.visibility = 'hidden';
         marquee.style.width = '0px';
         marquee.style.height = '0px';
-        hideSidebarMarqueeHighlight();
         preMarqueeSelectedItems.clear();
     };
 
