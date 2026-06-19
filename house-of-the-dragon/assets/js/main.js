@@ -789,7 +789,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const MARQUEE_SCROLL_EDGE_OVERSCAN = 1;
     const MARQUEE_WINDOW_EDGE_TOLERANCE = 0;
-    const MARQUEE_WINDOW_EDGE_HIGHLIGHT_WIDTH = 12;
+    const MARQUEE_LEFT_EDGE_GLOW_WIDTH = 44;
     const MARQUEE_BOTTOM_EDGE_HIGHLIGHT_HEIGHT = 24;
     const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
@@ -903,7 +903,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const clipContainer = appShell || document.body;
         const clipContainerRect = clipContainer.getBoundingClientRect();
 
-        const leftEdgeRight = Math.min(zone.right, zone.left + MARQUEE_WINDOW_EDGE_HIGHLIGHT_WIDTH);
+        const leftEdgeRight = Math.min(zone.right, zone.left + MARQUEE_LEFT_EDGE_GLOW_WIDTH);
         const leftEdgeTop = Math.max(marqueeViewportRect.top, zone.top);
         const leftEdgeBottom = Math.min(marqueeBottom, zone.bottom);
 
