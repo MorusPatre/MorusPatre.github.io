@@ -786,7 +786,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const MARQUEE_SCROLL_EDGE_OVERSCAN = 1;
     const MARQUEE_WINDOW_EDGE_TOLERANCE = 1;
-    const MARQUEE_EDGE_GLOW_BLEED = 8;
+    const MARQUEE_EDGE_GLOW_BLEED = 0;
     const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
     function getViewportBounds() {
