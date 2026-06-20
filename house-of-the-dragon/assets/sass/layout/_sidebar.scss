@@ -13,16 +13,15 @@ Finder-Style Sidebar
 	--sidebar-min-width: 176px;
 	--sidebar-max-width: 420px;
 	--sidebar-gutter: 8px;
-	--sidebar-blur-feather: 96px;
+	--sidebar-blur-feather: 72px;
 	--sidebar-blur-mask: linear-gradient(
 		to right,
 		#000 0,
 		#000 calc(100% - var(--sidebar-blur-feather)),
-		rgba(0, 0, 0, 0.96) calc(100% - 80px),
-		rgba(0, 0, 0, 0.84) calc(100% - 56px),
-		rgba(0, 0, 0, 0.64) calc(100% - 32px),
-		rgba(0, 0, 0, 0.38) calc(100% - 14px),
-		rgba(0, 0, 0, 0.18) calc(100% - 4px),
+		rgba(0, 0, 0, 0.94) calc(100% - 56px),
+		rgba(0, 0, 0, 0.74) calc(100% - 36px),
+		rgba(0, 0, 0, 0.48) calc(100% - 18px),
+		rgba(0, 0, 0, 0.2) calc(100% - 5px),
 		transparent 100%
 	);
 	--sidebar-radius: 20px;
