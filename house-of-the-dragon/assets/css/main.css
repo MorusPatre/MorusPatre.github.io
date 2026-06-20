@@ -2307,9 +2307,10 @@ Finder-Style Sidebar
     --marquee-sidebar-glow-mask: linear-gradient(
         to right,
         #000 0,
-        #000 max(56%, calc(100% - 48px)),
-        rgba(0, 0, 0, 0.9) max(74%, calc(100% - 30px)),
-        rgba(0, 0, 0, 0.62) max(92%, calc(100% - 10px)),
+        #000 max(48%, calc(100% - 64px)),
+        rgba(0, 0, 0, 0.88) max(68%, calc(100% - 42px)),
+        rgba(0, 0, 0, 0.55) max(84%, calc(100% - 22px)),
+        rgba(0, 0, 0, 0.22) max(96%, calc(100% - 6px)),
         transparent 100%
     );
     --sidebar-radius: 20px;
