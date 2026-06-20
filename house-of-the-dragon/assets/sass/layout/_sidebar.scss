@@ -24,6 +24,16 @@ Finder-Style Sidebar
 		rgba(0, 0, 0, 0.2) calc(100% - 5px),
 		transparent 100%
 	);
+	--marquee-sidebar-glow-mask: linear-gradient(
+		to right,
+		#000 0,
+		#000 max(40%, calc(100% - 88px)),
+		rgba(0, 0, 0, 0.94) max(56%, calc(100% - 68px)),
+		rgba(0, 0, 0, 0.76) max(72%, calc(100% - 46px)),
+		rgba(0, 0, 0, 0.46) max(88%, calc(100% - 22px)),
+		rgba(0, 0, 0, 0.18) max(96%, calc(100% - 6px)),
+		transparent 100%
+	);
 	--sidebar-radius: 20px;
 	--sidebar-toggle-size: 28px;
 	--sidebar-toggle-left: calc(var(--sidebar-gutter) + 12px);
