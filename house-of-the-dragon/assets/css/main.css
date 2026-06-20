@@ -2368,7 +2368,7 @@ Finder-Style Sidebar
     border: 1px solid var(--chrome-material-border);
     border-radius: var(--sidebar-radius);
     corner-shape: squircle;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
     cursor: default;
     -webkit-user-select: none;
     -moz-user-select: none;
