@@ -1633,6 +1633,12 @@ Styling for the Finder-Style Photo Gallery
     overflow: hidden;
     pointer-events: none;
     visibility: hidden;
+    -webkit-mask-image: var(--marquee-sidebar-glow-mask);
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-size: 100% 100%;
+    mask-image: var(--marquee-sidebar-glow-mask);
+    mask-repeat: no-repeat;
+    mask-size: 100% 100%;
     z-index: 12;
 }
 
@@ -2296,6 +2302,14 @@ Finder-Style Sidebar
         rgba(0, 0, 0, 0.86) calc(100% - 42px),
         rgba(0, 0, 0, 0.68) calc(100% - 20px),
         rgba(0, 0, 0, 0.48) calc(100% - 8px),
+        transparent 100%
+    );
+    --marquee-sidebar-glow-mask: linear-gradient(
+        to right,
+        #000 0,
+        #000 max(44%, calc(100% - 72px)),
+        rgba(0, 0, 0, 0.78) max(68%, calc(100% - 44px)),
+        rgba(0, 0, 0, 0.34) max(88%, calc(100% - 14px)),
         transparent 100%
     );
     --sidebar-radius: 20px;
