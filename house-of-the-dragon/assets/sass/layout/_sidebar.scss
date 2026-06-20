@@ -8,6 +8,7 @@ Finder-Style Sidebar
 	--chrome-material-bg: rgba(25, 25, 25, 0.8);
 	--top-bar-material-bg: rgba(15, 14, 12, 0.8);
 	--chrome-material-blur: blur(12px);
+	--sidebar-material-blur: blur(9px);
 	--chrome-material-border: rgba(255, 255, 255, 0.1);
 	--sidebar-width: 240px;
 	--sidebar-min-width: 176px;
@@ -49,8 +50,8 @@ Finder-Style Sidebar
 		z-index: 10;
 		pointer-events: none;
 		background-color: rgba(15, 14, 12, 0.01);
-		backdrop-filter: var(--chrome-material-blur);
-		-webkit-backdrop-filter: var(--chrome-material-blur);
+		backdrop-filter: var(--sidebar-material-blur);
+		-webkit-backdrop-filter: var(--sidebar-material-blur);
 		-webkit-mask-image: var(--sidebar-blur-mask);
 		-webkit-mask-repeat: no-repeat;
 		-webkit-mask-size: 100% 100%;
@@ -75,8 +76,8 @@ Finder-Style Sidebar
     top: var(--sidebar-gutter);
     z-index: 11;
     background-color: var(--chrome-material-bg);
-    backdrop-filter: var(--chrome-material-blur);
-    -webkit-backdrop-filter: var(--chrome-material-blur);
+    backdrop-filter: var(--sidebar-material-blur);
+    -webkit-backdrop-filter: var(--sidebar-material-blur);
     border: 1px solid var(--chrome-material-border);
     border-radius: var(--sidebar-radius);
     corner-shape: squircle;
