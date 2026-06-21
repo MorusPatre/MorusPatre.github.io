@@ -1623,7 +1623,11 @@ Styling for the Finder-Style Photo Gallery
 
 #marquee-gutter-highlight {
     position: fixed;
-    border: 1px solid rgba(255, 255, 255, 0.92);
+    border: 1px solid transparent;
+    border-top-color: var(--marquee-gutter-highlight-top, transparent);
+    border-right-color: var(--marquee-gutter-highlight-right, transparent);
+    border-bottom-color: var(--marquee-gutter-highlight-bottom, transparent);
+    border-left-color: var(--marquee-gutter-highlight-left, transparent);
     background-color: transparent;
     pointer-events: none;
     visibility: hidden;

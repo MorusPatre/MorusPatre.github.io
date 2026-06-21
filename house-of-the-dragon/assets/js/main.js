@@ -774,6 +774,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Refactored Marquee and Auto-Scroll Functions ---
 
     const MARQUEE_SCROLL_EDGE_OVERSCAN = 1;
+    const MARQUEE_EDGE_CONTACT_TOLERANCE = 1;
+    const MARQUEE_EDGE_HIGHLIGHT_COLOR = 'rgba(255, 255, 255, 0.92)';
     const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
     function getViewportBounds() {
@@ -823,6 +825,41 @@ document.addEventListener('DOMContentLoaded', () => {
         marqueeGutterHighlight.style.visibility = 'hidden';
         marqueeGutterHighlight.style.width = '0px';
         marqueeGutterHighlight.style.height = '0px';
+        setMarqueeGutterHighlightEdges();
+    }
+
+    function setMarqueeGutterHighlightEdges(edgeContact = {}) {
+        if (!marqueeGutterHighlight) return;
+
+        marqueeGutterHighlight.style.setProperty(
+            '--marquee-gutter-highlight-top',
+            edgeContact.top ? MARQUEE_EDGE_HIGHLIGHT_COLOR : 'transparent'
+        );
+        marqueeGutterHighlight.style.setProperty(
+            '--marquee-gutter-highlight-right',
+            edgeContact.right ? MARQUEE_EDGE_HIGHLIGHT_COLOR : 'transparent'
+        );
+        marqueeGutterHighlight.style.setProperty(
+            '--marquee-gutter-highlight-bottom',
+            edgeContact.bottom ? MARQUEE_EDGE_HIGHLIGHT_COLOR : 'transparent'
+        );
+        marqueeGutterHighlight.style.setProperty(
+            '--marquee-gutter-highlight-left',
+            edgeContact.left ? MARQUEE_EDGE_HIGHLIGHT_COLOR : 'transparent'
+        );
+    }
+
+    function getViewportEdgeContact(rect, viewportBounds) {
+        return {
+            left: Math.abs(rect.left - viewportBounds.left) <= MARQUEE_EDGE_CONTACT_TOLERANCE,
+            top: Math.abs(rect.top - viewportBounds.top) <= MARQUEE_EDGE_CONTACT_TOLERANCE,
+            right: Math.abs(rect.right - viewportBounds.right) <= MARQUEE_EDGE_CONTACT_TOLERANCE,
+            bottom: Math.abs(rect.bottom - viewportBounds.bottom) <= MARQUEE_EDGE_CONTACT_TOLERANCE
+        };
+    }
+
+    function hasViewportEdgeContact(edgeContact) {
+        return edgeContact.left || edgeContact.top || edgeContact.right || edgeContact.bottom;
     }
 
     function updateMarqueeGutterHighlight(visibleMarqueeRect, galleryRect) {
@@ -844,6 +881,13 @@ document.addEventListener('DOMContentLoaded', () => {
             right: galleryRect.left + visibleMarqueeRect.x + visibleMarqueeRect.w,
             bottom: galleryRect.top + visibleMarqueeRect.y + visibleMarqueeRect.h
         };
+        const viewportEdgeContact = getViewportEdgeContact(marqueeRect, getViewportBounds());
+
+        if (!hasViewportEdgeContact(viewportEdgeContact)) {
+            hideMarqueeGutterHighlight();
+            return;
+        }
+
         const intersection = {
             left: Math.max(marqueeRect.left, gutterRect.left),
             top: Math.max(marqueeRect.top, gutterRect.top),
@@ -864,6 +908,7 @@ document.addEventListener('DOMContentLoaded', () => {
         marqueeGutterHighlight.style.setProperty('--marquee-gutter-mask-x', `${gutterRect.left - marqueeRect.left}px`);
         marqueeGutterHighlight.style.setProperty('--marquee-gutter-mask-y', `${gutterRect.top - marqueeRect.top}px`);
         marqueeGutterHighlight.style.setProperty('--marquee-gutter-mask-width', `${gutterRect.right - gutterRect.left}px`);
+        setMarqueeGutterHighlightEdges(viewportEdgeContact);
         marqueeGutterHighlight.style.setProperty('--marquee-gutter-clip-top', `${intersection.top - marqueeRect.top}px`);
         marqueeGutterHighlight.style.setProperty('--marquee-gutter-clip-right', `${marqueeRect.right - intersection.right}px`);
         marqueeGutterHighlight.style.setProperty('--marquee-gutter-clip-bottom', `${marqueeRect.bottom - intersection.bottom}px`);
