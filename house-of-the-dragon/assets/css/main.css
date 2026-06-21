@@ -1534,7 +1534,7 @@ Styling for the Finder-Style Photo Gallery
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 3rem;
     width: 100%;
-    position: relative;
+    position: relative; /* Needed for the marquee positioning */
     -webkit-user-select: none; /* Safari */
     -ms-user-select: none; /* IE 10+ and Edge */
     user-select: none; /* Standard syntax */
@@ -1613,44 +1613,12 @@ Styling for the Finder-Style Photo Gallery
 
 /* 6. Marquee Selection Box */
 #marquee {
-    position: fixed;
-    box-sizing: border-box;
+    position: absolute;
     border: 1px solid rgba(255, 255, 255, 0.246);
     background-color: rgba(255, 255, 255, 0.098);
     pointer-events: none;
     visibility: hidden;
-    width: 0;
-    height: 0;
-    z-index: 9;
-}
-
-#marquee-sidebar-glow-clip {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 0;
-    height: 0;
-    overflow: hidden;
-    pointer-events: none;
-    visibility: hidden;
-    -webkit-mask-image: var(--marquee-sidebar-glow-mask);
-    -webkit-mask-repeat: no-repeat;
-    -webkit-mask-size: 100% 100%;
-    mask-image: var(--marquee-sidebar-glow-mask);
-    mask-repeat: no-repeat;
-    mask-size: 100% 100%;
-    z-index: 12;
-}
-
-#marquee-sidebar-left-glow,
-#marquee-sidebar-bottom-glow {
-    position: absolute;
-    pointer-events: none;
-    visibility: hidden;
-    background: rgba(255, 255, 255, 0.08);
-    box-shadow:
-        0 0 5px 0 rgba(255, 255, 255, 0.36),
-        0 0 11px 1px rgba(255, 255, 255, 0.18);
+    z-index: 9; /* Changed from 10 to 9 */
 }
 
 /* FINAL FIX: Prevents object-highlighting on the search input during a drag */
@@ -2301,16 +2269,6 @@ Finder-Style Sidebar
         rgba(0, 0, 0, 0.74) calc(100% - 36px),
         rgba(0, 0, 0, 0.48) calc(100% - 18px),
         rgba(0, 0, 0, 0.2) calc(100% - 5px),
-        transparent 100%
-    );
-    --marquee-sidebar-glow-mask: linear-gradient(
-        to right,
-        #000 0,
-        #000 max(40%, calc(100% - 88px)),
-        rgba(0, 0, 0, 0.94) max(56%, calc(100% - 68px)),
-        rgba(0, 0, 0, 0.76) max(72%, calc(100% - 46px)),
-        rgba(0, 0, 0, 0.46) max(88%, calc(100% - 22px)),
-        rgba(0, 0, 0, 0.18) max(96%, calc(100% - 6px)),
         transparent 100%
     );
     --sidebar-radius: 20px;

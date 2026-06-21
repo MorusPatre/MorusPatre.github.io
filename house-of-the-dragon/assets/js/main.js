@@ -552,20 +552,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!gallery || !wrapper) return;
 
-    const appShell = document.getElementById('app-shell');
     const marquee = document.getElementById('marquee');
-    const marqueeSidebarGlowClip = document.createElement('div');
-    const marqueeSidebarLeftGlow = document.createElement('div');
-    const marqueeSidebarBottomGlow = document.createElement('div');
-
-    marqueeSidebarGlowClip.id = 'marquee-sidebar-glow-clip';
-    marqueeSidebarGlowClip.setAttribute('aria-hidden', 'true');
-    marqueeSidebarLeftGlow.id = 'marquee-sidebar-left-glow';
-    marqueeSidebarBottomGlow.id = 'marquee-sidebar-bottom-glow';
-    marqueeSidebarGlowClip.appendChild(marqueeSidebarLeftGlow);
-    marqueeSidebarGlowClip.appendChild(marqueeSidebarBottomGlow);
-    (appShell || document.body).appendChild(marquee);
-    (appShell || document.body).appendChild(marqueeSidebarGlowClip);
     const items = gallery.getElementsByTagName('figure');
 
     let selectedItems = new Set();
@@ -785,8 +772,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Refactored Marquee and Auto-Scroll Functions ---
 
     const MARQUEE_SCROLL_EDGE_OVERSCAN = 1;
-    const MARQUEE_WINDOW_EDGE_TOLERANCE = 1;
-    const MARQUEE_EDGE_GLOW_BLEED = 4;
     const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
     function getViewportBounds() {
@@ -807,116 +792,6 @@ document.addEventListener('DOMContentLoaded', () => {
             right: window.innerWidth,
             bottom: window.innerHeight
         };
-    }
-
-    function getSidebarMarqueeZone() {
-        if (document.body.classList.contains('is-sidebar-collapsed')) {
-            return null;
-        }
-
-        const sidebarEl = document.getElementById('finder-sidebar');
-        if (!sidebarEl) {
-            return null;
-        }
-
-        const sidebarRect = sidebarEl.getBoundingClientRect();
-        const viewportBounds = getViewportBounds();
-        const zoneRight = Math.min(sidebarRect.right, viewportBounds.right);
-
-        if (sidebarRect.width <= 0 || zoneRight <= viewportBounds.left) {
-            return null;
-        }
-
-        return {
-            left: viewportBounds.left,
-            top: viewportBounds.top,
-            right: zoneRight,
-            bottom: viewportBounds.bottom
-        };
-    }
-
-    function hideMarqueeGlowLine(line) {
-        line.style.visibility = 'hidden';
-        line.style.width = '0px';
-        line.style.height = '0px';
-    }
-
-    function hideSidebarMarqueeGlow() {
-        marqueeSidebarGlowClip.style.visibility = 'hidden';
-        marqueeSidebarGlowClip.style.width = '0px';
-        marqueeSidebarGlowClip.style.height = '0px';
-        hideMarqueeGlowLine(marqueeSidebarLeftGlow);
-        hideMarqueeGlowLine(marqueeSidebarBottomGlow);
-    }
-
-    function updateMarqueeGlowLine(line, left, top, width, height) {
-        line.style.visibility = 'visible';
-        line.style.left = `${left}px`;
-        line.style.top = `${top}px`;
-        line.style.width = `${width}px`;
-        line.style.height = `${height}px`;
-    }
-
-    function updateSidebarMarqueeGlow(galleryRect, visibleMarqueeRect) {
-        const zone = getSidebarMarqueeZone();
-
-        if (!zone || visibleMarqueeRect.w <= 0 || visibleMarqueeRect.h <= 0) {
-            hideSidebarMarqueeGlow();
-            return;
-        }
-
-        const marqueeViewportRect = {
-            left: galleryRect.left + visibleMarqueeRect.x,
-            top: galleryRect.top + visibleMarqueeRect.y,
-            width: visibleMarqueeRect.w,
-            height: visibleMarqueeRect.h
-        };
-        const marqueeRight = marqueeViewportRect.left + marqueeViewportRect.width;
-        const marqueeBottom = marqueeViewportRect.top + marqueeViewportRect.height;
-        const isOnWindowLeftEdge =
-            marqueeViewportRect.left <= zone.left + MARQUEE_WINDOW_EDGE_TOLERANCE;
-        const isOnWindowBottomEdge =
-            marqueeBottom >= zone.bottom - MARQUEE_WINDOW_EDGE_TOLERANCE;
-        const intersectsSidebarZone =
-            marqueeRight > zone.left &&
-            marqueeViewportRect.left < zone.right &&
-            marqueeBottom > zone.top &&
-            marqueeViewportRect.top < zone.bottom;
-
-        if (!intersectsSidebarZone || (!isOnWindowLeftEdge && !isOnWindowBottomEdge)) {
-            hideSidebarMarqueeGlow();
-            return;
-        }
-
-        marqueeSidebarGlowClip.style.visibility = 'visible';
-        marqueeSidebarGlowClip.style.left = `${zone.left}px`;
-        marqueeSidebarGlowClip.style.top = `${zone.top}px`;
-        marqueeSidebarGlowClip.style.width = `${zone.right - zone.left}px`;
-        marqueeSidebarGlowClip.style.height = `${zone.bottom - zone.top}px`;
-
-        if (isOnWindowLeftEdge) {
-            updateMarqueeGlowLine(
-                marqueeSidebarLeftGlow,
-                marqueeViewportRect.left - zone.left,
-                marqueeViewportRect.top - zone.top - MARQUEE_EDGE_GLOW_BLEED,
-                1,
-                marqueeViewportRect.height + (MARQUEE_EDGE_GLOW_BLEED * 2)
-            );
-        } else {
-            hideMarqueeGlowLine(marqueeSidebarLeftGlow);
-        }
-
-        if (isOnWindowBottomEdge) {
-            updateMarqueeGlowLine(
-                marqueeSidebarBottomGlow,
-                marqueeViewportRect.left - zone.left - MARQUEE_EDGE_GLOW_BLEED,
-                marqueeBottom - zone.top - 1,
-                marqueeViewportRect.width + (MARQUEE_EDGE_GLOW_BLEED * 2),
-                1
-            );
-        } else {
-            hideMarqueeGlowLine(marqueeSidebarBottomGlow);
-        }
     }
 
     function getClampedMarqueePoint(clientX, clientY, galleryRect) {
@@ -985,11 +860,10 @@ document.addEventListener('DOMContentLoaded', () => {
             h: Math.max(0, visibleBottom - visibleTop)
         };
 
+        marquee.style.left = `${visibleMarqueeRect.x}px`;
+        marquee.style.top = `${visibleMarqueeRect.y}px`;
         marquee.style.width = `${visibleMarqueeRect.w}px`;
         marquee.style.height = `${visibleMarqueeRect.h}px`;
-        marquee.style.left = `${galleryRect.left + visibleMarqueeRect.x}px`;
-        marquee.style.top = `${galleryRect.top + visibleMarqueeRect.y}px`;
-        updateSidebarMarqueeGlow(galleryRect, visibleMarqueeRect);
 
         for (const item of items) {
             if (item.style.display === 'none') continue;
@@ -1104,7 +978,6 @@ document.addEventListener('DOMContentLoaded', () => {
         marqueeStartScrollY = 0;
 
         document.body.classList.remove('is-marquee-dragging');
-        hideSidebarMarqueeGlow();
         if (!isMarquee) return;
 
         if (!hasDragged) {
@@ -1163,7 +1036,6 @@ document.addEventListener('DOMContentLoaded', () => {
         marquee.style.visibility = 'hidden';
         marquee.style.width = '0px';
         marquee.style.height = '0px';
-        hideSidebarMarqueeGlow();
         preMarqueeSelectedItems.clear();
     };
 
