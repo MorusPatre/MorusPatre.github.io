@@ -1621,6 +1621,46 @@ Styling for the Finder-Style Photo Gallery
     z-index: 9; /* Changed from 10 to 9 */
 }
 
+#marquee-gutter-highlight {
+    position: fixed;
+    border: 1px solid rgba(255, 255, 255, 0.92);
+    background-color: transparent;
+    pointer-events: none;
+    visibility: hidden;
+    z-index: 9;
+    --marquee-gutter-highlight-mask: linear-gradient(
+        to right,
+        #000 0,
+        #000 48%,
+        rgba(0, 0, 0, 0.98) 58%,
+        rgba(0, 0, 0, 0.92) 68%,
+        rgba(0, 0, 0, 0.74) 78%,
+        rgba(0, 0, 0, 0.36) 86%,
+        rgba(0, 0, 0, 0.16) 96%,
+        transparent 100%
+    );
+    -webkit-mask-image: var(--marquee-gutter-highlight-mask);
+    -webkit-mask-position: var(--marquee-gutter-mask-x, 0px) var(--marquee-gutter-mask-y, 0px);
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-size: var(--marquee-gutter-mask-width, calc(var(--sidebar-gutter) + var(--sidebar-width))) 100vh;
+    mask-image: var(--marquee-gutter-highlight-mask);
+    mask-position: var(--marquee-gutter-mask-x, 0px) var(--marquee-gutter-mask-y, 0px);
+    mask-repeat: no-repeat;
+    mask-size: var(--marquee-gutter-mask-width, calc(var(--sidebar-gutter) + var(--sidebar-width))) 100vh;
+    -webkit-clip-path: inset(
+        var(--marquee-gutter-clip-top, 0px)
+        var(--marquee-gutter-clip-right, 0px)
+        var(--marquee-gutter-clip-bottom, 0px)
+        var(--marquee-gutter-clip-left, 0px)
+    );
+    clip-path: inset(
+        var(--marquee-gutter-clip-top, 0px)
+        var(--marquee-gutter-clip-right, 0px)
+        var(--marquee-gutter-clip-bottom, 0px)
+        var(--marquee-gutter-clip-left, 0px)
+    );
+}
+
 /* FINAL FIX: Prevents object-highlighting on the search input during a drag */
 body.is-marquee-dragging #search-input {
     pointer-events: none;

@@ -476,6 +476,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const header = document.getElementById('header');
     const footer = document.getElementById('footer');
     const gallery = document.getElementById('photo-gallery');
+    const sidebar = document.getElementById('finder-sidebar');
     const searchInput = document.getElementById('search-input');
     
     // =================================================================
@@ -553,6 +554,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!gallery || !wrapper) return;
 
     const marquee = document.getElementById('marquee');
+    const marqueeGutterHighlight = document.getElementById('marquee-gutter-highlight');
     const items = gallery.getElementsByTagName('figure');
 
     let selectedItems = new Set();
@@ -794,6 +796,80 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
+    function getSidebarGutterHighlightRect() {
+        if (!sidebar || document.body.classList.contains('is-sidebar-collapsed')) {
+            return null;
+        }
+
+        const sidebarRect = sidebar.getBoundingClientRect();
+        const viewportBounds = getViewportBounds();
+        const right = Math.min(viewportBounds.right, sidebarRect.right);
+
+        if (right <= viewportBounds.left) {
+            return null;
+        }
+
+        return {
+            left: viewportBounds.left,
+            top: viewportBounds.top,
+            right: right,
+            bottom: viewportBounds.bottom
+        };
+    }
+
+    function hideMarqueeGutterHighlight() {
+        if (!marqueeGutterHighlight) return;
+
+        marqueeGutterHighlight.style.visibility = 'hidden';
+        marqueeGutterHighlight.style.width = '0px';
+        marqueeGutterHighlight.style.height = '0px';
+    }
+
+    function updateMarqueeGutterHighlight(visibleMarqueeRect, galleryRect) {
+        if (!marqueeGutterHighlight || visibleMarqueeRect.w <= 0 || visibleMarqueeRect.h <= 0) {
+            hideMarqueeGutterHighlight();
+            return;
+        }
+
+        const gutterRect = getSidebarGutterHighlightRect();
+
+        if (!gutterRect) {
+            hideMarqueeGutterHighlight();
+            return;
+        }
+
+        const marqueeRect = {
+            left: galleryRect.left + visibleMarqueeRect.x,
+            top: galleryRect.top + visibleMarqueeRect.y,
+            right: galleryRect.left + visibleMarqueeRect.x + visibleMarqueeRect.w,
+            bottom: galleryRect.top + visibleMarqueeRect.y + visibleMarqueeRect.h
+        };
+        const intersection = {
+            left: Math.max(marqueeRect.left, gutterRect.left),
+            top: Math.max(marqueeRect.top, gutterRect.top),
+            right: Math.min(marqueeRect.right, gutterRect.right),
+            bottom: Math.min(marqueeRect.bottom, gutterRect.bottom)
+        };
+
+        if (intersection.right <= intersection.left || intersection.bottom <= intersection.top) {
+            hideMarqueeGutterHighlight();
+            return;
+        }
+
+        marqueeGutterHighlight.style.visibility = 'visible';
+        marqueeGutterHighlight.style.left = `${marqueeRect.left}px`;
+        marqueeGutterHighlight.style.top = `${marqueeRect.top}px`;
+        marqueeGutterHighlight.style.width = `${marqueeRect.right - marqueeRect.left}px`;
+        marqueeGutterHighlight.style.height = `${marqueeRect.bottom - marqueeRect.top}px`;
+        marqueeGutterHighlight.style.setProperty('--marquee-gutter-mask-x', `${gutterRect.left - marqueeRect.left}px`);
+        marqueeGutterHighlight.style.setProperty('--marquee-gutter-mask-y', `${gutterRect.top - marqueeRect.top}px`);
+        marqueeGutterHighlight.style.setProperty('--marquee-gutter-mask-width', `${gutterRect.right - gutterRect.left}px`);
+        marqueeGutterHighlight.style.setProperty('--marquee-gutter-clip-top', `${intersection.top - marqueeRect.top}px`);
+        marqueeGutterHighlight.style.setProperty('--marquee-gutter-clip-right', `${marqueeRect.right - intersection.right}px`);
+        marqueeGutterHighlight.style.setProperty('--marquee-gutter-clip-bottom', `${marqueeRect.bottom - intersection.bottom}px`);
+        marqueeGutterHighlight.style.setProperty('--marquee-gutter-clip-left', `${intersection.left - marqueeRect.left}px`);
+    }
+
     function getClampedMarqueePoint(clientX, clientY, galleryRect) {
         const viewportBounds = getViewportBounds();
 
@@ -864,6 +940,7 @@ document.addEventListener('DOMContentLoaded', () => {
         marquee.style.top = `${visibleMarqueeRect.y}px`;
         marquee.style.width = `${visibleMarqueeRect.w}px`;
         marquee.style.height = `${visibleMarqueeRect.h}px`;
+        updateMarqueeGutterHighlight(visibleMarqueeRect, galleryRect);
 
         for (const item of items) {
             if (item.style.display === 'none') continue;
@@ -1036,6 +1113,7 @@ document.addEventListener('DOMContentLoaded', () => {
         marquee.style.visibility = 'hidden';
         marquee.style.width = '0px';
         marquee.style.height = '0px';
+        hideMarqueeGutterHighlight();
         preMarqueeSelectedItems.clear();
     };
 
