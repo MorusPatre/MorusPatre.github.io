@@ -2044,27 +2044,134 @@ document.addEventListener('galleryLoaded', () => {
     });
 });
 
+function normalizeSidebarNumberValue(value) {
+    const rawValue = String(value ?? '').trim();
+    if (!rawValue) return '';
+
+    const numberValue = Number(rawValue);
+
+    return Number.isFinite(numberValue) ? String(numberValue) : '';
+}
+
+function buildSidebarEpisodeIndex() {
+    const episodesBySeason = new Map();
+    const allEpisodes = new Set();
+    const galleryItems = document.querySelectorAll('#photo-gallery figure img');
+
+    galleryItems.forEach(img => {
+        const season = normalizeSidebarNumberValue(img.dataset.season);
+        const episode = normalizeSidebarNumberValue(img.dataset.episode);
+
+        if (!episode) return;
+
+        allEpisodes.add(episode);
+
+        if (!season) return;
+
+        if (!episodesBySeason.has(season)) {
+            episodesBySeason.set(season, new Set());
+        }
+
+        episodesBySeason.get(season).add(episode);
+    });
+
+    episodesBySeason.set('all', allEpisodes);
+
+    return episodesBySeason;
+}
+
+function getSortedSidebarEpisodes(episodesBySeason, season) {
+    const episodeSet = episodesBySeason.get(season) || new Set();
+
+    return Array.from(episodeSet).sort((a, b) => Number(a) - Number(b));
+}
+
+function createSidebarFilterButton(filter, value, label, isActive, isEmphasis = false) {
+    const button = document.createElement('button');
+    button.className = `sidebar-option${isEmphasis ? ' sidebar-option--emphasis' : ''}${isActive ? ' is-active' : ''}`;
+    button.type = 'button';
+    button.dataset.sidebarFilter = filter;
+    button.dataset.sidebarValue = value;
+    button.setAttribute('aria-pressed', String(isActive));
+    button.textContent = label;
+
+    return button;
+}
+
+function updateSidebarFilterActiveState(sidebar, filter) {
+    const selectedValue = hotdGalleryFilters.sidebar[filter] || 'all';
+
+    sidebar.querySelectorAll(`[data-sidebar-filter="${filter}"]`).forEach(option => {
+        const isActive = option.dataset.sidebarValue === selectedValue;
+        option.classList.toggle('is-active', isActive);
+        option.setAttribute('aria-pressed', String(isActive));
+    });
+}
+
+function renderSidebarEpisodeOptions(sidebar, episodesBySeason) {
+    const episodeList = document.getElementById('sidebar-episode-options');
+    if (!episodeList) return;
+
+    const selectedSeason = hotdGalleryFilters.sidebar.season || 'all';
+    const availableEpisodes = getSortedSidebarEpisodes(episodesBySeason, selectedSeason);
+    const availableEpisodeValues = new Set(availableEpisodes);
+    let selectedEpisode = hotdGalleryFilters.sidebar.episode || 'all';
+
+    if (selectedEpisode !== 'all') {
+        selectedEpisode = normalizeSidebarNumberValue(selectedEpisode);
+
+        if (!availableEpisodeValues.has(selectedEpisode)) {
+            selectedEpisode = 'all';
+            hotdGalleryFilters.sidebar.episode = 'all';
+        }
+    }
+
+    const episodeButtons = [
+        createSidebarFilterButton('episode', 'all', 'All', selectedEpisode === 'all', true),
+        ...availableEpisodes.map(episode => {
+            const label = episode.padStart(2, '0');
+            return createSidebarFilterButton('episode', episode, label, selectedEpisode === episode);
+        })
+    ];
+    const currentButtons = Array.from(episodeList.querySelectorAll('[data-sidebar-filter="episode"]'));
+    const hasMatchingButtons =
+        currentButtons.length === episodeButtons.length &&
+        currentButtons.every((button, index) =>
+            button.dataset.sidebarValue === episodeButtons[index].dataset.sidebarValue &&
+            button.textContent === episodeButtons[index].textContent
+        );
+
+    if (!hasMatchingButtons) {
+        episodeList.replaceChildren(...episodeButtons);
+    }
+
+    updateSidebarFilterActiveState(sidebar, 'episode');
+}
+
 document.addEventListener('galleryLoaded', () => {
     const sidebar = document.getElementById('finder-sidebar');
     if (!sidebar) return;
 
-    const filterButtons = sidebar.querySelectorAll('[data-sidebar-filter]');
+    const episodesBySeason = buildSidebarEpisodeIndex();
 
-    filterButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const filter = button.dataset.sidebarFilter;
-            const value = button.dataset.sidebarValue;
+    renderSidebarEpisodeOptions(sidebar, episodesBySeason);
 
-            hotdGalleryFilters.sidebar[filter] = value;
+    sidebar.addEventListener('click', event => {
+        const button = event.target.closest('[data-sidebar-filter]');
+        if (!button || !sidebar.contains(button)) return;
 
-            sidebar.querySelectorAll(`[data-sidebar-filter="${filter}"]`).forEach(option => {
-                const isActive = option === button;
-                option.classList.toggle('is-active', isActive);
-                option.setAttribute('aria-pressed', String(isActive));
-            });
+        const filter = button.dataset.sidebarFilter;
+        const value = button.dataset.sidebarValue;
 
-            applyGalleryFilters({ scroll: true });
-        });
+        hotdGalleryFilters.sidebar[filter] = value;
+
+        if (filter === 'season') {
+            renderSidebarEpisodeOptions(sidebar, episodesBySeason);
+        }
+
+        updateSidebarFilterActiveState(sidebar, filter);
+
+        applyGalleryFilters({ scroll: true });
     });
 
     applyGalleryFilters();
