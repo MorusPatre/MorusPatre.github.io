@@ -2297,7 +2297,22 @@ Finder-Style Sidebar
 
 :root {
     --chrome-material-bg: rgba(25, 25, 25, 0.8);
-    --top-bar-material-bg: rgba(15, 14, 12, 0.8);
+    --top-bar-material-rgb: 15, 14, 12;
+    --top-bar-material-bg: rgba(var(--top-bar-material-rgb), 0.8);
+    --top-bar-material-gradient: linear-gradient(
+        to bottom,
+        rgba(var(--top-bar-material-rgb), 0.8) 0%,
+        rgba(var(--top-bar-material-rgb), 0.58) 38%,
+        rgba(var(--top-bar-material-rgb), 0.2) 72%,
+        rgba(var(--top-bar-material-rgb), 0) 100%
+    );
+    --top-bar-blur-mask: linear-gradient(
+        to bottom,
+        #000 0%,
+        rgba(0, 0, 0, 0.9) 34%,
+        rgba(0, 0, 0, 0.48) 68%,
+        transparent 100%
+    );
     --chrome-material-blur: blur(4px);
     --chrome-material-border: rgba(255, 255, 255, 0.1);
     --sidebar-width: 240px;
@@ -2319,6 +2334,7 @@ Finder-Style Sidebar
     --sidebar-toggle-size: 28px;
     --sidebar-toggle-left: calc(var(--sidebar-gutter) + 12px);
     --top-bar-height: 2.5rem;
+    --top-bar-fade-height: 4.5rem;
 }
 
 #app-shell {
@@ -2629,7 +2645,7 @@ body.is-sidebar-collapsed #app-shell::before {
     background-color: transparent;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-    border-bottom: 1px solid var(--chrome-material-border);
+    border-bottom: 0;
     isolation: isolate;
 }
 
@@ -2639,12 +2655,18 @@ body.is-sidebar-collapsed #app-shell::before {
     top: 0;
     left: 0;
     width: 100vw;
-    height: 2.5rem;
+    height: var(--top-bar-fade-height);
     z-index: 0;
     pointer-events: none;
-    background-color: var(--top-bar-material-bg);
+    background: var(--top-bar-material-gradient);
     backdrop-filter: var(--chrome-material-blur);
     -webkit-backdrop-filter: var(--chrome-material-blur);
+    -webkit-mask-image: var(--top-bar-blur-mask);
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-size: 100% 100%;
+    mask-image: var(--top-bar-blur-mask);
+    mask-repeat: no-repeat;
+    mask-size: 100% 100%;
 }
 
 #app-shell #header > * {
