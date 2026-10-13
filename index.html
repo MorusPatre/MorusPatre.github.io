@@ -152,6 +152,18 @@
 
             <div class="project-item">
                 <figure>
+                    <a href="/game-of-thrones">
+                        <img src="images/got-promo.webp" alt="Game of Thrones">
+                    </a>
+                    <figcaption>
+                        Game of Thrones
+                        <span class="image-count" id="got-count">-- Items</span>
+                    </figcaption>
+                </figure>
+            </div>
+
+            <div class="project-item">
+                <figure>
                     <a href="/house-of-the-dragon">
                         <img src="images/rhaenyra-promo.webp" alt="House of the Dragon">
                     </a>
@@ -182,6 +194,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const projects = [
+                { id: 'got-count', path: 'game-of-thrones/gallery-data.json' },
                 { id: 'hotd-count', path: 'house-of-the-dragon/gallery-data.json' },
                 { id: 'witcher-count', path: 'the-witcher/gallery-data.json' }
             ];

@@ -4,6 +4,7 @@ const path = require('path');
 // Define paths
 const witcherDataPath = path.join(__dirname, 'the-witcher', 'gallery-data.json');
 const hotdDataPath = path.join(__dirname, 'house-of-the-dragon', 'gallery-data.json');
+const gotDataPath = path.join(__dirname, 'game-of-thrones', 'gallery-data.json');
 const sitemapPath = path.join(__dirname, 'sitemap.xml'); // Changed to root directory
 const baseUrl = 'https://mouseia.com';
 
@@ -61,6 +62,18 @@ try {
     console.log(`Added ${hotdData.length + 1} URLs for the House of the Dragon gallery.`);
 } catch (error) {
     console.error('Could not read or parse House of the Dragon gallery data.', error);
+}
+
+// Add the main Game of Thrones gallery page
+sitemapEntries.push(buildStaticUrl('/game-of-thrones/', 'weekly', '0.9'));
+
+// Add all individual Game of Thrones images
+try {
+    const gotData = JSON.parse(fs.readFileSync(gotDataPath, 'utf8'));
+    sitemapEntries.push(buildGalleryUrls(gotData, '/game-of-thrones/'));
+    console.log(`Added ${gotData.length + 1} URLs for the Game of Thrones gallery.`);
+} catch (error) {
+    console.error('Could not read or parse Game of Thrones gallery data.', error);
 }
 
 // --- Assemble and write the final sitemap ---

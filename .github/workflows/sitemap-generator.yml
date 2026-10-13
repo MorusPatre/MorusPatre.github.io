@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - 'the-witcher/gallery-data.json'
+      - 'house-of-the-dragon/gallery-data.json'
+      - 'game-of-thrones/gallery-data.json'
   workflow_dispatch:
 
 jobs:

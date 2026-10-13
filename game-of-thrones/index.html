@@ -1,0 +1,204 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+        <title>Game of Thrones</title>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+
+        <link rel="stylesheet" href="assets/css/main.css?v=20260621-27" />
+        <noscript><link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
+    </head>
+    <body>
+        <div id="loader-wrapper">
+            <div class="loader"></div>
+        </div>
+
+        <div id="app-shell">
+            <button id="sidebar-toggle"
+                    class="sidebar-toggle"
+                    type="button"
+                    aria-label="Close sidebar"
+                    aria-controls="finder-sidebar"
+                    aria-expanded="true">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <rect x="3.5" y="5" width="17" height="14" rx="3"></rect>
+                    <path d="M9 5v14"></path>
+                </svg>
+            </button>
+
+            <aside id="finder-sidebar" aria-label="Sidebar">
+                <div class="sidebar-content">
+                    <section class="sidebar-filter-section sidebar-filter-section--placeholder" aria-label="Category">
+                        <h2 class="sidebar-filter-heading">Category:</h2>
+                        <div class="sidebar-option-list">
+                            <button class="sidebar-option sidebar-option--emphasis is-active" type="button" aria-disabled="true">All categories</button>
+                            <button class="sidebar-option" type="button" aria-disabled="true">Publicity still</button>
+                            <button class="sidebar-option" type="button" aria-disabled="true">Promo</button>
+                            <button class="sidebar-option" type="button" aria-disabled="true">Behind-the-scenes</button>
+                            <button class="sidebar-option" type="button" aria-disabled="true">Pre-production</button>
+                            <button class="sidebar-option" type="button" aria-disabled="true">Official screen capture</button>
+                        </div>
+                    </section>
+
+                    <section class="sidebar-filter-section" aria-label="Season">
+                        <h2 class="sidebar-filter-heading">Season:</h2>
+                        <div class="sidebar-option-list sidebar-option-list--inline" role="group" aria-label="Season filter">
+                            <button class="sidebar-option sidebar-option--emphasis is-active" type="button" data-sidebar-filter="season" data-sidebar-value="all" aria-pressed="true">All</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="season" data-sidebar-value="1" aria-pressed="false">01</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="season" data-sidebar-value="2" aria-pressed="false">02</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="season" data-sidebar-value="3" aria-pressed="false">03</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="season" data-sidebar-value="4" aria-pressed="false">04</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="season" data-sidebar-value="5" aria-pressed="false">05</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="season" data-sidebar-value="6" aria-pressed="false">06</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="season" data-sidebar-value="7" aria-pressed="false">07</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="season" data-sidebar-value="8" aria-pressed="false">08</button>
+                        </div>
+                    </section>
+
+                    <section class="sidebar-filter-section" aria-label="Episode">
+                        <h2 class="sidebar-filter-heading">Episode:</h2>
+                        <div id="sidebar-episode-options" class="sidebar-option-list sidebar-option-list--inline" role="group" aria-label="Episode filter">
+                            <button class="sidebar-option sidebar-option--emphasis is-active" type="button" data-sidebar-filter="episode" data-sidebar-value="all" aria-pressed="true">All</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="episode" data-sidebar-value="1" aria-pressed="false">01</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="episode" data-sidebar-value="2" aria-pressed="false">02</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="episode" data-sidebar-value="3" aria-pressed="false">03</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="episode" data-sidebar-value="4" aria-pressed="false">04</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="episode" data-sidebar-value="5" aria-pressed="false">05</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="episode" data-sidebar-value="6" aria-pressed="false">06</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="episode" data-sidebar-value="7" aria-pressed="false">07</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="episode" data-sidebar-value="8" aria-pressed="false">08</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="episode" data-sidebar-value="9" aria-pressed="false">09</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="episode" data-sidebar-value="10" aria-pressed="false">10</button>
+                        </div>
+                    </section>
+
+                    <section class="sidebar-filter-section" aria-label="Cast and crew">
+                        <h2 class="sidebar-filter-heading">Cast &amp; Crew:</h2>
+                        <div class="sidebar-option-list" role="group" aria-label="Cast and crew filter">
+                            <button class="sidebar-option sidebar-option--emphasis is-active" type="button" data-sidebar-filter="person" data-sidebar-value="all" aria-pressed="true">All people</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="person" data-sidebar-value="Emilia Clarke" aria-pressed="false">Emilia Clarke</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="person" data-sidebar-value="Kit Harington" aria-pressed="false">Kit Harington</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="person" data-sidebar-value="Peter Dinklage" aria-pressed="false">Peter Dinklage</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="person" data-sidebar-value="Sophie Turner" aria-pressed="false">Sophie Turner</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="person" data-sidebar-value="Lena Headey" aria-pressed="false">Lena Headey</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="person" data-sidebar-value="Maisie Williams" aria-pressed="false">Maisie Williams</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="person" data-sidebar-value="Iain Glen" aria-pressed="false">Iain Glen</button>
+                            <button class="sidebar-option" type="button" data-sidebar-filter="person" data-sidebar-value="Nikolaj Coster-Waldau" aria-pressed="false">Nikolaj Coster-Waldau</button>
+                            <span class="sidebar-option sidebar-option--emphasis sidebar-option--muted" aria-disabled="true">No others</span>
+                        </div>
+                    </section>
+
+                    <section class="sidebar-filter-section sidebar-filter-section--placeholder" aria-label="Sort by">
+                        <h2 class="sidebar-filter-heading">Sort by:</h2>
+                        <div class="sidebar-option-list">
+                            <button class="sidebar-option is-active" type="button" aria-disabled="true">Popularity</button>
+                            <button class="sidebar-option" type="button" aria-disabled="true">Date</button>
+                            <button class="sidebar-option" type="button" aria-disabled="true">Set</button>
+                            <button class="sidebar-option" type="button" aria-disabled="true">Episode</button>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="sidebar-resize-handle"
+                     role="separator"
+                     aria-label="Resize sidebar"
+                     aria-orientation="vertical"
+                     tabindex="0"></div>
+            </aside>
+
+            <div id="wrapper">
+                <header id="header">
+                    <div class="logo">
+                        <img src="images/got_sigil.png" alt="Game of Thrones" draggable="false" />
+                    </div>
+                    <div id="search-container">
+                        <form onsubmit="return false;">
+                            <span class="search-icon"></span>
+                            <div id="search-wrapper" class="search-wrapper">
+                                 <input type="text" id="search-input" placeholder="Search by filename, actor, character, location, season, episode etc..." autocomplete="off">
+                            </div>
+                            <span id="clear-search" class="clear-search-button">&times;</span>
+                            <div id="suggestions-container"></div>
+                        </form>
+                    </div>
+
+                    <div id="download-indicator">
+                        <div class="progress-circle"></div>
+                        <div class="cancel-icon">&times;</div>
+                    </div>
+                </header>
+
+                <div id="photo-gallery"
+                     data-gallery-json="gallery-data.json"
+                     data-gallery-id="game-of-thrones">
+                    <div id="gallery-blur-layer" aria-hidden="true"></div>
+                    <div id="marquee"></div>
+                    <div id="marquee-gutter-highlight" aria-hidden="true"></div>
+                </div>
+
+                <footer id="footer">
+                    <p class="copyright">&copy; Game of Thrones, 2011–2019 HBO. All Rights Reserved.</p>
+                </footer>
+            </div>
+        </div>
+
+        <div id="bg"></div>
+
+        <script src="assets/js/jquery.min.js"></script>
+        <script src="assets/js/browser.min.js"></script>
+        <script src="assets/js/breakpoints.min.js"></script>
+        <script src="assets/js/util.js"></script>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+        <script src="assets/js/main.js"></script>
+        <script src="assets/js/gallery-loader.js"></script>
+
+        <div id="image-modal" class="modal-overlay">
+            <span class="modal-close">&times;</span>
+            <span class="modal-prev">&#10094;</span>
+            <span class="modal-next">&#10095;</span>
+            <div class="modal-content">
+                <div class="modal-image-container">
+                    <img id="modal-img" src="" alt="Enlarged image">
+                </div>
+                <div class="modal-info-panel">
+                    <div class="info-content">
+                        <h3 id="modal-filename"></h3>
+                        <div id="modal-metadata">
+                        </div>
+                    </div>
+                    <a id="modal-download-btn" class="button download-btn" download><i class="fas fa-download"></i> Download</a>
+                </div>
+            </div>
+        </div>
+
+        <div id="custom-context-menu" class="context-menu">
+            <ul>
+                <li id="context-menu-open">Open</li>
+                <li id="context-menu-open-tab">Open Image in New Tab</li>
+                <li class="separator"></li>
+                <li id="context-menu-save">Save Image to "Downloads"</li>
+            </ul>
+        </div>
+
+        <div id="gallery-context-menu" class="context-menu">
+            <ul>
+                <li id="gallery-context-add">Add Images</li>
+                <li class="separator"></li>
+                <li id="gallery-context-sort">Sort By</li>
+                <li id="gallery-context-view">Show View Options</li>
+            </ul>
+        </div>
+
+        <div id="custom-scrollbar-track">
+            <div id="custom-scrollbar-thumb"></div>
+        </div>
+        
+        <input type="file" id="image-upload-input" style="display: none;" accept="image/*" multiple />
+        
+    </body>
+</html>
