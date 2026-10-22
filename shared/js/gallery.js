@@ -392,7 +392,10 @@ const galleryFilters = {
     sidebar: {
         season: 'all',
         episode: 'all',
-        person: 'all'
+        person: 'all',
+        // Set while the sidebar's "All People…" node is open: the names picked
+        // in its column, and whether an image needs all of them or any one.
+        allPeople: null
     }
 };
 
@@ -434,6 +437,38 @@ function matchesGalleryPersonFilter(img, selectedPerson) {
     });
 }
 
+const galleryImagePeopleCache = new WeakMap();
+
+// Every name an image credits (cast, crew, cast & crew), as written.
+function getGalleryImagePeople(img) {
+    let people = galleryImagePeopleCache.get(img);
+
+    if (!people) {
+        people = [img.dataset.cast, img.dataset.crew, img.dataset.castAndCrew]
+            .flatMap(source => (source || '').split(','))
+            .map(name => name.trim())
+            .filter(name => name.length > 0);
+        galleryImagePeopleCache.set(img, people);
+    }
+
+    return people;
+}
+
+// Case and accents don't make another person, as Binder folds tag names.
+function foldGalleryPersonName(name) {
+    return simplifyGallerySearchText(normalizeGalleryFilterValue(name));
+}
+
+function matchesGalleryAllPeopleFilter(img, allPeople) {
+    // Nothing picked yet: everyone, as the sidebar's old "All people" row showed.
+    if (allPeople.names.length === 0) return true;
+
+    const imagePeople = new Set(getGalleryImagePeople(img).map(foldGalleryPersonName));
+    const isCredited = name => imagePeople.has(foldGalleryPersonName(name));
+
+    return allPeople.matchAny ? allPeople.names.some(isCredited) : allPeople.names.every(isCredited);
+}
+
 function applyGalleryFilters(options = {}) {
     const gallery = document.getElementById('photo-gallery');
     if (!gallery) return;
@@ -456,7 +491,9 @@ function applyGalleryFilters(options = {}) {
         const matchesSidebar =
             matchesGalleryNumberFilter(img.dataset.season, sidebar.season || 'all') &&
             matchesGalleryNumberFilter(img.dataset.episode, sidebar.episode || 'all') &&
-            matchesGalleryPersonFilter(img, sidebar.person || 'all');
+            (sidebar.allPeople
+                ? matchesGalleryAllPeopleFilter(img, sidebar.allPeople)
+                : matchesGalleryPersonFilter(img, sidebar.person || 'all'));
 
         item.style.display = matchesSearch && matchesSidebar ? 'flex' : 'none';
     });
@@ -1041,7 +1078,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        if (e.button !== 0 || header.contains(e.target) || footer.contains(e.target)) {
+        if (e.button !== 0 || header.contains(e.target) || footer.contains(e.target) ||
+            e.target.closest('.all-people-match-row, .all-people-empty-state')) {
             isMarquee = false;
             return;
         }
@@ -2193,6 +2231,12 @@ document.addEventListener('galleryLoaded', () => {
     renderSidebarEpisodeOptions(sidebar, episodesBySeason);
 
     sidebar.addEventListener('click', event => {
+        const allPeopleRow = event.target.closest('[data-sidebar-node="all-people"]');
+        if (allPeopleRow && sidebar.contains(allPeopleRow)) {
+            openAllPeopleNode();
+            return;
+        }
+
         const button = event.target.closest('[data-sidebar-filter]');
         if (!button || !sidebar.contains(button)) return;
 
@@ -2205,6 +2249,11 @@ document.addEventListener('galleryLoaded', () => {
             renderSidebarEpisodeOptions(sidebar, episodesBySeason);
         }
 
+        // A person's own row leaves the All People node, as a tag row leaves All Tags.
+        if (filter === 'person') {
+            closeAllPeopleNode();
+        }
+
         updateSidebarFilterActiveState(sidebar, filter);
 
         applyGalleryFilters({ scroll: true });
@@ -2212,6 +2261,628 @@ document.addEventListener('galleryLoaded', () => {
 
     applyGalleryFilters();
 });
+
+/*
+==================================================================
+// START: ALL PEOPLE NODE
+==================================================================
+Binder's "All Tags…" node, for people. The last Cast & Crew row opens a
+column of everyone this gallery credits, between the sidebar and the
+photos. The row stays lit while names are picked in the column: one name
+shows that person's images, several show the images with all of them (or
+any one, from the Match row). A person's own sidebar row closes it again.
+*/
+
+const ALL_PEOPLE_WIDTH_STORAGE_KEY = 'allPeopleColumnWidth';
+const ALL_PEOPLE_SCROLL_STORAGE_KEY = 'allPeopleColumnScrollTop';
+const ALL_PEOPLE_SCROLL_SAVE_DELAY = 350;
+const ALL_PEOPLE_TYPE_SELECT_RESET = 1000;
+const ALL_PEOPLE_GALLERY_MIN_WIDTH = 320;
+
+const allPeopleColumnState = {
+    column: null,
+    list: null,
+    handle: null,
+    names: null,
+    selected: new Set(),
+    anchor: -1,
+    lead: -1,
+    width: null,
+    scrollTop: null,
+    scrollSaveTimer: null,
+    typeSelectText: '',
+    typeSelectTimer: null
+};
+
+function readAllPeopleStoredNumber(key) {
+    try {
+        const value = parseFloat(localStorage.getItem(key));
+        return Number.isFinite(value) ? value : null;
+    } catch (error) {
+        return null;
+    }
+}
+
+function writeAllPeopleStoredNumber(key, value) {
+    try {
+        localStorage.setItem(key, String(Math.round(value)));
+    } catch (error) {
+        // Blocked storage only costs the memory across visits.
+    }
+}
+
+// The scroll offset is per gallery, since each lists other people.
+function getAllPeopleScrollStorageKey() {
+    const gallery = document.getElementById('photo-gallery');
+    const galleryId = gallery && gallery.dataset.galleryId ? gallery.dataset.galleryId : location.pathname;
+
+    return `${ALL_PEOPLE_SCROLL_STORAGE_KEY}:${galleryId}`;
+}
+
+function getAllPeopleNames() {
+    if (allPeopleColumnState.names) return allPeopleColumnState.names;
+
+    const namesByKey = new Map();
+
+    document.querySelectorAll('#photo-gallery figure img').forEach(img => {
+        getGalleryImagePeople(img).forEach(name => {
+            const key = foldGalleryPersonName(name);
+            if (!namesByKey.has(key)) namesByKey.set(key, name);
+        });
+    });
+
+    // By name in Finder's numeric collation, nothing pinned or grouped.
+    const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+    allPeopleColumnState.names = Array.from(namesByKey.values()).sort(collator.compare);
+
+    return allPeopleColumnState.names;
+}
+
+function getAllPeopleRange(from, to) {
+    const range = new Set();
+
+    for (let index = Math.min(from, to); index <= Math.max(from, to); index++) {
+        range.add(index);
+    }
+
+    return range;
+}
+
+function openAllPeopleNode() {
+    // The row always opens the bare node, as All Tags… drops the column's picks.
+    galleryFilters.sidebar.person = 'all';
+    galleryFilters.sidebar.allPeople = { names: [], matchAny: false };
+
+    showAllPeopleColumn();
+    setAllPeopleColumnSelection(new Set(), -1);
+    syncAllPeopleSidebarRows();
+
+    applyGalleryFilters({ scroll: true });
+}
+
+function closeAllPeopleNode() {
+    galleryFilters.sidebar.allPeople = null;
+
+    hideAllPeopleColumn();
+    syncAllPeopleSidebarRows();
+}
+
+// The node lights its own row only, whoever is picked in the column.
+function syncAllPeopleSidebarRows() {
+    const sidebar = document.getElementById('finder-sidebar');
+    if (!sidebar) return;
+
+    const isOpen = Boolean(galleryFilters.sidebar.allPeople);
+
+    sidebar.querySelectorAll('[data-sidebar-node="all-people"]').forEach(row => {
+        row.classList.toggle('is-active', isOpen);
+        row.setAttribute('aria-pressed', String(isOpen));
+    });
+
+    updateSidebarFilterActiveState(sidebar, 'person');
+}
+
+function buildAllPeopleColumn() {
+    const state = allPeopleColumnState;
+    const column = document.createElement('div');
+    column.id = 'all-people-column';
+
+    const list = document.createElement('div');
+    list.className = 'all-people-list';
+    list.tabIndex = 0;
+    list.setAttribute('role', 'listbox');
+    list.setAttribute('aria-label', 'All People');
+    list.setAttribute('aria-multiselectable', 'true');
+
+    getAllPeopleNames().forEach((name, index) => {
+        const row = document.createElement('div');
+        row.className = 'all-people-row';
+        row.id = `all-people-row-${index}`;
+        row.dataset.index = String(index);
+        row.setAttribute('role', 'option');
+        row.setAttribute('aria-selected', 'false');
+
+        const label = document.createElement('span');
+        label.className = 'all-people-name';
+        label.textContent = name;
+
+        row.appendChild(label);
+        list.appendChild(row);
+    });
+
+    const handle = document.createElement('div');
+    handle.className = 'all-people-resize-handle';
+    handle.tabIndex = 0;
+    handle.setAttribute('role', 'separator');
+    handle.setAttribute('aria-label', 'Resize All People column');
+    handle.setAttribute('aria-orientation', 'vertical');
+
+    list.addEventListener('mousedown', handleAllPeopleListMouseDown);
+    list.addEventListener('keydown', handleAllPeopleListKeyDown);
+    list.addEventListener('scroll', () => {
+        clearTimeout(state.scrollSaveTimer);
+        state.scrollSaveTimer = setTimeout(saveAllPeopleColumnScroll, ALL_PEOPLE_SCROLL_SAVE_DELAY);
+    });
+    handle.addEventListener('pointerdown', startAllPeopleColumnResize);
+    handle.addEventListener('keydown', handleAllPeopleResizeKeyDown);
+
+    column.append(list, handle);
+
+    state.column = column;
+    state.list = list;
+    state.handle = handle;
+}
+
+function isAllPeopleColumnShown() {
+    return Boolean(allPeopleColumnState.column && allPeopleColumnState.column.isConnected);
+}
+
+// Inserted on open and removed on close, so no other view carries it.
+function showAllPeopleColumn() {
+    const state = allPeopleColumnState;
+    const shell = document.getElementById('app-shell');
+    const wrapper = document.getElementById('wrapper');
+
+    if (isAllPeopleColumnShown() || !shell || !wrapper) return;
+    if (!state.column) buildAllPeopleColumn();
+
+    if (state.width === null) {
+        state.width = readAllPeopleStoredNumber(ALL_PEOPLE_WIDTH_STORAGE_KEY);
+    }
+    if (state.scrollTop === null) {
+        state.scrollTop = readAllPeopleStoredNumber(getAllPeopleScrollStorageKey()) || 0;
+    }
+
+    shell.insertBefore(state.column, wrapper);
+    applyAllPeopleColumnWidth();
+    state.list.scrollTop = state.scrollTop;
+}
+
+function hideAllPeopleColumn() {
+    const state = allPeopleColumnState;
+    if (!isAllPeopleColumnShown()) return;
+
+    clearTimeout(state.scrollSaveTimer);
+    saveAllPeopleColumnScroll();
+
+    if (state.width !== null) {
+        writeAllPeopleStoredNumber(ALL_PEOPLE_WIDTH_STORAGE_KEY, state.width);
+    }
+
+    state.column.remove();
+}
+
+function saveAllPeopleColumnScroll() {
+    const state = allPeopleColumnState;
+    if (!isAllPeopleColumnShown()) return;
+
+    state.scrollTop = state.list.scrollTop;
+    writeAllPeopleStoredNumber(getAllPeopleScrollStorageKey(), state.scrollTop);
+}
+
+function getAllPeopleColumnBounds() {
+    const styles = getComputedStyle(document.documentElement);
+    const min = parseFloat(styles.getPropertyValue('--all-people-column-min-width')) || 150;
+    const left = isAllPeopleColumnShown() ? allPeopleColumnState.column.getBoundingClientRect().left : 0;
+    const max = Math.max(min, window.innerWidth - left - ALL_PEOPLE_GALLERY_MIN_WIDTH);
+
+    return { min, max };
+}
+
+// The width the user chose is kept; the window only clamps what is shown.
+function applyAllPeopleColumnWidth() {
+    const state = allPeopleColumnState;
+    if (!isAllPeopleColumnShown()) return;
+
+    const styles = getComputedStyle(document.documentElement);
+    const defaultWidth = parseFloat(styles.getPropertyValue('--all-people-column-width')) || 190;
+    const bounds = getAllPeopleColumnBounds();
+    const width = Math.min(Math.max(state.width !== null ? state.width : defaultWidth, bounds.min), bounds.max);
+
+    state.column.style.setProperty('--all-people-column-width', `${width}px`);
+    state.handle.setAttribute('aria-valuemin', String(bounds.min));
+    state.handle.setAttribute('aria-valuemax', String(Math.round(bounds.max)));
+    state.handle.setAttribute('aria-valuenow', String(Math.round(width)));
+}
+
+function setAllPeopleColumnWidth(width) {
+    const bounds = getAllPeopleColumnBounds();
+
+    allPeopleColumnState.width = Math.min(Math.max(width, bounds.min), bounds.max);
+    applyAllPeopleColumnWidth();
+}
+
+function startAllPeopleColumnResize(event) {
+    if (event.button !== 0) return;
+
+    event.preventDefault();
+
+    const handle = event.currentTarget;
+    const pointerId = event.pointerId;
+    const startX = event.clientX;
+    const startWidth = allPeopleColumnState.column.getBoundingClientRect().width;
+    let pendingWidth = startWidth;
+    let frame = null;
+
+    document.body.classList.add('is-resizing-all-people-column');
+    handle.setPointerCapture(pointerId);
+
+    function onPointerMove(moveEvent) {
+        if (moveEvent.pointerId !== pointerId) return;
+
+        // No collapse: the column only goes away with the node.
+        pendingWidth = startWidth + moveEvent.clientX - startX;
+
+        if (frame !== null) return;
+
+        frame = requestAnimationFrame(() => {
+            frame = null;
+            setAllPeopleColumnWidth(pendingWidth);
+        });
+    }
+
+    function onPointerUp(upEvent) {
+        if (upEvent.pointerId !== pointerId) return;
+
+        if (frame !== null) {
+            cancelAnimationFrame(frame);
+            frame = null;
+        }
+
+        setAllPeopleColumnWidth(pendingWidth);
+        writeAllPeopleStoredNumber(ALL_PEOPLE_WIDTH_STORAGE_KEY, allPeopleColumnState.width);
+
+        document.body.classList.remove('is-resizing-all-people-column');
+        if (handle.hasPointerCapture(pointerId)) {
+            handle.releasePointerCapture(pointerId);
+        }
+        document.removeEventListener('pointermove', onPointerMove);
+        document.removeEventListener('pointerup', onPointerUp);
+        document.removeEventListener('pointercancel', onPointerUp);
+    }
+
+    document.addEventListener('pointermove', onPointerMove);
+    document.addEventListener('pointerup', onPointerUp);
+    document.addEventListener('pointercancel', onPointerUp);
+}
+
+function handleAllPeopleResizeKeyDown(event) {
+    const bounds = getAllPeopleColumnBounds();
+    const currentWidth = allPeopleColumnState.column.getBoundingClientRect().width;
+    const step = event.shiftKey ? 36 : 12;
+    let width = null;
+
+    if (event.key === 'ArrowLeft') {
+        width = currentWidth - step;
+    } else if (event.key === 'ArrowRight') {
+        width = currentWidth + step;
+    } else if (event.key === 'Home') {
+        width = bounds.min;
+    } else if (event.key === 'End') {
+        width = bounds.max;
+    }
+
+    if (width === null) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    setAllPeopleColumnWidth(width);
+    writeAllPeopleStoredNumber(ALL_PEOPLE_WIDTH_STORAGE_KEY, allPeopleColumnState.width);
+}
+
+function setAllPeopleColumnSelection(selected, lead, anchor = lead) {
+    const state = allPeopleColumnState;
+
+    state.selected = selected;
+    state.lead = lead;
+    state.anchor = anchor;
+
+    if (!state.list) return;
+
+    Array.from(state.list.children).forEach((row, index) => {
+        const isSelected = selected.has(index);
+        row.classList.toggle('is-selected', isSelected);
+        row.setAttribute('aria-selected', String(isSelected));
+    });
+
+    if (lead >= 0) {
+        state.list.setAttribute('aria-activedescendant', `all-people-row-${lead}`);
+    } else {
+        state.list.removeAttribute('aria-activedescendant');
+    }
+}
+
+// Every change of the column's selection is a new location for the gallery.
+function pickAllPeopleRows(selected, lead, anchor = lead) {
+    setAllPeopleColumnSelection(selected, lead, anchor);
+
+    const allPeople = galleryFilters.sidebar.allPeople;
+    if (!allPeople) return;
+
+    const names = getAllPeopleNames();
+    const picked = Array.from(selected).sort((a, b) => a - b).map(index => names[index]);
+    const isUnchanged =
+        picked.length === allPeople.names.length &&
+        picked.every((name, index) => name === allPeople.names[index]);
+
+    if (isUnchanged) return;
+
+    allPeople.names = picked;
+    applyGalleryFilters({ scroll: true });
+}
+
+function scrollAllPeopleRowIntoView(index) {
+    const list = allPeopleColumnState.list;
+    const row = list ? list.children[index] : null;
+    if (!row) return;
+
+    const styles = getComputedStyle(list);
+    const topInset = parseFloat(styles.paddingTop) || 0;
+    const bottomInset = parseFloat(styles.paddingBottom) || 0;
+    const rowTop = row.offsetTop;
+    const rowBottom = rowTop + row.offsetHeight;
+
+    if (rowTop - topInset < list.scrollTop) {
+        list.scrollTop = rowTop - topInset;
+    } else if (rowBottom + bottomInset > list.scrollTop + list.clientHeight) {
+        list.scrollTop = rowBottom + bottomInset - list.clientHeight;
+    }
+}
+
+function handleAllPeopleListMouseDown(event) {
+    if (event.button !== 0) return;
+
+    const state = allPeopleColumnState;
+    const row = event.target.closest('.all-people-row');
+    const isToggle = event.metaKey || event.ctrlKey;
+
+    if (!row) {
+        // A click past the last name clears the picks, as in a table.
+        if (!isToggle && !event.shiftKey) pickAllPeopleRows(new Set(), -1);
+        return;
+    }
+
+    const index = Number(row.dataset.index);
+
+    if (event.shiftKey && state.anchor >= 0) {
+        pickAllPeopleRows(getAllPeopleRange(state.anchor, index), index, state.anchor);
+    } else if (isToggle) {
+        const selected = new Set(state.selected);
+
+        if (selected.has(index)) {
+            selected.delete(index);
+        } else {
+            selected.add(index);
+        }
+
+        pickAllPeopleRows(selected, index);
+    } else {
+        pickAllPeopleRows(new Set([index]), index);
+    }
+}
+
+function handleAllPeopleListKeyDown(event) {
+    const state = allPeopleColumnState;
+    const lastIndex = getAllPeopleNames().length - 1;
+    const isCommand = event.metaKey || event.ctrlKey;
+    const keepFromGallery = () => {
+        event.preventDefault();
+        event.stopPropagation();
+    };
+
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        keepFromGallery();
+        if (lastIndex < 0) return;
+
+        const step = event.key === 'ArrowDown' ? 1 : -1;
+        const lead = state.lead < 0
+            ? (step > 0 ? 0 : lastIndex)
+            : Math.min(Math.max(state.lead + step, 0), lastIndex);
+
+        if (event.shiftKey && state.anchor >= 0) {
+            pickAllPeopleRows(getAllPeopleRange(state.anchor, lead), lead, state.anchor);
+        } else {
+            pickAllPeopleRows(new Set([lead]), lead);
+        }
+
+        scrollAllPeopleRowIntoView(lead);
+        return;
+    }
+
+    // A table's Home/End and page keys scroll without moving the selection.
+    if (event.key === 'Home' || event.key === 'End') {
+        keepFromGallery();
+        state.list.scrollTop = event.key === 'Home' ? 0 : state.list.scrollHeight;
+        return;
+    }
+
+    if (event.key === 'PageUp' || event.key === 'PageDown') {
+        keepFromGallery();
+        const page = state.list.clientHeight - (parseFloat(getComputedStyle(state.list).paddingTop) || 0);
+        state.list.scrollTop += event.key === 'PageDown' ? page : -page;
+        return;
+    }
+
+    // Finder's tags column swallows Return and Enter: no rename, no open.
+    if (event.key === 'Enter' || event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        keepFromGallery();
+        return;
+    }
+
+    if (isCommand && event.key.toLowerCase() === 'a') {
+        keepFromGallery();
+        if (lastIndex >= 0) pickAllPeopleRows(getAllPeopleRange(0, lastIndex), Math.max(state.lead, 0), 0);
+        return;
+    }
+
+    if (!isCommand && !event.altKey && event.key.length === 1) {
+        keepFromGallery();
+        typeSelectAllPeopleRow(event.key);
+    }
+}
+
+// Type-select: the first name that starts with what was typed in the last second.
+function typeSelectAllPeopleRow(character) {
+    const state = allPeopleColumnState;
+
+    if (character === ' ' && !state.typeSelectText) return;
+
+    clearTimeout(state.typeSelectTimer);
+    state.typeSelectText += character;
+    state.typeSelectTimer = setTimeout(() => {
+        state.typeSelectText = '';
+    }, ALL_PEOPLE_TYPE_SELECT_RESET);
+
+    const typed = simplifyGallerySearchText(state.typeSelectText.toLowerCase());
+    const index = getAllPeopleNames().findIndex(name => foldGalleryPersonName(name).startsWith(typed));
+
+    if (index < 0) return;
+
+    pickAllPeopleRows(new Set([index]), index);
+    scrollAllPeopleRowIntoView(index);
+}
+
+function setAllPeopleMatchAny(matchAny) {
+    const allPeople = galleryFilters.sidebar.allPeople;
+    if (!allPeople || allPeople.names.length < 2 || allPeople.matchAny === matchAny) return;
+
+    allPeople.matchAny = matchAny;
+    applyGalleryFilters({ scroll: true });
+}
+
+function createAllPeopleMatchRow() {
+    const row = document.createElement('div');
+    row.id = 'all-people-match-row';
+    row.className = 'all-people-match-row';
+
+    const label = document.createElement('span');
+    label.className = 'all-people-match-label';
+    label.textContent = 'Match:';
+
+    const pills = document.createElement('div');
+    pills.className = 'all-people-match-pills';
+    pills.setAttribute('role', 'group');
+    pills.setAttribute('aria-label', 'Match selected people');
+
+    [
+        ['all', 'All People', 'Show images with all selected people'],
+        ['any', 'Any Person', 'Show images with any selected person']
+    ].forEach(([match, title, tooltip]) => {
+        const pill = document.createElement('button');
+        pill.type = 'button';
+        pill.className = 'all-people-match-pill';
+        pill.dataset.allPeopleMatch = match;
+        pill.title = tooltip;
+        pill.textContent = title;
+        pill.addEventListener('click', () => setAllPeopleMatchAny(match === 'any'));
+        pills.appendChild(pill);
+    });
+
+    row.append(label, pills);
+
+    return row;
+}
+
+function createAllPeopleEmptyState() {
+    const emptyState = document.createElement('div');
+    emptyState.id = 'all-people-empty-state';
+    emptyState.className = 'all-people-empty-state';
+
+    const message = document.createElement('p');
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'all-people-empty-button';
+    button.textContent = 'Match Any Person';
+    button.addEventListener('click', () => setAllPeopleMatchAny(true));
+
+    emptyState.append(message, button);
+
+    return emptyState;
+}
+
+// Two picks or more bring the Match row, and its empty state when nothing matches.
+function syncAllPeopleMatchControls() {
+    const wrapper = document.getElementById('wrapper');
+    const gallery = document.getElementById('photo-gallery');
+    if (!wrapper || !gallery) return;
+
+    const sidebar = galleryFilters.sidebar;
+    const allPeople = sidebar.allPeople;
+    const showsMatch = Boolean(allPeople && allPeople.names.length > 1);
+    let row = document.getElementById('all-people-match-row');
+
+    if (showsMatch && !row) {
+        row = createAllPeopleMatchRow();
+        wrapper.insertBefore(row, gallery);
+    } else if (!showsMatch && row) {
+        row.remove();
+        row = null;
+    }
+
+    if (row) {
+        row.querySelectorAll('[data-all-people-match]').forEach(pill => {
+            const isActive = (pill.dataset.allPeopleMatch === 'any') === allPeople.matchAny;
+            pill.classList.toggle('is-active', isActive);
+            pill.setAttribute('aria-pressed', String(isActive));
+        });
+    }
+
+    const hasResults = Array.from(gallery.querySelectorAll('figure')).some(item => item.style.display !== 'none');
+    let emptyState = document.getElementById('all-people-empty-state');
+
+    if (!showsMatch || hasResults) {
+        if (emptyState) emptyState.remove();
+        return;
+    }
+
+    if (!emptyState) {
+        emptyState = createAllPeopleEmptyState();
+        wrapper.appendChild(emptyState);
+    }
+
+    let message;
+    if (galleryFilters.searchTerms.length > 0) {
+        message = 'No images match this search';
+    } else if (sidebar.season !== 'all' || sidebar.episode !== 'all') {
+        message = 'No images match these filters';
+    } else {
+        message = allPeople.matchAny ? 'No images have any selected person' : 'No images have all selected people';
+    }
+
+    emptyState.querySelector('p').textContent = message;
+    emptyState.querySelector('button').hidden = allPeople.matchAny;
+}
+
+window.addEventListener('galleryFiltered', syncAllPeopleMatchControls);
+
+window.addEventListener('resize', applyAllPeopleColumnWidth);
+
+/*
+==================================================================
+// END: ALL PEOPLE NODE
+==================================================================
+*/
 
 
 document.addEventListener('keydown', (e) => {

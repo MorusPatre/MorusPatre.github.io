@@ -2763,3 +2763,220 @@ body.is-sidebar-collapsed #app-shell::before {
     }
 
 }
+
+/*
+============================================
+All People Column
+============================================
+*/
+
+/* Binder's All Tags column, for people: a split view item between the sidebar
+   and the gallery, inserted while the sidebar's "All People…" row is selected. */
+
+:root {
+    --all-people-column-width: 190px;
+    --all-people-column-min-width: 150px;
+    --all-people-row-height: 1.1rem;
+    --all-people-pill-inset: 0.5rem;
+    --all-people-focus-pill: rgba(219, 183, 167, 0.34);
+}
+
+#all-people-column {
+    flex: 0 0 var(--all-people-column-width);
+    width: var(--all-people-column-width);
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    border-right: 1px solid var(--chrome-material-border);
+    cursor: default;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+.all-people-list {
+    position: relative;
+    height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* The first name lines up with the gallery's first row, below the top bar's fade. */
+    padding: calc(var(--top-bar-height) + 2.5rem) 0 1.6rem;
+    scrollbar-width: none;
+    outline: none;
+}
+
+.all-people-list::-webkit-scrollbar {
+    display: none;
+}
+
+.all-people-row {
+    display: flex;
+    align-items: center;
+    height: var(--all-people-row-height);
+    margin: 0 var(--all-people-pill-inset);
+    padding: 0 0.34rem;
+    border-radius: 7px;
+    color: rgba(255, 255, 255, 0.68);
+    font-size: 0.72rem;
+    font-weight: 300;
+    line-height: 1.25;
+}
+
+.all-people-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Adjacent picks join into one pill, as a table's selected rows do. */
+.all-people-row.is-selected {
+    background: rgba(255, 255, 255, 0.16);
+    color: rgba(255, 255, 255, 0.92);
+}
+
+.all-people-row.is-selected + .all-people-row.is-selected {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+.all-people-row.is-selected:has(+ .all-people-row.is-selected) {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.all-people-list:focus .all-people-row.is-selected {
+    background: var(--all-people-focus-pill);
+    color: #fff;
+}
+
+.all-people-resize-handle {
+    position: absolute;
+    top: 0;
+    right: -5px;
+    width: 8px;
+    height: 100%;
+    z-index: 2;
+    cursor: col-resize;
+    touch-action: none;
+    outline: none;
+}
+
+body.is-resizing-all-people-column,
+body.is-resizing-all-people-column * {
+    cursor: col-resize !important;
+}
+
+/* Two picks or more: Binder's "Match:" row, the Find bar's scope row. */
+.all-people-match-row {
+    position: sticky;
+    top: var(--top-bar-height);
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    width: 100%;
+    padding: 0.35rem 2rem 0;
+    font-size: 0.62rem;
+    line-height: 1.25;
+}
+
+.all-people-match-label {
+    margin-right: 0.08rem;
+    color: rgba(255, 255, 255, 0.68);
+}
+
+.all-people-match-pills {
+    display: flex;
+    gap: 2px;
+}
+
+#app-shell .all-people-match-pill,
+#app-shell .all-people-empty-button {
+    width: auto;
+    height: auto;
+    margin: 0;
+    padding: 0.08rem 0.46rem;
+    border-radius: 7px;
+    background: transparent;
+    box-shadow: inset 0 0 0 1px transparent;
+    color: rgba(255, 255, 255, 0.78) !important;
+    font: inherit;
+    font-weight: 600;
+    letter-spacing: 0;
+    line-height: 1.25;
+    text-transform: none;
+    cursor: default;
+}
+
+#app-shell .all-people-match-pill:hover {
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+}
+
+#app-shell .all-people-match-pill.is-active {
+    background: rgba(255, 255, 255, 0.16);
+    color: rgba(255, 255, 255, 0.95) !important;
+}
+
+#app-shell .all-people-match-row + #photo-gallery {
+    margin-top: 1.4rem;
+}
+
+.all-people-empty-state {
+    position: absolute;
+    top: 50vh;
+    left: 50%;
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+    width: max-content;
+    max-width: min(360px, calc(100% - 32px));
+    color: rgba(255, 255, 255, 0.56);
+    font-size: 0.72rem;
+    line-height: 1.35;
+    text-align: center;
+    transform: translate(-50%, -50%);
+}
+
+.all-people-empty-state p {
+    margin: 0;
+}
+
+#app-shell .all-people-empty-button {
+    font-size: 0.62rem;
+    font-weight: 400;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+}
+
+#app-shell .all-people-empty-button:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+@media screen and (max-width: 736px) {
+
+    :root {
+        --all-people-column-width: 120px;
+        --all-people-column-min-width: 88px;
+        --all-people-row-height: 1rem;
+        --all-people-pill-inset: 0.2rem;
+    }
+
+    .all-people-list {
+        padding-top: calc(var(--top-bar-height) + 1.5rem);
+    }
+
+    .all-people-row {
+        padding: 0 0.18rem;
+        font-size: 0.62rem;
+    }
+
+    .all-people-match-row {
+        padding: 0.3rem 1rem 0;
+    }
+
+}
