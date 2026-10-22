@@ -387,7 +387,7 @@
 
 })(jQuery);
 
-const hotdGalleryFilters = {
+const galleryFilters = {
     searchTerms: [],
     sidebar: {
         season: 'all',
@@ -396,7 +396,7 @@ const hotdGalleryFilters = {
     }
 };
 
-window.hotdGalleryFilters = hotdGalleryFilters;
+window.galleryFilters = galleryFilters;
 
 function simplifyGallerySearchText(text) {
     if (!text) return '';
@@ -438,8 +438,8 @@ function applyGalleryFilters(options = {}) {
     const gallery = document.getElementById('photo-gallery');
     if (!gallery) return;
 
-    const state = window.hotdGalleryFilters || hotdGalleryFilters;
-    const sidebar = state.sidebar || hotdGalleryFilters.sidebar;
+    const state = window.galleryFilters || galleryFilters;
+    const sidebar = state.sidebar || galleryFilters.sidebar;
     const searchTerms = state.searchTerms || [];
     const galleryItems = gallery.querySelectorAll('figure');
 
@@ -470,6 +470,14 @@ function applyGalleryFilters(options = {}) {
 
 window.applyGalleryFilters = applyGalleryFilters;
 
+// Each page sets its own placeholder in index.html; remember it before pills clear it.
+function getDefaultSearchPlaceholder(searchInput) {
+    if (searchInput.dataset.defaultPlaceholder === undefined) {
+        searchInput.dataset.defaultPlaceholder = searchInput.placeholder;
+    }
+    return searchInput.dataset.defaultPlaceholder;
+}
+
 
 document.addEventListener('DOMContentLoaded', () => {
     const wrapper = document.getElementById('wrapper');
@@ -478,6 +486,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const gallery = document.getElementById('photo-gallery');
     const sidebar = document.getElementById('finder-sidebar');
     const searchInput = document.getElementById('search-input');
+    getDefaultSearchPlaceholder(searchInput);
     
     // =================================================================
     // START: MODIFIED SEARCH AND AUTOCOMPLETE LOGIC
@@ -522,13 +531,13 @@ document.addEventListener('DOMContentLoaded', () => {
             searchWrapper.style.paddingRight = '';
         }
         
-        hotdGalleryFilters.searchTerms = buildGallerySearchTerms(fullQueryText);
+        galleryFilters.searchTerms = buildGallerySearchTerms(fullQueryText);
 
         // If there are pills, hide the placeholder
         if (pills.length > 0) {
             searchInput.placeholder = '';
         } else {
-            searchInput.placeholder = 'Search by filename, actor, character, season, episode etc...';
+            searchInput.placeholder = getDefaultSearchPlaceholder(searchInput);
         }
 
         applyGalleryFilters({ scroll: true });
@@ -1489,10 +1498,13 @@ document.addEventListener('DOMContentLoaded', () => {
         cast: 'Cast',
         crew: 'Crew',
         castAndCrew: 'Cast & Crew',
-        characters: 'Characters'
+        characters: 'Characters',
+        location: 'Location',
+        scene: 'Scene'
     };
 
-    const primaryKeys = ['season', 'episode', 'cast', 'crew', 'castAndCrew', 'characters'];
+    // Fields a gallery's data doesn't have are skipped, so one list serves every show.
+    const primaryKeys = ['season', 'episode', 'cast', 'crew', 'castAndCrew', 'characters', 'location', 'scene'];
 
 
     modalContent.addEventListener('mouseenter', () => {
@@ -1863,10 +1875,10 @@ document.addEventListener('galleryLoaded', () => {
         
         const fullQueryText = pillQueries.join(' ') + ' ' + searchInput.value;
         
-        hotdGalleryFilters.searchTerms = buildGallerySearchTerms(fullQueryText);
+        galleryFilters.searchTerms = buildGallerySearchTerms(fullQueryText);
 
         // Update placeholder based on pills
-        searchInput.placeholder = pills.length > 0 ? '' : 'Search by filename, character, actor, etc...';
+        searchInput.placeholder = pills.length > 0 ? '' : getDefaultSearchPlaceholder(searchInput);
         applyGalleryFilters();
     }
 
@@ -1916,7 +1928,7 @@ document.addEventListener('galleryLoaded', () => {
     // --- Autocomplete data setup ---
     const searchTerms = new Set();
     galleryItems.forEach(img => {
-        const peopleSources = [img.dataset.cast, img.dataset.crew, img.dataset.castAndCrew, img.dataset.characters];
+        const peopleSources = [img.dataset.cast, img.dataset.crew, img.dataset.castAndCrew, img.dataset.characters, img.dataset.location, img.dataset.scene];
         peopleSources.forEach(source => {
             if (source) {
                 source.split(',').forEach(term => {
@@ -2080,6 +2092,29 @@ function buildSidebarEpisodeIndex() {
     return episodesBySeason;
 }
 
+function buildSidebarSeasonList() {
+    const seasons = new Set();
+
+    document.querySelectorAll('#photo-gallery figure img').forEach(img => {
+        const season = normalizeSidebarNumberValue(img.dataset.season);
+        if (season) seasons.add(season);
+    });
+
+    return Array.from(seasons).sort((a, b) => Number(a) - Number(b));
+}
+
+function renderSidebarSeasonOptions(sidebar, seasons) {
+    const seasonList = document.getElementById('sidebar-season-options');
+    if (!seasonList) return;
+
+    const selectedSeason = galleryFilters.sidebar.season || 'all';
+
+    seasonList.replaceChildren(
+        createSidebarFilterButton('season', 'all', 'All', selectedSeason === 'all', true),
+        ...seasons.map(season => createSidebarFilterButton('season', season, season.padStart(2, '0'), selectedSeason === season))
+    );
+}
+
 function getSortedSidebarEpisodes(episodesBySeason, season) {
     const episodeSet = episodesBySeason.get(season) || new Set();
 
@@ -2099,7 +2134,7 @@ function createSidebarFilterButton(filter, value, label, isActive, isEmphasis = 
 }
 
 function updateSidebarFilterActiveState(sidebar, filter) {
-    const selectedValue = hotdGalleryFilters.sidebar[filter] || 'all';
+    const selectedValue = galleryFilters.sidebar[filter] || 'all';
 
     sidebar.querySelectorAll(`[data-sidebar-filter="${filter}"]`).forEach(option => {
         const isActive = option.dataset.sidebarValue === selectedValue;
@@ -2112,17 +2147,17 @@ function renderSidebarEpisodeOptions(sidebar, episodesBySeason) {
     const episodeList = document.getElementById('sidebar-episode-options');
     if (!episodeList) return;
 
-    const selectedSeason = hotdGalleryFilters.sidebar.season || 'all';
+    const selectedSeason = galleryFilters.sidebar.season || 'all';
     const availableEpisodes = getSortedSidebarEpisodes(episodesBySeason, selectedSeason);
     const availableEpisodeValues = new Set(availableEpisodes);
-    let selectedEpisode = hotdGalleryFilters.sidebar.episode || 'all';
+    let selectedEpisode = galleryFilters.sidebar.episode || 'all';
 
     if (selectedEpisode !== 'all') {
         selectedEpisode = normalizeSidebarNumberValue(selectedEpisode);
 
         if (!availableEpisodeValues.has(selectedEpisode)) {
             selectedEpisode = 'all';
-            hotdGalleryFilters.sidebar.episode = 'all';
+            galleryFilters.sidebar.episode = 'all';
         }
     }
 
@@ -2154,6 +2189,7 @@ document.addEventListener('galleryLoaded', () => {
 
     const episodesBySeason = buildSidebarEpisodeIndex();
 
+    renderSidebarSeasonOptions(sidebar, buildSidebarSeasonList());
     renderSidebarEpisodeOptions(sidebar, episodesBySeason);
 
     sidebar.addEventListener('click', event => {
@@ -2163,7 +2199,7 @@ document.addEventListener('galleryLoaded', () => {
         const filter = button.dataset.sidebarFilter;
         const value = button.dataset.sidebarValue;
 
-        hotdGalleryFilters.sidebar[filter] = value;
+        galleryFilters.sidebar[filter] = value;
 
         if (filter === 'season') {
             renderSidebarEpisodeOptions(sidebar, episodesBySeason);

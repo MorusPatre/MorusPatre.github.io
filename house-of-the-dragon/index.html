@@ -7,7 +7,7 @@
 
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
 
-        <link rel="stylesheet" href="assets/css/main.css?v=20260621-27" />
+        <link rel="stylesheet" href="../shared/css/gallery.css?v=20261022" />
         <noscript><link rel="stylesheet" href="../shared/css/noscript.css" /></noscript>
     </head>
     <body>
@@ -44,11 +44,8 @@
 
                     <section class="sidebar-filter-section" aria-label="Season">
                         <h2 class="sidebar-filter-heading">Season:</h2>
-                        <div class="sidebar-option-list sidebar-option-list--inline" role="group" aria-label="Season filter">
+                        <div id="sidebar-season-options" class="sidebar-option-list sidebar-option-list--inline" role="group" aria-label="Season filter">
                             <button class="sidebar-option sidebar-option--emphasis is-active" type="button" data-sidebar-filter="season" data-sidebar-value="all" aria-pressed="true">All</button>
-                            <button class="sidebar-option" type="button" data-sidebar-filter="season" data-sidebar-value="1" aria-pressed="false">01</button>
-                            <button class="sidebar-option" type="button" data-sidebar-filter="season" data-sidebar-value="2" aria-pressed="false">02</button>
-                            <button class="sidebar-option" type="button" data-sidebar-filter="season" data-sidebar-value="3" aria-pressed="false">03</button>
                         </div>
                     </section>
 
@@ -56,16 +53,6 @@
                         <h2 class="sidebar-filter-heading">Episode:</h2>
                         <div id="sidebar-episode-options" class="sidebar-option-list sidebar-option-list--inline" role="group" aria-label="Episode filter">
                             <button class="sidebar-option sidebar-option--emphasis is-active" type="button" data-sidebar-filter="episode" data-sidebar-value="all" aria-pressed="true">All</button>
-                            <button class="sidebar-option" type="button" data-sidebar-filter="episode" data-sidebar-value="1" aria-pressed="false">01</button>
-                            <button class="sidebar-option" type="button" data-sidebar-filter="episode" data-sidebar-value="2" aria-pressed="false">02</button>
-                            <button class="sidebar-option" type="button" data-sidebar-filter="episode" data-sidebar-value="3" aria-pressed="false">03</button>
-                            <button class="sidebar-option" type="button" data-sidebar-filter="episode" data-sidebar-value="4" aria-pressed="false">04</button>
-                            <button class="sidebar-option" type="button" data-sidebar-filter="episode" data-sidebar-value="5" aria-pressed="false">05</button>
-                            <button class="sidebar-option" type="button" data-sidebar-filter="episode" data-sidebar-value="6" aria-pressed="false">06</button>
-                            <button class="sidebar-option" type="button" data-sidebar-filter="episode" data-sidebar-value="7" aria-pressed="false">07</button>
-                            <button class="sidebar-option" type="button" data-sidebar-filter="episode" data-sidebar-value="8" aria-pressed="false">08</button>
-                            <button class="sidebar-option" type="button" data-sidebar-filter="episode" data-sidebar-value="9" aria-pressed="false">09</button>
-                            <button class="sidebar-option" type="button" data-sidebar-filter="episode" data-sidebar-value="10" aria-pressed="false">10</button>
                         </div>
                     </section>
 
@@ -149,7 +136,7 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
-        <script src="assets/js/main.js"></script>
+        <script src="../shared/js/gallery.js?v=20261022"></script>
         <script src="../shared/js/gallery-loader.js"></script>
 
         <div id="image-modal" class="modal-overlay">
