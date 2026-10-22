@@ -1672,30 +1672,38 @@ body.is-sidebar-collapsed #gallery-blur-layer {
 
 
 /* 2. Each Individual Grid Item (Figure) */
+/* No height: grid items stretch to their row anyway. A percentage height made
+   Safari lay out the whole grid again on every scroll step, ~20 ms a frame
+   with thousands of figures. */
 #photo-gallery figure {
     margin: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    height: 100%;
     padding: 10px;
     border-radius: 8px;
     cursor: default;
 }
 
 /* 3. The Container for the Image */
+/* The image is positioned, not a flex item, and the container is sized and
+   laid out on its own, so a thumbnail that finishes loading only lays out its
+   own box. In normal flow every lazy-load relaid the whole grid, which takes
+   tens of ms with thousands of figures, once per image as you scroll. */
 #photo-gallery figure .image-container {
+    position: relative;
+    contain: size layout;
     height: 225px;
     width: 100%;
     margin-bottom: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
 /* 4. The Image Itself */
 #photo-gallery figure img {
+    position: absolute;
+    inset: 0;
+    margin: auto; /* Centers it in the container */
     display: block;
     max-width: 100%;
     max-height: 100%;
@@ -1799,13 +1807,20 @@ body.is-marquee-dragging #search-input {
 }
 
 /* FINAL FIX: Globally disables default browser selection during a marquee drag */
-body.is-marquee-dragging,
-body.is-marquee-dragging * {
+/* Set on the body, which descendants follow, plus the few elements with a
+   cursor of their own. A rule on every element restyled the whole page,
+   thousands of figures included, as each drag started and ended. */
+body.is-marquee-dragging {
     cursor: default !important;
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
+}
+
+body.is-marquee-dragging :is(a, button, input, label, .button, .search-wrapper, .search-pill,
+                             .sidebar-resize-handle, .all-people-resize-handle) {
+    cursor: default !important;
 }
 
 /*
@@ -2204,6 +2219,14 @@ html, body {
     box-shadow: var(--accent-glow);
 }
 
+/* At rest the filename carries a transparent glow the size of --accent-text-glow,
+   so selecting only recolors it. A glow appearing from none changes the text's
+   painted bounds, which relays the whole grid: tens of ms per item that a
+   marquee selects in a gallery of thousands. */
+#photo-gallery figure figcaption .filename {
+    text-shadow: 0 0 22px transparent;
+}
+
 /* Makes the filename text color and glow match the selected image's border. */
 #photo-gallery figure.selected figcaption .filename {
     color: var(--accent); /* Same color as the selected image border */
@@ -2212,19 +2235,22 @@ html, body {
 }
 /*
 ==================================================================
-// Lazy Load Image Fade-in
+// Lazy Load Image Reveal
 ==================================================================
 */
 
+/* Hidden until the thumbnail loads, then shown at once. Not opacity: below 1
+   it gives each waiting figure two layers of its own, thousands in a big
+   gallery, and a fade-in starts and ends more of them on every frame while
+   you scroll. Both made Safari and Chrome miss frames. */
 #photo-gallery figure .image-container,
 #photo-gallery figure figcaption {
-    opacity: 0;
-    transition: opacity 0.4s ease-in-out;
+    visibility: hidden;
 }
 
 #photo-gallery figure.is-visible .image-container,
 #photo-gallery figure.is-visible figcaption {
-    opacity: 1;
+    visibility: visible;
 }
 
 /*

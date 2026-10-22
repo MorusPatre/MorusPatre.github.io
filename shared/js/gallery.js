@@ -623,6 +623,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastClientX = 0;
     let lastClientY = 0;
     let lastClientModifierKey = false;
+    let marqueeItemRects = null;
 
 
     // Attach a single, permanent listener to the cancel button
@@ -772,6 +773,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const galleryObserver = new ResizeObserver(() => {
         calculateGridMetrics();
+        marqueeItemRects = null;
     });
     galleryObserver.observe(gallery);
 
@@ -981,6 +983,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Items keep their place in the gallery while it scrolls, so a drag measures
+    // them once. Reading every rect on every move forced a layout of the whole
+    // grid each time the previous move had changed the selection.
+    function getMarqueeItemRects(galleryRect) {
+        if (marqueeItemRects) return marqueeItemRects;
+
+        marqueeItemRects = [];
+        for (const item of items) {
+            if (item.style.display === 'none') continue;
+
+            const itemRect = item.getBoundingClientRect();
+            marqueeItemRects.push({
+                item,
+                left: itemRect.left - galleryRect.left,
+                top: itemRect.top - galleryRect.top,
+                right: itemRect.right - galleryRect.left,
+                bottom: itemRect.bottom - galleryRect.top
+            });
+        }
+
+        return marqueeItemRects;
+    }
+
     function updateMarqueeAndSelection(clientX, clientY, isModifier) {
         marquee.style.visibility = 'visible';
 
@@ -1033,22 +1058,13 @@ document.addEventListener('DOMContentLoaded', () => {
         marquee.style.height = `${visibleMarqueeRect.h}px`;
         updateMarqueeGutterHighlight(visibleMarqueeRect, galleryRect);
 
-        for (const item of items) {
-            if (item.style.display === 'none') continue;
-
-            const itemRect = item.getBoundingClientRect();
-            const relativeItemRect = {
-                left: itemRect.left - galleryRect.left,
-                top: itemRect.top - galleryRect.top,
-                right: itemRect.right - galleryRect.left,
-                bottom: itemRect.bottom - galleryRect.top
-            };
-
+        for (const itemRect of getMarqueeItemRects(galleryRect)) {
+            const item = itemRect.item;
             const intersects =
-                selectionRect.x < relativeItemRect.right &&
-                selectionRect.x + selectionRect.w > relativeItemRect.left &&
-                selectionRect.y < relativeItemRect.bottom &&
-                selectionRect.y + selectionRect.h > relativeItemRect.top;
+                selectionRect.x < itemRect.right &&
+                selectionRect.x + selectionRect.w > itemRect.left &&
+                selectionRect.y < itemRect.bottom &&
+                selectionRect.y + selectionRect.h > itemRect.top;
 
             if (isModifier) {
                 setSelection(item, intersects ? !preMarqueeSelectedItems.has(item) : preMarqueeSelectedItems.has(item));
@@ -1099,6 +1115,7 @@ document.addEventListener('DOMContentLoaded', () => {
         startPos = getClampedMarqueePoint(e.clientX, e.clientY, galleryRect);
 
         preMarqueeSelectedItems = new Set(selectedItems);
+        marqueeItemRects = null;
     });
 
     // --- MouseMove Listener ---
@@ -1207,6 +1224,7 @@ document.addEventListener('DOMContentLoaded', () => {
         marquee.style.height = '0px';
         hideMarqueeGutterHighlight();
         preMarqueeSelectedItems.clear();
+        marqueeItemRects = null;
     };
 
     document.addEventListener('mouseup', endDragAction);
