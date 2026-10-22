@@ -75,7 +75,7 @@
         --pill-selected-bg: #d0cac3;
 
         --thumb-border: #d8d3cd;
-        --thumb-glow: 0 0 18px rgba(60, 50, 40, 0.12);
+        --thumb-glow: 0 4px 14px rgba(0, 0, 0, 0.28);
 
         --accent: #9c6247;
         --accent-glow: 0 0 16px rgba(176, 108, 70, 0.4);
