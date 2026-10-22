@@ -1,36 +1,31 @@
 const fs = require('fs');
 const path = require('path');
 
-// Define paths
-const witcherDataPath = path.join(__dirname, 'the-witcher', 'gallery-data.json');
-const hotdDataPath = path.join(__dirname, 'house-of-the-dragon', 'gallery-data.json');
-const gotDataPath = path.join(__dirname, 'game-of-thrones', 'gallery-data.json');
-const sitemapPath = path.join(__dirname, 'sitemap.xml'); // Changed to root directory
 const baseUrl = 'https://mouseia.com';
+const sitemapPath = path.join(__dirname, 'sitemap.xml');
+const shows = ['the-witcher', 'house-of-the-dragon', 'game-of-thrones'];
 
-// --- Functions to build URL entries ---
+// Google reads at most 1,000 <image:image> tags per <url>, so a bigger gallery
+// repeats its page's <url> once per chunk of images.
+const maxImagesPerUrl = 1000;
 
-function buildStaticUrl(urlPath, changefreq, priority) {
-    return `
-  <url>
-    <loc>${baseUrl}${urlPath}</loc>
-    <lastmod>${new Date().toISOString()}</lastmod>
-    <changefreq>${changefreq}</changefreq>
-    <priority>${priority}</priority>
-  </url>`;
+// No <lastmod>: in a fresh checkout every file's mtime is the run time, so it
+// would claim each gallery changed on every run. Google ignores <changefreq>
+// and <priority>.
+
+function escapeXml(value) {
+    return value.replace(/[&<>"']/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;'
+    })[char]);
 }
 
-function buildGalleryUrls(galleryData, galleryPath) {
-    return galleryData.map(item => {
-        const urlHash = encodeURIComponent(item.filename);
-        return `
+function buildUrl(urlPath, imageUrls = []) {
+    const images = imageUrls.map(src => `
+    <image:image><image:loc>${escapeXml(src)}</image:loc></image:image>`).join('');
+    return `
   <url>
-    <loc>${baseUrl}${galleryPath}#${urlHash}</loc>
-    <lastmod>${new Date().toISOString()}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <loc>${baseUrl}${urlPath}</loc>${images}
   </url>`;
-    }).join('');
 }
 
 
@@ -38,50 +33,28 @@ function buildGalleryUrls(galleryData, galleryPath) {
 
 console.log('Starting sitemap generation...');
 
-let sitemapEntries = [];
+const sitemapEntries = [buildUrl('/')];
 
-// Add the main Witcher gallery page
-sitemapEntries.push(buildStaticUrl('/the-witcher/', 'weekly', '0.9'));
-
-// Add all individual Witcher images
-try {
-    const witcherData = JSON.parse(fs.readFileSync(witcherDataPath, 'utf8'));
-    sitemapEntries.push(buildGalleryUrls(witcherData, '/the-witcher/'));
-    console.log(`Added ${witcherData.length + 1} URLs for The Witcher gallery.`);
-} catch (error) {
-    console.error('Could not read or parse The Witcher gallery data.', error);
-}
-
-// Add the main House of the Dragon gallery page
-sitemapEntries.push(buildStaticUrl('/house-of-the-dragon/', 'weekly', '0.9'));
-
-// Add all individual House of the Dragon images
-try {
-    const hotdData = JSON.parse(fs.readFileSync(hotdDataPath, 'utf8'));
-    sitemapEntries.push(buildGalleryUrls(hotdData, '/house-of-the-dragon/'));
-    console.log(`Added ${hotdData.length + 1} URLs for the House of the Dragon gallery.`);
-} catch (error) {
-    console.error('Could not read or parse House of the Dragon gallery data.', error);
-}
-
-// Add the main Game of Thrones gallery page
-sitemapEntries.push(buildStaticUrl('/game-of-thrones/', 'weekly', '0.9'));
-
-// Add all individual Game of Thrones images
-try {
-    const gotData = JSON.parse(fs.readFileSync(gotDataPath, 'utf8'));
-    sitemapEntries.push(buildGalleryUrls(gotData, '/game-of-thrones/'));
-    console.log(`Added ${gotData.length + 1} URLs for the Game of Thrones gallery.`);
-} catch (error) {
-    console.error('Could not read or parse Game of Thrones gallery data.', error);
+// A gallery that can't be read fails the run, so the workflow keeps the last
+// good sitemap instead of committing one without that gallery.
+for (const show of shows) {
+    const galleryData = JSON.parse(fs.readFileSync(path.join(__dirname, show, 'gallery-data.json'), 'utf8'));
+    const imageUrls = galleryData.map(item => item.src).filter(Boolean);
+    let start = 0;
+    do {
+        sitemapEntries.push(buildUrl(`/${show}/`, imageUrls.slice(start, start + maxImagesPerUrl)));
+        start += maxImagesPerUrl;
+    } while (start < imageUrls.length);
+    console.log(`Added ${imageUrls.length} images for /${show}/.`);
 }
 
 // --- Assemble and write the final sitemap ---
 
 const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  ${sitemapEntries.join('')}
-</urlset>`;
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">${sitemapEntries.join('')}
+</urlset>
+`;
 
 fs.writeFileSync(sitemapPath, sitemapContent);
 console.log(`Sitemap successfully generated at ${sitemapPath}`);
