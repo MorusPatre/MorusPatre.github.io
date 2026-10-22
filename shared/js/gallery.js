@@ -999,11 +999,319 @@ document.addEventListener('DOMContentLoaded', () => {
                 left: itemRect.left - galleryRect.left,
                 top: itemRect.top - galleryRect.top,
                 right: itemRect.right - galleryRect.left,
-                bottom: itemRect.bottom - galleryRect.top
+                bottom: itemRect.bottom - galleryRect.top,
+                hitBox: null
             });
         }
 
         return marqueeItemRects;
+    }
+
+    // --- Item Hit Boxes ---
+    // As in Binder's icon view, after Finder, an item is hit where it draws: its
+    // thumbnail, every pixel of the thumbnail's shadow with any alpha (Finder
+    // tests QuickLook's thumbnail image, which has the shadow baked in), the
+    // filename and the dimensions line. The rest of the figure is background,
+    // like the space around a Finder icon. A selected thumbnail trades its
+    // shadow for the gold glow, which plays Finder's selection box: it counts
+    // for clicks while it shows and never for the marquee.
+
+    // Safari, and every iOS browser, draws shadows with WebKit's own blur.
+    const drawsShadowsLikeWebKit = navigator.vendor === 'Apple Computer, Inc.';
+    const hitTextRange = document.createRange();
+    let thumbnailShadows = null;
+
+    window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
+        thumbnailShadows = null;
+    });
+
+    function isEmptyRect(rect) {
+        return !rect || rect.right <= rect.left || rect.bottom <= rect.top;
+    }
+
+    function rectsIntersect(a, b) {
+        return !isEmptyRect(a) && !isEmptyRect(b) &&
+            a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+    }
+
+    function rectContains(outer, inner) {
+        return outer.left <= inner.left && outer.right >= inner.right &&
+            outer.top <= inner.top && outer.bottom >= inner.bottom;
+    }
+
+    function rectContainsPoint(rect, x, y) {
+        return !isEmptyRect(rect) && x >= rect.left && x < rect.right && y >= rect.top && y < rect.bottom;
+    }
+
+    // The first shadow of a computed box-shadow, such as
+    // "rgba(0, 0, 0, 0.28) 0px 4px 14px 0px". An inset shadow falls inside the
+    // thumbnail, which counts anyway.
+    function parseBoxShadow(value) {
+        const shadow = value.split(/,(?![^(]*\))/)[0];
+        const color = shadow.match(/rgba?\(([^)]*)\)/);
+        if (!color || /\binset\b/.test(shadow)) return null;
+
+        const channels = color[1].split(/[\s,/]+/).filter(Boolean).map(parseFloat);
+        const alpha = channels.length > 3 ? channels[3] : 1;
+        const [x = 0, y = 0, blur = 0, spread = 0] =
+            shadow.replace(color[0], '').trim().split(/\s+/).map(parseFloat);
+        return alpha > 0 ? { x, y, blur, spread, alpha, template: null } : null;
+    }
+
+    // The thumbnail shadow and the selection glow for the current appearance.
+    // A probe resolves the tokens, since computed values come in px and rgba().
+    function getThumbnailShadows() {
+        if (thumbnailShadows) return thumbnailShadows;
+
+        const probe = document.createElement('div');
+        probe.style.display = 'none';
+        document.body.appendChild(probe);
+        const resolve = token => {
+            probe.style.boxShadow = `var(${token})`;
+            return parseBoxShadow(getComputedStyle(probe).boxShadow);
+        };
+        const artwork = resolve('--thumb-glow');
+        const selection = resolve('--accent-glow');
+        probe.remove();
+
+        // How far past its figure an item's hit box can reach: a blurred shadow
+        // is gone 3σ (1.5 blur radii) past its rect, and a click is a pixel wide.
+        const reachOf = shadow => shadow
+            ? Math.max(Math.abs(shadow.x), Math.abs(shadow.y)) + shadow.spread + 1.5 * shadow.blur
+            : 0;
+        thumbnailShadows = { artwork, selection, reach: Math.max(reachOf(artwork), reachOf(selection)) + 1 };
+        return thumbnailShadows;
+    }
+
+    // Abramowitz and Stegun 7.1.26, good to 1.5e-7: far finer than the half
+    // step of 8-bit alpha that decides whether a pixel is drawn.
+    function erf(x) {
+        const t = 1 / (1 + 0.3275911 * Math.abs(x));
+        const y = 1 - t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 +
+            t * (-1.453152027 + t * 1.061405429)))) * Math.exp(-x * x);
+        return x < 0 ? -y : y;
+    }
+
+    // A shadow's 8-bit alpha as the spec has it, which Chrome draws to within a
+    // pixel or two: the rect blurred by a Gaussian of σ = blur / 2. A sharp
+    // rect blurs one axis at a time, so its alpha is the product of the two.
+    function getGaussianShadowAlpha(x, y, rect, shadow) {
+        const coverage = (u, from, to) => {
+            if (shadow.blur === 0) return u >= from && u < to ? 1 : 0;
+            const scale = shadow.blur / 2 * Math.SQRT2;
+            return (erf((to - u) / scale) - erf((from - u) / scale)) / 2;
+        };
+        return Math.round(shadow.alpha * 255 *
+            coverage(x, rect.left, rect.right) * coverage(y, rect.top, rect.bottom));
+    }
+
+    // One box blur along a row or column, as WebKit's ShadowBlur::blurLayerImage
+    // runs it: a sliding sum in 17.15 fixed point, the ends held at the edge pixels.
+    function webKitBoxBlur(pixels, left, right) {
+        const length = pixels.length;
+        const blurred = new Uint8Array(length);
+        const count = left + 1 + right;
+        const inverse = Math.floor(((1 << 15) + count - 1) / count);
+        const at = i => pixels[clamp(i, 0, length - 1)];
+        let sum = 0;
+        for (let i = -left; i <= right; i++) sum += at(i);
+        for (let i = 0; i < length; i++) {
+            blurred[i] = (sum * inverse) >> 15;
+            sum += at(i + right + 1) - at(i - left);
+        }
+        return blurred;
+    }
+
+    // WebKit's shadow template (ShadowBlur::drawRectShadowWithTiling): a black
+    // square on a (4e + 1) px canvas at one pixel per CSS px, e = ceil(blur),
+    // blurred along the rows and then the columns, three boxes each, then
+    // tinted with the shadow colour.
+    function getWebKitShadowTemplate(shadow) {
+        if (shadow.template) return shadow.template;
+
+        const blur = Math.min(shadow.blur, 128);
+        const edge = Math.max(2, Math.ceil(blur));
+        const size = 4 * edge + 1;
+
+        // calculateLobes: three boxes for a Gaussian of σ = blur / 2, narrowed
+        // by WebKit's 0.88 fudge factor.
+        const diameter = Math.max(2, Math.floor(blur / 2 * 0.75 * Math.sqrt(2 * Math.PI) * 0.88 + 0.5));
+        const half = diameter >> 1;
+        const lobes = diameter & 1
+            ? [[half, half], [half, half], [half, half]]
+            : [[half, half - 1], [half - 1, half], [half, half]];
+
+        const alpha = new Uint8Array(size * size);
+        for (let y = edge; y < size - edge; y++) {
+            alpha.fill(255, y * size + edge, (y + 1) * size - edge);
+        }
+        for (let y = 0; y < size; y++) {
+            let row = alpha.subarray(y * size, (y + 1) * size);
+            for (const [left, right] of lobes) row = webKitBoxBlur(row, left, right);
+            alpha.set(row, y * size);
+        }
+        const column = new Uint8Array(size);
+        for (let x = 0; x < size; x++) {
+            for (let y = 0; y < size; y++) column[y] = alpha[y * size + x];
+            let blurred = column;
+            for (const [left, right] of lobes) blurred = webKitBoxBlur(blurred, left, right);
+            for (let y = 0; y < size; y++) alpha[y * size + x] = Math.floor(blurred[y] * shadow.alpha + 0.5);
+        }
+
+        shadow.template = { edge, size, alpha, fill: Math.floor(255 * shadow.alpha + 0.5) };
+        return shadow.template;
+    }
+
+    // The template pixel ShadowBlur::drawLayerPieces lays over `u` along one
+    // axis of a shadow rect: the template's ends over the rect's ends, its
+    // middle pixel stretched across a span WebKit truncates to whole px. -1 is
+    // outside the shadow.
+    function getWebKitTemplateIndex(u, from, to, edge) {
+        const middleEnd = from + edge + Math.trunc(to - from - 2 * edge);
+        if (u < from - edge || u >= middleEnd + 2 * edge) return -1;
+        if (u < from + edge) return Math.floor(u - from + edge);
+        if (u >= middleEnd) return Math.floor(u - middleEnd) + 2 * edge + 1;
+        return 2 * edge;
+    }
+
+    // A shadow's 8-bit alpha as Safari draws it. Against WebKit snapshots of
+    // these shadows it takes in every drawn pixel, and overshoots by at most a
+    // pixel of alpha 1/255 below the thumbnail.
+    function getWebKitShadowAlpha(x, y, rect, shadow) {
+        if (shadow.blur === 0) return getGaussianShadowAlpha(x, y, rect, shadow);
+
+        const template = getWebKitShadowTemplate(shadow);
+        const column = getWebKitTemplateIndex(x, rect.left, rect.right, template.edge);
+        const row = getWebKitTemplateIndex(y, rect.top, rect.bottom, template.edge);
+        if (column < 0 || row < 0) return 0;
+        // Between the stretched edges WebKit fills the plain colour.
+        if (column === 2 * template.edge && row === 2 * template.edge) return template.fill;
+        return template.alpha[row * template.size + column];
+    }
+
+    // Whether a shadow draws a device pixel with any alpha in `probe`. Its alpha
+    // only falls off away from the middle of its rect, so the probe's pixel
+    // nearest that middle decides.
+    function shadowDrawsIn(probe, card, shadow) {
+        if (!shadow) return false;
+
+        const rect = {
+            left: card.left + shadow.x - shadow.spread,
+            top: card.top + shadow.y - shadow.spread,
+            right: card.right + shadow.x + shadow.spread,
+            bottom: card.bottom + shadow.y + shadow.spread
+        };
+        const half = 0.5 / window.devicePixelRatio;
+        const nearest = (middle, from, to) => clamp(middle, from + half, Math.max(from + half, to - half));
+        const x = nearest((rect.left + rect.right) / 2, probe.left, probe.right);
+        const y = nearest((rect.top + rect.bottom) / 2, probe.top, probe.bottom);
+        const getAlpha = drawsShadowsLikeWebKit ? getWebKitShadowAlpha : getGaussianShadowAlpha;
+        return getAlpha(x, y, rect, shadow) > 0;
+    }
+
+    // What an item draws, in gallery coordinates: its canvas (the thumbnail's
+    // container), the thumbnail, the filename and the dimensions text. Measured
+    // only for items a click or the band comes near, and kept for the rest of
+    // the drag once the thumbnail has loaded; until then the item draws nothing.
+    function getItemHitBox(entry, galleryRect) {
+        if (entry.hitBox && entry.hitBox.isLoaded) return entry.hitBox;
+
+        const item = entry.item;
+        const toGallery = rect => ({
+            left: rect.left - galleryRect.left,
+            top: rect.top - galleryRect.top,
+            right: rect.right - galleryRect.left,
+            bottom: rect.bottom - galleryRect.top
+        });
+        // The thumbnail, and its shadow with it, is painted snapped to device
+        // pixels of the viewport.
+        const snap = u => Math.round(u * window.devicePixelRatio) / window.devicePixelRatio;
+        const snapped = rect => ({
+            left: snap(rect.left),
+            top: snap(rect.top),
+            right: snap(rect.right),
+            bottom: snap(rect.bottom)
+        });
+        // The dimensions line is a block as wide as the caption; only its text draws.
+        const textRect = element => {
+            if (!element) return null;
+            hitTextRange.selectNodeContents(element);
+            return toGallery(hitTextRange.getBoundingClientRect());
+        };
+        const hitBox = {
+            isLoaded: item.classList.contains('is-visible'),
+            canvas: toGallery(item.querySelector('.image-container').getBoundingClientRect())
+        };
+        if (hitBox.isLoaded) {
+            hitBox.card = toGallery(snapped(item.querySelector('img').getBoundingClientRect()));
+            hitBox.name = textRect(item.querySelector('.filename'));
+            hitBox.info = textRect(item.querySelector('.dimensions'));
+        }
+
+        entry.hitBox = hitBox;
+        return hitBox;
+    }
+
+    // Finder's image view: the band or click touches the thumbnail or a pixel
+    // of its shadow. A band around the whole canvas counts even before the
+    // thumbnail has loaded.
+    function hitsArtwork(probe, hitBox, shadow) {
+        if (rectContains(probe, hitBox.canvas)) return true;
+        return hitBox.isLoaded &&
+            (rectsIntersect(probe, hitBox.card) || shadowDrawsIn(probe, hitBox.card, shadow));
+    }
+
+    // Finder's -[TIconView _hitTestWithLocalPoint:]: the thumbnail and its
+    // shadow, the selection glow while it shows, the filename, the dimensions.
+    function isPointInItemHitBox(entry, x, y, galleryRect) {
+        const hitBox = getItemHitBox(entry, galleryRect);
+        if (!hitBox.isLoaded) return false;
+
+        const probe = { left: x, top: y, right: x + 1, bottom: y + 1 };
+        const shadows = getThumbnailShadows();
+        return hitsArtwork(probe, hitBox, shadows.artwork) ||
+            (isSelected(entry.item) && shadowDrawsIn(probe, hitBox.card, shadows.selection)) ||
+            rectContainsPoint(hitBox.name, x, y) ||
+            rectContainsPoint(hitBox.info, x, y);
+    }
+
+    // Finder's -[TIconView isIconOrTextInRect:]. The selection glow never counts,
+    // so what the band takes in doesn't change as it selects.
+    function doesBandHitItem(band, entry, galleryRect) {
+        const shadows = getThumbnailShadows();
+        if (band.left >= entry.right + shadows.reach || band.right <= entry.left - shadows.reach ||
+            band.top >= entry.bottom + shadows.reach || band.bottom <= entry.top - shadows.reach) {
+            return false;
+        }
+        // A band around the whole figure takes in its thumbnail, or its canvas
+        // while the thumbnail loads.
+        if (rectContains(band, entry)) return true;
+
+        const hitBox = getItemHitBox(entry, galleryRect);
+        return rectsIntersect(band, hitBox.name) || rectsIntersect(band, hitBox.info) ||
+            hitsArtwork(band, hitBox, shadows.artwork);
+    }
+
+    // The item a click at a viewport point hits, or null. Later figures paint on
+    // top, so they are tried first. Outside a drag a search may have changed the
+    // gallery since it was last measured, so it is measured afresh.
+    function getItemAtPoint(clientX, clientY) {
+        if (!isMarquee) marqueeItemRects = null;
+
+        const galleryRect = gallery.getBoundingClientRect();
+        const x = clientX - galleryRect.left;
+        const y = clientY - galleryRect.top;
+        const reach = getThumbnailShadows().reach;
+        const entries = getMarqueeItemRects(galleryRect);
+        for (let i = entries.length - 1; i >= 0; i--) {
+            const entry = entries[i];
+            if (x < entry.left - reach || x >= entry.right + reach ||
+                y < entry.top - reach || y >= entry.bottom + reach) {
+                continue;
+            }
+            if (isPointInItemHitBox(entry, x, y, galleryRect)) return entry.item;
+        }
+        return null;
     }
 
     function updateMarqueeAndSelection(clientX, clientY, isModifier) {
@@ -1058,13 +1366,16 @@ document.addEventListener('DOMContentLoaded', () => {
         marquee.style.height = `${visibleMarqueeRect.h}px`;
         updateMarqueeGutterHighlight(visibleMarqueeRect, galleryRect);
 
+        const band = {
+            left: selectionRect.x,
+            top: selectionRect.y,
+            right: selectionRect.x + selectionRect.w,
+            bottom: selectionRect.y + selectionRect.h
+        };
+
         for (const itemRect of getMarqueeItemRects(galleryRect)) {
             const item = itemRect.item;
-            const intersects =
-                selectionRect.x < itemRect.right &&
-                selectionRect.x + selectionRect.w > itemRect.left &&
-                selectionRect.y < itemRect.bottom &&
-                selectionRect.y + selectionRect.h > itemRect.top;
+            const intersects = doesBandHitItem(band, itemRect, galleryRect);
 
             if (isModifier) {
                 setSelection(item, intersects ? !preMarqueeSelectedItems.has(item) : preMarqueeSelectedItems.has(item));
@@ -1109,13 +1420,13 @@ document.addEventListener('DOMContentLoaded', () => {
         isMarquee = true;
         hasAutoScrolledUpDuringMarquee = false;
         marqueeStartScrollY = window.scrollY;
-        mouseDownItem = e.target.closest('figure');
+        marqueeItemRects = null;
+        mouseDownItem = getItemAtPoint(e.clientX, e.clientY);
 
         const galleryRect = gallery.getBoundingClientRect();
         startPos = getClampedMarqueePoint(e.clientX, e.clientY, galleryRect);
 
         preMarqueeSelectedItems = new Set(selectedItems);
-        marqueeItemRects = null;
     });
 
     // --- MouseMove Listener ---
@@ -1198,7 +1509,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         } else {
-            const itemUnderMouse = e.target.closest('figure');
+            const itemUnderMouse = getItemAtPoint(e.clientX, e.clientY);
 
             if (mouseDownItem) {
                 selectionAnchor = mouseDownItem;
@@ -1279,7 +1590,7 @@ document.addEventListener('DOMContentLoaded', () => {
     gallery.addEventListener('contextmenu', (e) => {
         e.preventDefault();
 
-        const figure = e.target.closest('figure');
+        const figure = getItemAtPoint(e.clientX, e.clientY);
 
         itemContextMenu.style.display = 'none';
         galleryContextMenu.style.display = 'none';
@@ -1305,7 +1616,7 @@ document.addEventListener('DOMContentLoaded', () => {
             itemContextMenu.style.left = `${e.clientX}px`;
             itemContextMenu.style.top = `${e.clientY}px`;
 
-        } else if (e.target === gallery) {
+        } else {
             rightClickedItem = null;
             galleryContextMenu.style.display = 'block';
             galleryContextMenu.style.left = `${e.clientX}px`;
@@ -1340,10 +1651,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         switch (targetId) {
             case 'context-menu-open': {
-                const dblClickEvent = new MouseEvent('dblclick', {
-                    bubbles: true, cancelable: true, view: window
-                });
-                primaryTarget.dispatchEvent(dblClickEvent);
+                openItem(primaryTarget);
                 break;
             }
             case 'context-menu-open-tab': {
@@ -1686,14 +1994,17 @@ document.addEventListener('DOMContentLoaded', () => {
         showImage(prevIndex);
     }
 
-    gallery.addEventListener('dblclick', function(event) {
-        const figure = event.target.closest('figure');
-        if (!figure) return;
+    function openItem(figure) {
         const visibleFigures = Array.from(gallery.querySelectorAll('figure:not([style*="display: none"])'));
         const index = visibleFigures.indexOf(figure);
         if (index > -1) {
             showImage(index);
         }
+    }
+
+    gallery.addEventListener('dblclick', function(event) {
+        const figure = getItemAtPoint(event.clientX, event.clientY);
+        if (figure) openItem(figure);
     });
 
     function hideModal() {
