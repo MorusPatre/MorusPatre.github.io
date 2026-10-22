@@ -1,11 +1,97 @@
 @import url("https://fonts.googleapis.com/css?family=Source+Sans+Pro:300italic,600italic,300,600");
 @import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&display=swap");
 
-/* Gallery theme. A page overrides these in a <style> block after this stylesheet. */
+/* Gallery theme. Dark is the default; light follows the device's appearance setting.
+   A page overrides the --theme-bg tokens in a <style> block after this stylesheet,
+   for both appearances. */
 :root {
+    color-scheme: dark;
     --theme-bg: #0f0e0c;
     --theme-bg-rgb: 15, 14, 12;
     --theme-bg-overlay: none;
+
+    /* Ink: text, rules, and the tints laid over the background for hovers and fills. */
+    --ink-rgb: 255, 255, 255;
+    --ink: rgb(var(--ink-rgb));
+    --ink-soft: #ccc;
+    --ink-muted: #999;
+    --on-ink: #1b1f22;
+    --search-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' /%3e%3c/svg%3e");
+
+    /* Materials: the sidebar, menus and the top bar's fallback. */
+    --panel-rgb: 25, 25, 25;
+    --chrome-material-bg: rgba(25, 25, 25, 0.56);
+    --chrome-material-border: rgba(var(--ink-rgb), 0.1);
+    --scrollbar-rgb: 255, 250, 240;
+
+    --focus-ring: #a3adaf;
+    --focus-glow: 0 0 5px rgba(163, 173, 175, 0.5);
+    --pill-bg: #3f3a36;
+    --pill-border: #5c5753;
+    --pill-text: #e0e0e0;
+    --pill-selected-bg: #5c5753;
+
+    --thumb-border: #474442;
+    --thumb-glow: 0 0 18px rgba(71, 68, 66, 0.3);
+
+    /* Gold selection accent. */
+    --accent: #dbb7a7;
+    --accent-glow: 0 0 18px rgba(255, 184, 130, 0.5);
+    --accent-text-glow: 0 0 22px rgba(255, 184, 130, 0.6);
+    --all-people-focus-pill: rgba(219, 183, 167, 0.34);
+    --text-selection: rgba(255, 222, 150, 0.3);
+
+    --modal-scrim: rgba(0, 0, 0, 0.9);
+    --modal-surface: rgba(10, 10, 10, 0.65);
+    --modal-shadow: 0 8px 16px 0 rgba(0,0,0,0.4),0 12px 40px 0 rgba(0,0,0,0.3);
+    --modal-info-bg: rgba(0, 0, 0, 0.2);
+    --modal-control: #aaa;
+    --modal-nav-hover: rgba(0,0,0,0.8);
+    --download-cancel-bg: #111;
+}
+
+@media (prefers-color-scheme: light) {
+
+    :root {
+        color-scheme: light;
+        --theme-bg: #f6f4f1;
+        --theme-bg-rgb: 246, 244, 241;
+
+        --ink-rgb: 31, 27, 24;
+        --ink-soft: #4a4541;
+        --ink-muted: #857f79;
+        --on-ink: #ffffff;
+        --search-icon: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23857f79' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' /%3e%3c/svg%3e");
+
+        --panel-rgb: 250, 249, 247;
+        --chrome-material-bg: rgba(255, 255, 255, 0.55);
+        --scrollbar-rgb: 31, 27, 24;
+
+        --focus-ring: #8e989b;
+        --focus-glow: 0 0 5px rgba(142, 152, 155, 0.45);
+        --pill-bg: #e8e4df;
+        --pill-border: #d0cac3;
+        --pill-text: #3a3531;
+        --pill-selected-bg: #d0cac3;
+
+        --thumb-border: #d8d3cd;
+        --thumb-glow: 0 0 18px rgba(60, 50, 40, 0.12);
+
+        --accent: #9c6247;
+        --accent-glow: 0 0 16px rgba(176, 108, 70, 0.4);
+        --accent-text-glow: 0 0 22px rgba(176, 108, 70, 0.25);
+        --all-people-focus-pill: rgba(156, 98, 71, 0.2);
+        --text-selection: rgba(222, 168, 96, 0.35);
+
+        --modal-scrim: rgba(246, 244, 241, 0.92);
+        --modal-surface: rgba(255, 255, 255, 0.7);
+        --modal-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.08), 0 12px 40px 0 rgba(0, 0, 0, 0.12);
+        --modal-info-bg: rgba(0, 0, 0, 0.03);
+        --modal-control: #8a847e;
+        --modal-nav-hover: rgba(31, 27, 24, 0.08);
+        --download-cancel-bg: #e6e2dd;
+    }
+
 }
 
 html, body, div, span, applet, object,
@@ -110,7 +196,7 @@ input, select, textarea {
 
 
     body, input, select, textarea {
-        color: #ffffff;
+        color: var(--ink);
         font-family: "Source Sans Pro", sans-serif;
         font-weight: 300;
         font-size: 1rem;
@@ -122,7 +208,7 @@ input, select, textarea {
         -webkit-transition: color 0.2s ease-in-out, background-color 0.2s ease-in-out, border-bottom-color 0.2s ease-in-out;
         -ms-transition: color 0.2s ease-in-out, background-color 0.2s ease-in-out, border-bottom-color 0.2s ease-in-out;
         transition: color 0.2s ease-in-out, background-color 0.2s ease-in-out, border-bottom-color 0.2s ease-in-out;
-        border-bottom: dotted 1px rgba(255, 255, 255, 0.5);
+        border-bottom: dotted 1px rgba(var(--ink-rgb), 0.5);
         text-decoration: none;
         color: inherit;
     }
@@ -132,7 +218,7 @@ input, select, textarea {
         }
 
     strong, b {
-        color: #ffffff;
+        color: var(--ink);
         font-weight: 600;
     }
 
@@ -145,7 +231,7 @@ input, select, textarea {
     }
 
     h1, h2, h3, h4, h5, h6 {
-        color: #ffffff;
+        color: var(--ink);
         font-weight: 600;
         line-height: 1.5;
         margin: 0 0 1rem 0;
@@ -159,7 +245,7 @@ input, select, textarea {
         }
 
         h1.major, h2.major, h3.major, h4.major, h5.major, h6.major {
-            border-bottom: solid 1px #ffffff;
+            border-bottom: solid 1px var(--ink);
             width: -moz-max-content;
             width: -webkit-max-content;
             width: -ms-max-content;
@@ -223,14 +309,14 @@ input, select, textarea {
     }
 
     blockquote {
-        border-left: solid 4px #ffffff;
+        border-left: solid 4px var(--ink);
         font-style: italic;
         margin: 0 0 2rem 0;
         padding: 0.5rem 0 0.5rem 2rem;
     }
 
     code {
-        background: rgba(255, 255, 255, 0.075);
+        background: rgba(var(--ink-rgb), 0.075);
         border-radius: 4px;
         font-family: "Courier New", monospace;
         font-size: 0.9rem;
@@ -254,7 +340,7 @@ input, select, textarea {
 
     hr {
         border: 0;
-        border-bottom: solid 1px #ffffff;
+        border-bottom: solid 1px var(--ink);
         margin: 2.75rem 0;
     }
 
@@ -345,7 +431,7 @@ input, select, textarea {
         }
 
     label {
-        color: #ffffff;
+        color: var(--ink);
         display: block;
         font-size: 0.8rem;
         font-weight: 300;
@@ -395,9 +481,9 @@ input, select, textarea {
         input[type="tel"]:focus,
         select:focus,
         textarea:focus {
-            background: rgba(255, 255, 255, 0.075);
-            border-color: #a3adaf;
-            box-shadow: 0 0 0 0.5px #a3adaf;
+            background: rgba(var(--ink-rgb), 0.075);
+            border-color: var(--focus-ring);
+            box-shadow: 0 0 0 0.5px var(--focus-ring);
         }
 
     select {
@@ -411,8 +497,8 @@ input, select, textarea {
     }
 
         select option {
-            color: #ffffff;
-            background: #1b1f22;
+            color: var(--ink);
+            background: var(--on-ink);
         }
 
         select:focus::-ms-value {
@@ -455,7 +541,7 @@ input, select, textarea {
             -webkit-user-select: none;
             -ms-user-select: none;
             user-select: none;
-            color: #ffffff;
+            color: var(--ink);
             cursor: pointer;
             display: inline-block;
             font-size: 0.8rem;
@@ -487,7 +573,7 @@ input, select, textarea {
                 -ms-transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
                 transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
                 border-radius: 4px;
-                border: solid 1px #ffffff;
+                border: solid 1px var(--ink);
                 content: '';
                 display: inline-block;
                 height: 1.65rem;
@@ -501,17 +587,17 @@ input, select, textarea {
 
         input[type="checkbox"]:checked + label:before,
         input[type="radio"]:checked + label:before {
-            background: #ffffff !important;
-            border-color: #ffffff !important;
-            color: #1b1f22;
+            background: var(--ink) !important;
+            border-color: var(--ink) !important;
+            color: var(--on-ink);
             content: '\f00c';
         }
 
         input[type="checkbox"]:focus + label:before,
         input[type="radio"]:focus + label:before {
-            background: rgba(255, 255, 255, 0.075);
-            border-color: #ffffff;
-            box-shadow: 0 0 0 1px #ffffff;
+            background: rgba(var(--ink-rgb), 0.075);
+            border-color: var(--ink);
+            box-shadow: 0 0 0 1px var(--ink);
         }
 
     input[type="checkbox"] + label:before {
@@ -523,27 +609,27 @@ input, select, textarea {
     }
 
     ::-webkit-input-placeholder {
-        color: rgba(255, 255, 255, 0.5) !important;
+        color: rgba(var(--ink-rgb), 0.5) !important;
         opacity: 0.7;
     }
 
     :-moz-placeholder {
-        color: rgba(255, 255, 255, 0.5) !important;
+        color: rgba(var(--ink-rgb), 0.5) !important;
         opacity: 0.7;
     }
 
     ::-moz-placeholder {
-        color: rgba(255, 255, 255, 0.5) !important;
+        color: rgba(var(--ink-rgb), 0.5) !important;
         opacity: 0.7;
     }
 
     :-ms-input-placeholder {
-        color: rgba(255, 255, 255, 0.5) !important;
+        color: rgba(var(--ink-rgb), 0.5) !important;
         opacity: 0.7;
     }
 
     .formerize-placeholder {
-        color: rgba(255, 255, 255, 0.5) !important;
+        color: rgba(var(--ink-rgb), 0.5) !important;
         opacity: 0.7;
     }
 
@@ -551,7 +637,7 @@ input, select, textarea {
 
     .box {
         border-radius: 4px;
-        border: solid 1px #ffffff;
+        border: solid 1px var(--ink);
         margin-bottom: 2rem;
         padding: 1.5em;
     }
@@ -718,7 +804,7 @@ input, select, textarea {
         }
 
             ul.alt li {
-                border-top: solid 1px #ffffff;
+                border-top: solid 1px var(--ink);
                 padding: 0.5em 0;
             }
 
@@ -882,7 +968,7 @@ input, select, textarea {
 
             ul.icons li a {
                 border-radius: 100%;
-                box-shadow: inset 0 0 0 1px #ffffff;
+                box-shadow: inset 0 0 0 1px var(--ink);
                 display: inline-block;
                 height: 2.25rem;
                 line-height: 2.25rem;
@@ -891,11 +977,11 @@ input, select, textarea {
             }
 
                 ul.icons li a:hover {
-                    background-color: rgba(255, 255, 255, 0.075);
+                    background-color: rgba(var(--ink-rgb), 0.075);
                 }
 
                 ul.icons li a:active {
-                    background-color: rgba(255, 255, 255, 0.175);
+                    background-color: rgba(var(--ink-rgb), 0.175);
                 }
 
 /* Table */
@@ -911,13 +997,13 @@ input, select, textarea {
     }
 
         table tbody tr {
-            border: solid 1px #ffffff;
+            border: solid 1px var(--ink);
             border-left: 0;
             border-right: 0;
         }
 
             table tbody tr:nth-child(2n + 1) {
-                background-color: rgba(255, 255, 255, 0.075);
+                background-color: rgba(var(--ink-rgb), 0.075);
             }
 
         table td {
@@ -925,7 +1011,7 @@ input, select, textarea {
         }
 
         table th {
-            color: #ffffff;
+            color: var(--ink);
             font-size: 0.9em;
             font-weight: 600;
             padding: 0 0.75em 0.75em 0.75em;
@@ -933,11 +1019,11 @@ input, select, textarea {
         }
 
         table thead {
-            border-bottom: solid 2px #ffffff;
+            border-bottom: solid 2px var(--ink);
         }
 
         table tfoot {
-            border-top: solid 2px #ffffff;
+            border-top: solid 2px var(--ink);
         }
 
         table.alt {
@@ -945,7 +1031,7 @@ input, select, textarea {
         }
 
             table.alt tbody tr td {
-                border: solid 1px #ffffff;
+                border: solid 1px var(--ink);
                 border-left-width: 0;
                 border-top-width: 0;
             }
@@ -984,8 +1070,8 @@ input, select, textarea {
         background-color: transparent;
         border-radius: 4px;
         border: 0;
-        box-shadow: inset 0 0 0 1px #ffffff;
-        color: #ffffff !important;
+        box-shadow: inset 0 0 0 1px var(--ink);
+        color: var(--ink) !important;
         cursor: pointer;
         display: inline-block;
         font-size: 0.8rem;
@@ -1006,7 +1092,7 @@ input, select, textarea {
         input[type="button"]:hover,
         button:hover,
         .button:hover {
-            background-color: rgba(255, 255, 255, 0.075);
+            background-color: rgba(var(--ink-rgb), 0.075);
         }
 
         input[type="submit"]:active,
@@ -1014,7 +1100,7 @@ input, select, textarea {
         input[type="button"]:active,
         button:active,
         .button:active {
-            background-color: rgba(255, 255, 255, 0.175);
+            background-color: rgba(var(--ink-rgb), 0.175);
         }
 
         input[type="submit"].icon:before,
@@ -1048,8 +1134,8 @@ input, select, textarea {
         input[type="button"].primary,
         button.primary,
         .button.primary {
-            background-color: #ffffff;
-            color: #1b1f22 !important;
+            background-color: var(--ink);
+            color: var(--on-ink) !important;
             font-weight: 600;
         }
 
@@ -1198,10 +1284,10 @@ input, select, textarea {
     height: 2.5rem;
 
     /* === NEW: Background for visibility when scrolling === */
-    background-color: rgba(25, 25, 25, 0.8);
+    background-color: rgba(var(--panel-rgb), 0.8);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(var(--ink-rgb), 0.1);
     cursor: default;
 
     /* Add these lines to disable selection on the header itself */
@@ -1281,7 +1367,7 @@ input, select, textarea {
     flex-wrap: nowrap;
     align-items: center;
     border-radius: 20px;
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: rgba(var(--ink-rgb), 0.05);
     padding: 0 12px 0 30px; /* Removed vertical padding */
     width: 26.5em;
     height: 36px; /* Locks height to 36px */
@@ -1292,13 +1378,13 @@ input, select, textarea {
 }
 
 .search-wrapper:hover {
-    background-color: rgba(255, 255, 255, 0.075);
+    background-color: rgba(var(--ink-rgb), 0.075);
 }
 
 .search-wrapper.is-focused {
-    background: rgba(255, 255, 255, 0.075);
-    border: solid 1px #a3adaf;
-    box-shadow: 0 0 0 0.5px #a3adaf;
+    background: rgba(var(--ink-rgb), 0.075);
+    border: solid 1px var(--focus-ring);
+    box-shadow: 0 0 0 0.5px var(--focus-ring);
     padding: 0 11px 0 29px; /* Offset for 1px border to prevent layout shifting */
 }
 
@@ -1310,7 +1396,7 @@ input, select, textarea {
     padding: 0 0 0 1px !important; /* Removed vertical padding */
     margin: 0 !important;
     outline: none !important;
-    color: #ffffff !important;
+    color: var(--ink) !important;
     box-shadow: none !important;
     border-radius: 0 !important;
     height: 100% !important; /* Fills container height */
@@ -1328,13 +1414,13 @@ input, select, textarea {
 .search-pill {
     display: inline-flex;
     align-items: center;
-    background-color: #3f3a36; /* Correct visible background */
-    border: 1px solid #5c5753;   /* Correct visible border */
+    background-color: var(--pill-bg);
+    border: 1px solid var(--pill-border);
     border-radius: 10px;
     padding: 0px 8px;
     margin: 2px 6px 2px 0;
     font-size: 0.6rem;
-    color: #e0e0e0;
+    color: var(--pill-text);
     cursor: pointer;
     user-select: none;
     transition: all 0.2s ease;
@@ -1343,10 +1429,10 @@ input, select, textarea {
 
 /* A pill's appearance when it is actively selected */
 .search-pill.selected {
-    background-color: #5c5753;
-    border-color: #a3adaf;
-    color: #fff;
-    box-shadow: 0 0 5px rgba(163, 173, 175, 0.5); /* Adds the selection glow */
+    background-color: var(--pill-selected-bg);
+    border-color: var(--focus-ring);
+    color: var(--ink);
+    box-shadow: var(--focus-glow); /* Adds the selection glow */
 }
 
 .search-pill-text {
@@ -1363,7 +1449,7 @@ input, select, textarea {
 }
 
 .remove-pill:hover {
-    color: #fff;
+    color: var(--ink);
 }
 
 /* Main */
@@ -1458,11 +1544,11 @@ input, select, textarea {
                 }
 
                 #main article .close:hover:before {
-                    background-color: rgba(255, 255, 255, 0.075);
+                    background-color: rgba(var(--ink-rgb), 0.075);
                 }
 
                 #main article .close:active:before {
-                    background-color: rgba(255, 255, 255, 0.175);
+                    background-color: rgba(var(--ink-rgb), 0.175);
                 }
 
         @media screen and (max-width: 736px) {
@@ -1616,9 +1702,9 @@ body.is-sidebar-collapsed #gallery-blur-layer {
     width: auto;
     height: auto;
     object-fit: contain;
-    border: solid 1px #474442;
+    border: solid 1px var(--thumb-border);
     pointer-events: none; /* Makes sure clicks go to the parent figure */
-    box-shadow: 0 0 18px rgba(71, 68, 66, 0.3); /* A warm grey glow */
+    box-shadow: var(--thumb-glow);
 }
 
 /* 5. The Filename Caption */
@@ -1626,7 +1712,7 @@ body.is-sidebar-collapsed #gallery-blur-layer {
     font-family: "Source Sans Pro", sans-serif;
     font-weight: 300;
     font-size: 0.65rem;
-    color: rgba(255, 255, 255, 0.8);
+    color: rgba(var(--ink-rgb), 0.8);
     line-height: 1.4;
     word-break: break-all;
     padding: 0 0.25rem;
@@ -1654,8 +1740,8 @@ body.is-sidebar-collapsed #gallery-blur-layer {
 /* 6. Marquee Selection Box */
 #marquee {
     position: absolute;
-    border: 1px solid rgba(255, 255, 255, 0.246);
-    background-color: rgba(255, 255, 255, 0.098);
+    border: 1px solid rgba(var(--ink-rgb), 0.246);
+    background-color: rgba(var(--ink-rgb), 0.098);
     pointer-events: none;
     visibility: hidden;
     z-index: 9; /* Changed from 10 to 9 */
@@ -1738,7 +1824,7 @@ Modal / Lightbox Styles
     width: 100%;
     height: 100%;
     overflow: auto;
-    background-color: rgba(0, 0, 0, 0.9);
+    background-color: var(--modal-scrim);
     align-items: center;
     justify-content: center;
 
@@ -1760,11 +1846,11 @@ Modal / Lightbox Styles
 .modal-content {
     display: flex;
     flex-direction: row;
-    background-color: rgba(10, 10, 10, 0.65);
+    background-color: var(--modal-surface);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px); /* Safari compatibility */
     margin: auto;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(var(--ink-rgb), 0.2);
     border-radius: 12px;
     width: 90%;
     max-width: 1400px;
@@ -1772,13 +1858,13 @@ Modal / Lightbox Styles
     max-height: 90vh; /* Set a max-height relative to viewport for very large images */
     align-items: stretch;
     position: relative;
-    box-shadow: 0 8px 16px 0 rgba(0,0,0,0.4),0 12px 40px 0 rgba(0,0,0,0.3); /* Enhanced shadow */
+    box-shadow: var(--modal-shadow);
     overflow: hidden; /* ADDED to apply border-radius to children */
 }
 
 /* The Close Button */
 .modal-close {
-    color: #aaa;
+    color: var(--modal-control);
     position: absolute;
     top: 15px;
     right: 25px;
@@ -1789,7 +1875,7 @@ Modal / Lightbox Styles
 
 .modal-close:hover,
 .modal-close:focus {
-    color: #fff;
+    color: var(--ink);
     text-decoration: none;
     cursor: pointer;
 }
@@ -1802,7 +1888,7 @@ Modal / Lightbox Styles
     width: auto;
     padding: 16px;
     margin-top: -50px;
-    color: white;
+    color: var(--ink);
     font-weight: bold;
     font-size: 20px;
     transition: 0.6s ease;
@@ -1823,7 +1909,7 @@ Modal / Lightbox Styles
 
 /* On hover, add a black background color with a little transparency */
 .modal-prev:hover, .modal-next:hover {
-    background-color: rgba(0,0,0,0.8);
+    background-color: var(--modal-nav-hover);
 }
 
 /* Left side of the modal (the image) */
@@ -1853,7 +1939,7 @@ Modal / Lightbox Styles
     flex: 1;
     min-width: 350px; /* Ensure info panel has enough space */
     padding: 2.5rem;
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: var(--modal-info-bg);
     display: flex;
     flex-direction: column;
     overflow-y: auto;
@@ -1894,20 +1980,20 @@ New Styles for Finder-Style Info Panel
 
 .info-item {
     padding: 0.5rem 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(var(--ink-rgb), 0.1);
 }
 
 .info-grid dt {
     font-size: 0.55rem;
     font-weight: 300;
-    color: #999;
+    color: var(--ink-muted);
     text-transform: uppercase;
     margin: 0;
 }
 
 .info-grid dd {
     font-size: 0.65rem;
-    color: #fff;
+    color: var(--ink);
     margin: 0;
     word-wrap: break-word;
 }
@@ -1919,7 +2005,7 @@ New Styles for Finder-Style Info Panel
     margin: 0;
     font-size: 0.7rem;
     letter-spacing: 0.1rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    border-bottom: 1px solid rgba(var(--ink-rgb), 0.2);
 }
 
 /* ================================================
@@ -1928,15 +2014,15 @@ Custom Download Button Style
 */
 /* Using the 'Subtle & Integrated' style */
 #modal-download-btn.download-btn {
-    background-color: rgba(255, 255, 255, 0.075);
-    color: #ffffff !important;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+    background-color: rgba(var(--ink-rgb), 0.075);
+    color: var(--ink) !important;
+    box-shadow: inset 0 0 0 1px rgba(var(--ink-rgb), 0.25);
     font-weight: 300;
 }
 
 #modal-download-btn.download-btn:hover {
-    background-color: rgba(255, 255, 255, 0.15);
-    box-shadow: inset 0 0 0 1px #ffffff;
+    background-color: rgba(var(--ink-rgb), 0.15);
+    box-shadow: inset 0 0 0 1px var(--ink);
 }
 
 #modal-download-btn.download-btn .fas {
@@ -1953,17 +2039,17 @@ Custom Context Menu
     display: none; /* Hidden by default */
     position: fixed; /* Stays in place on the screen */
     z-index: 2000; /* Ensures it's on top of other elements */
-    background-color: rgba(25, 25, 25, 0.7);
+    background-color: rgba(var(--panel-rgb), 0.7);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px); /* Safari compatibility */
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(var(--ink-rgb), 0.1);
     border-radius: 8px;
     padding: 5px 0;
     box-shadow: 0 6px 20px rgba(0,0,0,0.3);
     font-family: "Source Sans Pro", sans-serif;
     font-weight: 300;
     font-size: 0.65rem; /* Matched to filename size */
-    color: #ffffff;
+    color: var(--ink);
     -webkit-user-select: none; /* Prevent text selection */
     -ms-user-select: none;
     user-select: none;
@@ -1983,7 +2069,7 @@ Custom Context Menu
 
 /* MODIFIED: This rule now excludes .separator from the hover effect */
 .context-menu ul li:not(.separator):hover {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: rgba(var(--ink-rgb), 0.1);
 }
 
 /* NEW: This rule styles the separator as a centered, inset line */
@@ -1991,7 +2077,7 @@ Custom Context Menu
     height: 1px;
     padding: 0;
     margin: 6px 15px;
-    background-color: rgba(255, 255, 255, 0.15);
+    background-color: rgba(var(--ink-rgb), 0.15);
     cursor: default; /* Use the default cursor, not the pointer */
 }
 
@@ -2019,7 +2105,7 @@ Custom Context Menu
     background-repeat: no-repeat;
     background-size: contain;
     /* The SVG icon is embedded here. You can change stroke-width from '1.5' to '1' for ultra-thin or '2' for thicker. */
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' /%3e%3c/svg%3e");
+    background-image: var(--search-icon);
 }
 
 .clear-search-button {
@@ -2029,7 +2115,7 @@ Custom Context Menu
     transform: translateY(-50%);
     cursor: default;
     display: none; /* Hidden by default */
-    color: #999;
+    color: var(--ink-muted);
     font-size: 1.2rem;
     font-weight: bold;
     line-height: 1; /* Ensure the 'x' is centered in its own box */
@@ -2040,7 +2126,7 @@ Custom Context Menu
 }
 
 .clear-search-button:hover {
-    color: #fff;
+    color: var(--ink);
 }
 
 
@@ -2078,7 +2164,7 @@ html, body {
     top: 0;
     right: 1px;
     width: 3px;
-    background-color: rgba(255, 250, 240, 0.35);
+    background-color: rgba(var(--scrollbar-rgb), 0.35);
     border-radius: 2px;
     cursor: default;
     /* Animate all property changes smoothly */
@@ -2090,7 +2176,7 @@ html, body {
 #custom-scrollbar-thumb.is-near {
     right: 2px;  /* Re-center the wider thumb */
     width: 15px;  /* The new, wider width */
-    background-color: rgba(255, 250, 240, 0.55);
+    background-color: rgba(var(--scrollbar-rgb), 0.55);
 }
 
 /* Invisible, larger grab area around the 'is-near' thumb */
@@ -2114,15 +2200,15 @@ html, body {
 
 /* Changes the image border to gold and adds a soft glow effect */
 #photo-gallery figure.selected img {
-    border-color: #dbb7a7; /* Gold */
-    box-shadow: 0 0 18px rgba(255, 184, 130, 0.5); /* Gold with 50% opacity */
+    border-color: var(--accent);
+    box-shadow: var(--accent-glow);
 }
 
 /* Makes the filename text color and glow match the selected image's border. */
 #photo-gallery figure.selected figcaption .filename {
-    color: #dbb7a7; /* Same color as the selected image border */
+    color: var(--accent); /* Same color as the selected image border */
     /* A single shadow with a large blur-radius for a very soft effect. */
-    text-shadow: 0 0 22px rgba(255, 184, 130, 0.6);
+    text-shadow: var(--accent-text-glow);
 }
 /*
 ==================================================================
@@ -2189,11 +2275,11 @@ html, body {
 */
 
 ::selection {
-  background-color: rgba(255, 222, 150, 0.3); /* An muted, semi-transparent, gold */
+  background-color: var(--text-selection);
 }
 
 ::-moz-selection { /* Firefox compatibility */
-  background-color: rgba(255, 222, 150, 0.3);
+  background-color: var(--text-selection);
 }
 
 /*
@@ -2214,7 +2300,7 @@ html, body {
     background-color: rgba(var(--theme-bg-rgb), 0.85);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(var(--ink-rgb), 0.15);
     border-radius: 4px;
     z-index: 1001;
     max-height: 280px;
@@ -2226,7 +2312,7 @@ html, body {
     padding: 8px 30px;
     cursor: default;
     font-size: 0.65rem;
-    color: #ccc;
+    color: var(--ink-soft);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -2235,8 +2321,8 @@ html, body {
 
 .suggestion-item:hover,
 .suggestion-item.active {
-    background-color: rgba(255, 255, 255, 0.1);
-    color: #fff;
+    background-color: rgba(var(--ink-rgb), 0.1);
+    color: var(--ink);
 }
 
 #suggestions-container::-webkit-scrollbar {
@@ -2246,11 +2332,11 @@ html, body {
     background: transparent;
 }
 #suggestions-container::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(var(--ink-rgb), 0.3);
     border-radius: 4px;
 }
 #suggestions-container::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.5);
+    background: rgba(var(--ink-rgb), 0.5);
 }
 
 /* --- Download Progress Indicator --- */
@@ -2294,7 +2380,7 @@ html, body {
 
 #download-indicator .progress-circle {
     /* The background is now ONLY the conic-gradient for the progress */
-    background: conic-gradient(#fff var(--progress-angle), rgba(255,255,255,0.2) 0deg);
+    background: conic-gradient(var(--ink) var(--progress-angle), rgba(var(--ink-rgb), 0.2) 0deg);
 
     /* This mask now correctly cuts a real hole out of the background */
     -webkit-mask-image: radial-gradient(transparent 56%, black 57%);
@@ -2311,8 +2397,8 @@ html, body {
 
 /* --- Cancel (Hover) State --- */
 #download-indicator .cancel-icon {
-    background-color: #111;
-    color: #fff;
+    background-color: var(--download-cancel-bg);
+    color: var(--ink);
     font-size: 20px; /* Changed from 24px */
     line-height: 1;
     cursor: native;
@@ -2336,7 +2422,6 @@ Finder-Style Sidebar
 */
 
 :root {
-    --chrome-material-bg: rgba(25, 25, 25, 0.56);
     --top-bar-material-rgb: var(--theme-bg-rgb);
     --top-bar-material-bg: rgba(var(--top-bar-material-rgb), 0.8);
     --top-bar-material-gradient: linear-gradient(
@@ -2354,7 +2439,6 @@ Finder-Style Sidebar
         transparent 100%
     );
     --chrome-material-blur: blur(4px);
-    --chrome-material-border: rgba(255, 255, 255, 0.1);
     --sidebar-width: 240px;
     --sidebar-min-width: 176px;
     --sidebar-max-width: 420px;
@@ -2471,7 +2555,7 @@ Finder-Style Sidebar
 
 .sidebar-filter-heading {
     margin: 0 0 0.42rem;
-    color: rgba(255, 255, 255, 0.9);
+    color: rgba(var(--ink-rgb), 0.9);
     font-family: 'Game of Thrones', 'Cinzel', 'Trajan Pro', serif;
     font-size: 0.82rem;
     font-weight: 600;
@@ -2508,7 +2592,7 @@ Finder-Style Sidebar
     border-radius: 7px;
     background: transparent;
     box-shadow: none;
-    color: rgba(255, 255, 255, 0.68) !important;
+    color: rgba(var(--ink-rgb), 0.68) !important;
     font: inherit;
     font-size: 0.72rem;
     font-weight: 300;
@@ -2527,8 +2611,8 @@ Finder-Style Sidebar
 }
 
 #finder-sidebar .sidebar-option:hover, #finder-sidebar .sidebar-option:focus-visible, #finder-sidebar .sidebar-option.is-active {
-    background: rgba(255, 255, 255, 0.16);
-    color: rgba(255, 255, 255, 0.92) !important;
+    background: rgba(var(--ink-rgb), 0.16);
+    color: rgba(var(--ink-rgb), 0.92) !important;
 }
 
 #finder-sidebar .sidebar-option:focus {
@@ -2540,7 +2624,7 @@ Finder-Style Sidebar
 }
 
 .sidebar-option--muted {
-    color: rgba(255, 255, 255, 0.56) !important;
+    color: rgba(var(--ink-rgb), 0.56) !important;
 }
 
 .sidebar-toggle {
@@ -2557,7 +2641,7 @@ Finder-Style Sidebar
     border-radius: 7px;
     background: transparent;
     box-shadow: none;
-    color: rgba(255, 255, 255, 0.72);
+    color: rgba(var(--ink-rgb), 0.72);
     cursor: default;
     -webkit-appearance: none;
     appearance: none;
@@ -2575,8 +2659,8 @@ Finder-Style Sidebar
 }
 
 .sidebar-toggle:hover, .sidebar-toggle:focus-visible {
-    background: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.9);
+    background: rgba(var(--ink-rgb), 0.1);
+    color: rgba(var(--ink-rgb), 0.9);
 }
 
 .sidebar-toggle:focus {
@@ -2778,7 +2862,6 @@ All People Column
     --all-people-column-min-width: 150px;
     --all-people-row-height: 1.1rem;
     --all-people-pill-inset: 0.5rem;
-    --all-people-focus-pill: rgba(219, 183, 167, 0.34);
 }
 
 #all-people-column {
@@ -2819,7 +2902,7 @@ All People Column
     margin: 0 var(--all-people-pill-inset);
     padding: 0 0.34rem;
     border-radius: 7px;
-    color: rgba(255, 255, 255, 0.68);
+    color: rgba(var(--ink-rgb), 0.68);
     font-size: 0.72rem;
     font-weight: 300;
     line-height: 1.25;
@@ -2834,8 +2917,8 @@ All People Column
 
 /* Adjacent picks join into one pill, as a table's selected rows do. */
 .all-people-row.is-selected {
-    background: rgba(255, 255, 255, 0.16);
-    color: rgba(255, 255, 255, 0.92);
+    background: rgba(var(--ink-rgb), 0.16);
+    color: rgba(var(--ink-rgb), 0.92);
 }
 
 .all-people-row.is-selected + .all-people-row.is-selected {
@@ -2850,7 +2933,7 @@ All People Column
 
 .all-people-list:focus .all-people-row.is-selected {
     background: var(--all-people-focus-pill);
-    color: #fff;
+    color: var(--ink);
 }
 
 .all-people-resize-handle {
@@ -2886,7 +2969,7 @@ body.is-resizing-all-people-column * {
 
 .all-people-match-label {
     margin-right: 0.08rem;
-    color: rgba(255, 255, 255, 0.68);
+    color: rgba(var(--ink-rgb), 0.68);
 }
 
 .all-people-match-pills {
@@ -2903,7 +2986,7 @@ body.is-resizing-all-people-column * {
     border-radius: 7px;
     background: transparent;
     box-shadow: inset 0 0 0 1px transparent;
-    color: rgba(255, 255, 255, 0.78) !important;
+    color: rgba(var(--ink-rgb), 0.78) !important;
     font: inherit;
     font-weight: 600;
     letter-spacing: 0;
@@ -2913,12 +2996,12 @@ body.is-resizing-all-people-column * {
 }
 
 #app-shell .all-people-match-pill:hover {
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+    box-shadow: inset 0 0 0 1px rgba(var(--ink-rgb), 0.22);
 }
 
 #app-shell .all-people-match-pill.is-active {
-    background: rgba(255, 255, 255, 0.16);
-    color: rgba(255, 255, 255, 0.95) !important;
+    background: rgba(var(--ink-rgb), 0.16);
+    color: rgba(var(--ink-rgb), 0.95) !important;
 }
 
 #app-shell .all-people-match-row + #photo-gallery {
@@ -2936,7 +3019,7 @@ body.is-resizing-all-people-column * {
     gap: 0.6rem;
     width: max-content;
     max-width: min(360px, calc(100% - 32px));
-    color: rgba(255, 255, 255, 0.56);
+    color: rgba(var(--ink-rgb), 0.56);
     font-size: 0.72rem;
     line-height: 1.35;
     text-align: center;
@@ -2950,11 +3033,11 @@ body.is-resizing-all-people-column * {
 #app-shell .all-people-empty-button {
     font-size: 0.62rem;
     font-weight: 400;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+    box-shadow: inset 0 0 0 1px rgba(var(--ink-rgb), 0.28);
 }
 
 #app-shell .all-people-empty-button:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(var(--ink-rgb), 0.08);
 }
 
 @media screen and (max-width: 736px) {

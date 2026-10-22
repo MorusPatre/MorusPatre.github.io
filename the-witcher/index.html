@@ -4,16 +4,25 @@
         <title>The Witcher</title>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+        <meta name="color-scheme" content="dark light" />
 
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
 
-        <link rel="stylesheet" href="../shared/css/gallery.css?v=20261022-2" />
+        <link rel="stylesheet" href="../shared/css/gallery.css?v=20261022-3" />
         <noscript><link rel="stylesheet" href="../shared/css/noscript.css" /></noscript>
         <style>
             :root {
                 --theme-bg: #1f1b18;
                 --theme-bg-rgb: 31, 27, 24;
                 --theme-bg-overlay: linear-gradient(to top, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url("/shared/images/overlay.png");
+            }
+
+            @media (prefers-color-scheme: light) {
+                :root {
+                    --theme-bg: #f3efe9;
+                    --theme-bg-rgb: 243, 239, 233;
+                    --theme-bg-overlay: linear-gradient(to top, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.3)), url("/shared/images/overlay.png");
+                }
             }
         </style>
     </head>
@@ -141,7 +150,7 @@
 
         <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
-        <script src="../shared/js/gallery.js?v=20261022-2"></script>
+        <script src="../shared/js/gallery.js?v=20261022-3"></script>
         <script src="../shared/js/gallery-loader.js"></script>
 
         <div id="image-modal" class="modal-overlay">

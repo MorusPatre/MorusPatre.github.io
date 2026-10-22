@@ -821,7 +821,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const MARQUEE_SCROLL_EDGE_OVERSCAN = 1;
     const MARQUEE_EDGE_CONTACT_TOLERANCE = 1;
-    const MARQUEE_EDGE_HIGHLIGHT_COLOR = 'rgba(255, 255, 255, 0.92)';
+    const MARQUEE_EDGE_HIGHLIGHT_COLOR = 'rgba(var(--ink-rgb), 0.92)';
     const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
     function getViewportBounds() {
