@@ -1013,8 +1013,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // tests QuickLook's thumbnail image, which has the shadow baked in), the
     // filename and the dimensions line. The rest of the figure is background,
     // like the space around a Finder icon. A selected thumbnail trades its
-    // shadow for the gold glow, which plays Finder's selection box: it counts
-    // for clicks while it shows and never for the marquee.
+    // shadow for the gold glow, which plays Finder's selection box: a click
+    // tests whichever of the two is drawn, the marquee always the shadow.
 
     // Safari, and every iOS browser, draws shadows with WebKit's own blur.
     const drawsShadowsLikeWebKit = navigator.vendor === 'Apple Computer, Inc.';
@@ -1262,15 +1262,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Finder's -[TIconView _hitTestWithLocalPoint:]: the thumbnail and its
-    // shadow, the selection glow while it shows, the filename, the dimensions.
+    // shadow, or the selection glow that replaces the shadow while it shows,
+    // the filename, the dimensions.
     function isPointInItemHitBox(entry, x, y, galleryRect) {
         const hitBox = getItemHitBox(entry, galleryRect);
         if (!hitBox.isLoaded) return false;
 
         const probe = { left: x, top: y, right: x + 1, bottom: y + 1 };
         const shadows = getThumbnailShadows();
-        return hitsArtwork(probe, hitBox, shadows.artwork) ||
-            (isSelected(entry.item) && shadowDrawsIn(probe, hitBox.card, shadows.selection)) ||
+        const shadow = isSelected(entry.item) ? shadows.selection : shadows.artwork;
+        return hitsArtwork(probe, hitBox, shadow) ||
             rectContainsPoint(hitBox.name, x, y) ||
             rectContainsPoint(hitBox.info, x, y);
     }
