@@ -1652,10 +1652,12 @@ Styling for the Finder-Style Photo Gallery
     /* QuickLook insets a thumbnail 7/128 of the icon a side (128 to 256). */
     --thumb-inset: round(var(--icon-size) * 7 / 128, 1px);
     --thumb-box: calc(var(--icon-size) - 2 * var(--thumb-inset));
-    /* Binder rounds a thumbnail by its View Options corner radius, a share of
-       the box, set to 6% there. Its corners are Apple's continuous ones, which
-       Safari can't draw; circular ones of the same radius stay within 0.2px. */
-    --thumb-radius: calc(var(--thumb-box) * 0.06);
+    /* View Options ▸ Corner radius: a share of the thumbnail box, 0 to 0.5.
+       The panel sets it; the gallery starts at 6%. Binder draws Apple's
+       continuous corners, which Safari can't; circular ones of the same
+       radius stay within 0.2px of them at 6%. */
+    --corner-radius: 0.06;
+    --thumb-radius: calc(var(--thumb-box) * var(--corner-radius));
     /* The name starts 2px below the selection box, floored. */
     --name-top: round(down, var(--icon-top) + var(--icon-size) + var(--icon-padding) + 2px, 1px);
     /* The name wraps at 4 to 20 widths of "0" across the grid spacing range,
@@ -2411,6 +2413,159 @@ Custom Context Menu
     content: '\2713';
     position: absolute;
     left: 12px;
+}
+
+/*
+============================================
+View Options Panel
+============================================
+*/
+
+/* Binder's View Options window: 236pt wide, 18pt margins, its controls in an
+   11pt font. Here it is set in the menus' font and material, so its metrics
+   are points of that font: --pt is 1/11 of it. The script places it. */
+.view-options-panel {
+    --pt: calc(1em / 11);
+    position: fixed;
+    z-index: 1400;
+    width: calc(236 * var(--pt));
+    padding-bottom: calc(14 * var(--pt));
+    background-color: rgba(var(--panel-rgb), 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(var(--ink-rgb), 0.1);
+    border-radius: 12px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    font-family: "Source Sans Pro", sans-serif;
+    font-weight: 300;
+    font-size: 0.65rem;
+    line-height: calc(18 * var(--pt));
+    color: var(--ink);
+    cursor: default;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Its display would otherwise beat the hidden attribute. */
+.view-options-panel[hidden] {
+    display: none;
+}
+
+/* A utility window's title bar: the close button on the left, the title
+   centred across the whole bar. */
+.view-options-title-bar {
+    position: relative;
+    height: calc(28 * var(--pt));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 calc(28 * var(--pt));
+    touch-action: none;
+}
+
+.view-options-panel .view-options-title {
+    margin: 0;
+    overflow: hidden;
+    font-size: 1em;
+    font-weight: 600;
+    line-height: inherit;
+    letter-spacing: 0;
+    text-overflow: ellipsis;
+    text-transform: none;
+    white-space: nowrap;
+}
+
+.view-options-close {
+    position: absolute;
+    top: 50%;
+    left: calc(9 * var(--pt));
+    width: 12px;
+    height: 12px;
+    margin-top: -6px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background-color: #ff5f57;
+    box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.2);
+    cursor: default;
+}
+
+.view-options-close::before,
+.view-options-close::after {
+    content: '';
+    position: absolute;
+    top: 5.5px;
+    left: 3px;
+    width: 6px;
+    height: 1px;
+    background-color: rgba(77, 0, 0, 0.75);
+    opacity: 0;
+    transform: rotate(45deg);
+}
+
+.view-options-close::after {
+    transform: rotate(-45deg);
+}
+
+.view-options-close:hover::before,
+.view-options-close:hover::after {
+    opacity: 1;
+}
+
+.view-options-panel label {
+    display: inline;
+    margin: 0;
+    color: inherit;
+    font-size: 1em;
+    letter-spacing: 0;
+    line-height: inherit;
+    text-transform: none;
+}
+
+/* Group By: its label, then the popup 64pt in. */
+.view-options-row {
+    display: flex;
+    align-items: center;
+    height: calc(22 * var(--pt));
+    margin-top: calc(8 * var(--pt));
+    padding: 0 calc(18 * var(--pt));
+}
+
+.view-options-row label {
+    flex: 0 0 calc(64 * var(--pt));
+}
+
+/* A native popup button, as Binder's is, not the template's field. Its font is
+   the panel's, which its metrics count in. */
+.view-options-panel select {
+    all: revert;
+    width: calc(134 * var(--pt));
+    font: inherit;
+}
+
+.view-options-separator {
+    height: 1px;
+    margin: calc(8 * var(--pt)) 0 calc(6 * var(--pt));
+    background-color: rgba(var(--ink-rgb), 0.15);
+}
+
+/* A slider: its title and value on one line, the slider under them, 26pt in
+   and 68pt short of the margin, where the other sliders keep their icons. */
+.view-options-slider {
+    display: grid;
+    grid-template-columns: calc(86 * var(--pt)) 1fr;
+    padding: 0 calc(18 * var(--pt));
+}
+
+/* A native slider too. Its font is the panel's, which its metrics count in. */
+.view-options-slider input[type="range"] {
+    all: revert;
+    font: inherit;
+    grid-column: 1 / -1;
+    width: calc(132 * var(--pt));
+    height: calc(18 * var(--pt));
+    margin: 0 0 0 calc(26 * var(--pt));
+    accent-color: var(--accent);
 }
 
 /*

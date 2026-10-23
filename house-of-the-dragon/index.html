@@ -8,7 +8,7 @@
 
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
 
-        <link rel="stylesheet" href="../shared/css/gallery.css?v=20261023-8" />
+        <link rel="stylesheet" href="../shared/css/gallery.css?v=20261023-9" />
         <noscript><link rel="stylesheet" href="../shared/css/noscript.css" /></noscript>
     </head>
     <body>
@@ -141,7 +141,7 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
         <script type="application/json" id="gallery-episode-titles">{"1":{"1":"The Heirs of the Dragon","2":"The Rogue Prince","3":"Second of His Name","4":"King of the Narrow Sea","5":"We Light the Way","6":"The Princess and the Queen","7":"Driftmark","8":"The Lord of the Tides","9":"The Green Council","10":"The Black Queen"},"2":{"1":"A Son for a Son","2":"Rhaenyra the Cruel","3":"The Burning Mill","4":"The Red Dragon and the Gold","5":"Regent","6":"Smallfolk","7":"The Red Sowing","8":"The Queen Who Ever Was"}}</script>
-        <script src="../shared/js/gallery.js?v=20261023-6"></script>
+        <script src="../shared/js/gallery.js?v=20261023-7"></script>
         <script src="../shared/js/gallery-loader.js?v=20261023-1"></script>
 
         <div id="image-modal" class="modal-overlay">
@@ -184,6 +184,24 @@
 
         <div id="gallery-group-by-menu" class="context-menu context-submenu">
             <ul></ul>
+        </div>
+
+        <div id="view-options-panel" class="view-options-panel" role="dialog" aria-labelledby="view-options-title" hidden>
+            <div class="view-options-title-bar">
+                <button type="button" class="view-options-close" aria-label="Close"></button>
+                <h2 id="view-options-title" class="view-options-title">House of the Dragon</h2>
+            </div>
+            <div class="view-options-row">
+                <label for="view-options-group-by">Group By:</label>
+                <select id="view-options-group-by"></select>
+            </div>
+            <div class="view-options-separator"></div>
+            <div class="view-options-slider">
+                <label for="view-options-corner-radius">Corner radius:</label>
+                <output id="view-options-corner-radius-value" for="view-options-corner-radius">6%</output>
+                <input type="range" id="view-options-corner-radius" min="0" max="50" step="1" value="6" list="view-options-corner-radius-ticks">
+                <datalist id="view-options-corner-radius-ticks"><option value="0"></option><option value="10"></option><option value="20"></option><option value="30"></option><option value="40"></option><option value="50"></option></datalist>
+            </div>
         </div>
 
         <div id="custom-scrollbar-track">

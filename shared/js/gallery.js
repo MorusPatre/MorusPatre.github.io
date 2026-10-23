@@ -709,7 +709,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('keydown', (e) => {
         // MODIFIED: Also check for selected pills
         const activeEl = document.activeElement;
-        const isSearchActive = (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) || searchWrapper.querySelector('.search-pill.selected');
+        const isSearchActive = (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT')) || searchWrapper.querySelector('.search-pill.selected');
         
         if (isSearchActive) {
             return;
@@ -879,6 +879,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const groupByMenuRow = document.getElementById('gallery-context-group');
     const groupByMenu = document.getElementById('gallery-group-by-menu');
     const sidebarGroupByList = document.getElementById('sidebar-group-by-options');
+    const viewOptionsGroupBy = document.getElementById('view-options-group-by');
     // Each page lists its show's episode titles, by season and episode.
     const galleryEpisodeTitles = (() => {
         const source = document.getElementById('gallery-episode-titles');
@@ -1602,6 +1603,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }));
         }
 
+        if (viewOptionsGroupBy) {
+            const popupItems = [];
+            options.forEach(option => {
+                popupItems.push(new Option(option.label, option.key));
+                if (option.key === 'none') popupItems.push(document.createElement('hr'));
+            });
+            viewOptionsGroupBy.replaceChildren(...popupItems);
+        }
+
         syncGroupByControls();
     }
 
@@ -1619,6 +1629,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 button.setAttribute('aria-pressed', String(isActive));
             });
         }
+
+        if (viewOptionsGroupBy) viewOptionsGroupBy.value = groupBy;
     }
 
     if (galleryContextMenuElement && groupByMenuRow) {
@@ -1652,6 +1664,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    if (viewOptionsGroupBy) {
+        viewOptionsGroupBy.addEventListener('change', () => setGroupBy(viewOptionsGroupBy.value));
+    }
+
     // The key is kept per gallery, and comes back with the page.
     document.addEventListener('galleryLoaded', () => {
         galleryFigures = Array.from(items);
@@ -1665,6 +1681,163 @@ document.addEventListener('DOMContentLoaded', () => {
         const storedKey = readGroupStorage(GROUP_BY_STORAGE_PREFIX + galleryStorageId);
         if (storedKey && getGroupByOption(storedKey)) applyGroupBy(storedKey);
     });
+
+    // --- View Options ---
+    // Binder's View Options panel, after Finder's: a small window floating over
+    // the gallery while you work, titled with the gallery it sets. Show View
+    // Options in the background menu or Command-J opens it; Hide View Options,
+    // Command-J again or its close button closes it. It opens where it was last
+    // left, at first centred in the window. Its options are kept per gallery,
+    // as Binder keeps them per folder; Group By keeps its own key.
+    // Corner radius runs 0 to 50% of the thumbnail box in whole percent, as
+    // Binder's slider does. The gallery starts at 6%, where Binder starts at 10%.
+    const VIEW_OPTIONS_STORAGE_PREFIX = 'galleryViewOptions:';
+    const VIEW_OPTIONS_PANEL_STORAGE_KEY = 'galleryViewOptionsPanel';
+    const DEFAULT_VIEW_OPTIONS = { cornerRadius: 0.06 };
+    const viewOptionsPanel = document.getElementById('view-options-panel');
+    const viewOptionsTitleBar = viewOptionsPanel && viewOptionsPanel.querySelector('.view-options-title-bar');
+    const viewOptionsCloseButton = viewOptionsPanel && viewOptionsPanel.querySelector('.view-options-close');
+    const viewOptionsMenuRow = document.getElementById('gallery-context-view');
+    const cornerRadiusSlider = document.getElementById('view-options-corner-radius');
+    const cornerRadiusValue = document.getElementById('view-options-corner-radius-value');
+    let viewOptions = readViewOptions();
+    let viewOptionsPanelPosition = null;
+    let viewOptionsDrag = null;
+
+    function readStoredJSON(key) {
+        try {
+            return JSON.parse(readGroupStorage(key));
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function readViewOptions() {
+        const stored = readStoredJSON(VIEW_OPTIONS_STORAGE_PREFIX + galleryStorageId);
+        const options = { ...DEFAULT_VIEW_OPTIONS };
+        if (stored && Number.isFinite(stored.cornerRadius)) {
+            options.cornerRadius = Math.min(Math.max(Math.round(stored.cornerRadius * 100), 0), 50) / 100;
+        }
+        return options;
+    }
+
+    function saveViewOptions() {
+        writeGroupStorage(VIEW_OPTIONS_STORAGE_PREFIX + galleryStorageId, JSON.stringify(viewOptions));
+    }
+
+    // The thumbnails take the radius from the gallery's --corner-radius.
+    function applyCornerRadius() {
+        const percent = Math.round(viewOptions.cornerRadius * 100);
+        gallery.style.setProperty('--corner-radius', String(viewOptions.cornerRadius));
+        if (cornerRadiusSlider) cornerRadiusSlider.value = String(percent);
+        if (cornerRadiusValue) cornerRadiusValue.textContent = `${percent}%`;
+    }
+
+    function isViewOptionsShown() {
+        return Boolean(viewOptionsPanel) && !viewOptionsPanel.hidden;
+    }
+
+    function isInViewOptions(target) {
+        return Boolean(viewOptionsPanel && viewOptionsPanel.contains(target));
+    }
+
+    // Kept whole inside the window, which may have shrunk since it was put there.
+    function positionViewOptionsPanel() {
+        const maxLeft = Math.max(0, window.innerWidth - viewOptionsPanel.offsetWidth);
+        const maxTop = Math.max(0, window.innerHeight - viewOptionsPanel.offsetHeight);
+        viewOptionsPanel.style.left = `${Math.round(clamp(viewOptionsPanelPosition.left, 0, maxLeft))}px`;
+        viewOptionsPanel.style.top = `${Math.round(clamp(viewOptionsPanelPosition.top, 0, maxTop))}px`;
+    }
+
+    function showViewOptions() {
+        if (!viewOptionsPanel || isViewOptionsShown()) return;
+
+        viewOptionsPanel.hidden = false;
+        if (!viewOptionsPanelPosition) {
+            const stored = readStoredJSON(VIEW_OPTIONS_PANEL_STORAGE_KEY);
+            viewOptionsPanelPosition = stored && Number.isFinite(stored.left) && Number.isFinite(stored.top)
+                ? stored
+                : {
+                    left: (window.innerWidth - viewOptionsPanel.offsetWidth) / 2,
+                    top: (window.innerHeight - viewOptionsPanel.offsetHeight) / 2
+                };
+        }
+        positionViewOptionsPanel();
+        if (viewOptionsMenuRow) viewOptionsMenuRow.textContent = 'Hide View Options';
+    }
+
+    function hideViewOptions() {
+        if (!isViewOptionsShown()) return;
+
+        viewOptionsPanel.hidden = true;
+        if (viewOptionsMenuRow) viewOptionsMenuRow.textContent = 'Show View Options';
+    }
+
+    function toggleViewOptions() {
+        if (isViewOptionsShown()) {
+            hideViewOptions();
+        } else {
+            showViewOptions();
+        }
+    }
+
+    if (cornerRadiusSlider) {
+        cornerRadiusSlider.addEventListener('input', () => {
+            viewOptions.cornerRadius = Number(cornerRadiusSlider.value) / 100;
+            applyCornerRadius();
+        });
+        cornerRadiusSlider.addEventListener('change', saveViewOptions);
+    }
+
+    if (viewOptionsCloseButton) {
+        viewOptionsCloseButton.addEventListener('click', hideViewOptions);
+    }
+
+    // Moved by its title bar, as a window is, and kept where it was let go.
+    if (viewOptionsTitleBar) {
+        viewOptionsTitleBar.addEventListener('pointerdown', event => {
+            if (event.button !== 0 || event.target.closest('button')) return;
+
+            event.preventDefault();
+            viewOptionsTitleBar.setPointerCapture(event.pointerId);
+            viewOptionsDrag = {
+                pointerId: event.pointerId,
+                x: event.clientX - viewOptionsPanel.offsetLeft,
+                y: event.clientY - viewOptionsPanel.offsetTop
+            };
+        });
+
+        viewOptionsTitleBar.addEventListener('pointermove', event => {
+            if (!viewOptionsDrag || event.pointerId !== viewOptionsDrag.pointerId) return;
+
+            viewOptionsPanelPosition = { left: event.clientX - viewOptionsDrag.x, top: event.clientY - viewOptionsDrag.y };
+            positionViewOptionsPanel();
+        });
+
+        const endViewOptionsDrag = event => {
+            if (!viewOptionsDrag || event.pointerId !== viewOptionsDrag.pointerId) return;
+
+            viewOptionsDrag = null;
+            viewOptionsPanelPosition = { left: viewOptionsPanel.offsetLeft, top: viewOptionsPanel.offsetTop };
+            writeGroupStorage(VIEW_OPTIONS_PANEL_STORAGE_KEY, JSON.stringify(viewOptionsPanelPosition));
+        };
+        viewOptionsTitleBar.addEventListener('pointerup', endViewOptionsDrag);
+        viewOptionsTitleBar.addEventListener('pointercancel', endViewOptionsDrag);
+    }
+
+    window.addEventListener('resize', () => {
+        if (isViewOptionsShown()) positionViewOptionsPanel();
+    });
+
+    document.addEventListener('keydown', event => {
+        if ((event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey &&
+            event.key.toLowerCase() === 'j') {
+            event.preventDefault();
+            toggleViewOptions();
+        }
+    });
+
+    applyCornerRadius();
     /*
     ==================================================================
     // END: FINDER-STYLE ARROW KEY NAVIGATION LOGIC
@@ -2539,7 +2712,7 @@ document.addEventListener('DOMContentLoaded', () => {
             hideGroupByMenu();
         }
 
-        if (!wrapper.contains(e.target) && !isInMenu) {
+        if (!wrapper.contains(e.target) && !isInMenu && !isInViewOptions(e.target)) {
             if (!e.metaKey && !e.ctrlKey && !e.shiftKey) {
                 clearSelection();
             }
@@ -2776,7 +2949,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('Functionality for "Sort By" is not yet implemented.');
                 break;
             case 'gallery-context-view':
-                alert('Functionality for "Show View Options" is not yet implemented.');
+                toggleViewOptions();
                 break;
         }
     });
