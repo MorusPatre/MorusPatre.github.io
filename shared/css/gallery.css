@@ -3104,6 +3104,67 @@ html, body {
 
 /*
 ==================================================================
+// Download Button
+==================================================================
+*/
+
+/* The download button on the item under the pointer: Binder's like heart,
+   which is Photos' favourite badge (+[IPXBadges newFavoriteBadgeWithTarget:
+   action:]), an unbordered button the size of its 16×18 image. Photos' image
+   is a white SF Symbol at 13pt regular over a black halo of 40% alpha,
+   blurred 1px (sigma) all round: fitted to MediaItem-Favorite-Off within
+   1/255. These are drawn the same way from arrow.down.circle, the symbol of
+   Binder's Downloads row, at 1x and 2x. The script places the button in the
+   thumbnail's box, which is hidden until the thumbnail loads, so it is made
+   visible itself. The template's button styles are undone. */
+#photo-gallery .item-download-button {
+    all: unset;
+    position: absolute;
+    width: 16px;
+    height: 18px;
+    visibility: visible;
+    cursor: default;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+#photo-gallery .item-download-button[hidden] {
+    display: none;
+}
+
+/* The images carry 3px of halo a side past the frame, which Photos' crop, so
+   they are drawn by pseudo-elements that take no clicks: the button's frame
+   alone is hit. Pressed, it shows arrow.down.circle.fill, as Photos' badge
+   shows its alternate image while held. Both images are drawn from the start,
+   so the first press doesn't wait for its image. */
+#photo-gallery .item-download-button::before,
+#photo-gallery .item-download-button::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    background: no-repeat 0 0 / 100% 100%;
+    pointer-events: none;
+}
+
+#photo-gallery .item-download-button::before {
+    background-image: image-set(url("../images/badges/download.webp") 1x, url("../images/badges/download-2x.webp") 2x);
+}
+
+#photo-gallery .item-download-button::after {
+    background-image: image-set(url("../images/badges/download-pressed.webp") 1x, url("../images/badges/download-pressed-2x.webp") 2x);
+    visibility: hidden;
+}
+
+#photo-gallery .item-download-button:active:hover::before {
+    visibility: hidden;
+}
+
+#photo-gallery .item-download-button:active:hover::after {
+    visibility: visible;
+}
+
+/*
+==================================================================
 // Constrained Text Selection in Modal
 ==================================================================
 */

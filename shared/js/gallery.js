@@ -1106,6 +1106,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function cloneGroupFigure(figure) {
         const clone = figure.cloneNode(true);
         clone.classList.remove('selected');
+        clone.querySelector('.item-download-button')?.remove();
         if (!clone.classList.contains('is-visible')) {
             clone.querySelector('img').addEventListener('load', () => {
                 clone.classList.add('is-visible');
@@ -2985,14 +2986,25 @@ document.addEventListener('DOMContentLoaded', () => {
             const pixels = context.getImageData(0, 0, width, height).data;
             const stride = width + 1;
             const sums = new Uint32Array(stride * (height + 1));
+            // And the icon's ink, the bounds of its pixels at least half opaque,
+            // for the download button to sit on (Binder's inkUnitRect).
+            let inkLeft = width, inkTop = height, inkRight = 0, inkBottom = 0;
             for (let y = 0; y < height; y++) {
                 let row = 0;
                 for (let x = 0; x < width; x++) {
-                    if (pixels[(y * width + x) * 4 + 3] > 0) row++;
+                    const alpha = pixels[(y * width + x) * 4 + 3];
+                    if (alpha > 0) row++;
+                    if (alpha >= 128) {
+                        inkLeft = Math.min(inkLeft, x);
+                        inkTop = Math.min(inkTop, y);
+                        inkRight = Math.max(inkRight, x + 1);
+                        inkBottom = Math.max(inkBottom, y + 1);
+                    }
                     sums[(y + 1) * stride + x + 1] = sums[y * stride + x + 1] + row;
                 }
             }
-            kindIconMasks.set(url, { width, height, sums });
+            const ink = { left: inkLeft / width, top: inkTop / height, right: inkRight / width, bottom: inkBottom / height };
+            kindIconMasks.set(url, { width, height, sums, ink });
         };
         image.src = url;
         return null;
@@ -3249,7 +3261,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (e.button !== 0 || header.contains(e.target) || footer.contains(e.target) ||
-            e.target.closest('.all-people-match-row, .all-people-empty-state, .gallery-group-toggle')) {
+            e.target.closest('.all-people-match-row, .all-people-empty-state, .gallery-group-toggle, .item-download-button')) {
             isMarquee = false;
             return;
         }
@@ -3466,14 +3478,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 lastSelectedItem = figure;
             }
 
-            const saveMenuItem = document.getElementById('context-menu-save');
-            // An image shown in more than one group is saved once.
-            const imageCount = getDistinctImageItems(selectedItems).length;
-            if (imageCount > 1) {
-                saveMenuItem.textContent = `Save ${imageCount} Images to "Downloads"`;
-            } else {
-                saveMenuItem.textContent = 'Save Image to "Downloads"';
-            }
+            document.getElementById('context-menu-save').textContent = getSaveImagesTitle(selectedItems);
 
             itemContextMenu.style.display = 'block';
             itemContextMenu.style.left = `${e.clientX}px`;
@@ -3503,6 +3508,123 @@ document.addEventListener('DOMContentLoaded', () => {
         saveAs(blob, filename);
     }
 
+    // The save's name, as the item menu and the download button give it. An
+    // image shown in more than one group is saved once.
+    function getSaveImagesTitle(figures) {
+        const count = getDistinctImageItems(figures).length;
+        return count > 1 ? `Save ${count} Images to "Downloads"` : 'Save Image to "Downloads"';
+    }
+
+    // Saves the images of `figures` to Downloads, each once, with the header's
+    // progress ring; a save started while another runs cancels it.
+    function saveImages(figures) {
+        if (downloadAbortController) {
+            downloadAbortController.abort();
+        }
+        
+        downloadAbortController = new AbortController();
+        const signal = downloadAbortController.signal;
+
+        const indicator = document.getElementById('download-indicator');
+        const progressCircle = indicator.querySelector('.progress-circle');
+        indicator.classList.add('is-active', 'is-downloading');
+
+        const parseSizeToBytes = (sizeStr) => {
+            if (!sizeStr) return 0;
+            const [value, unit] = sizeStr.split(' ');
+            const num = parseFloat(value);
+            if (isNaN(num)) return 0;
+            switch (unit.toUpperCase()) {
+                case 'KB': return num * 1024;
+                case 'MB': return num * 1024 * 1024;
+                case 'GB': return num * 1024 * 1024 * 1024;
+                default: return num;
+            }
+        };
+
+        const updateProgress = (percent) => {
+            progressCircle.style.setProperty('--progress-angle', `${percent * 3.6}deg`);
+        };
+        
+        updateProgress(0);
+
+        const performDownloads = async () => {
+            let totalDownloaded = 0;
+            let totalDownloadSize = 0;
+
+            try {
+                const itemsToDownload = getDistinctImageItems(figures);
+                if (itemsToDownload.length === 0) {
+                     indicator.classList.remove('is-active', 'is-downloading');
+                     return;
+                }
+
+                itemsToDownload.forEach(item => {
+                    const img = item.querySelector('img');
+                    totalDownloadSize += parseSizeToBytes(img.dataset.size);
+                });
+
+                const processInBatches = async (items, batchSize, processFn) => {
+                    let position = 0;
+                    while (position < items.length) {
+                        if (signal.aborted) throw new Error('AbortError');
+                        const itemsForBatch = items.slice(position, position + batchSize);
+                        await Promise.all(itemsForBatch.map(item => processFn(item)));
+                        position += batchSize;
+                    }
+                };
+
+                await processInBatches(itemsToDownload, 6, async (item) => {
+                    const img = item.querySelector('img');
+                    const url = img.dataset.fullsrc;
+                    const filename = url.substring(url.lastIndexOf('/') + 1);
+
+                    try {
+                        const response = await fetch(url, { signal, cache: 'no-store' });
+                        if (!response.ok) {
+                            console.error(`Failed to fetch ${filename}: ${response.statusText}`);
+                            totalDownloadSize -= parseSizeToBytes(img.dataset.size);
+                            return;
+                        }
+                        const blob = await response.blob();
+                        saveAs(blob, filename);
+
+                        totalDownloaded += blob.size;
+                        const percent = totalDownloadSize > 0 ? (totalDownloaded / totalDownloadSize) * 100 : 0;
+                        updateProgress(percent);
+
+                    } catch (error) {
+                        if (error.name !== 'AbortError') {
+                            console.error(`Could not download ${filename}:`, error);
+                        } else {
+                            throw error;
+                        }
+                    }
+                });
+                
+                updateProgress(100);
+
+                await new Promise(resolve => setTimeout(resolve, 400));
+                
+                indicator.classList.remove('is-active', 'is-downloading');
+
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    console.log('Download canceled by user.');
+                } else {
+                    console.error("Download failed:", error);
+                    alert(`An error occurred during the download: ${error.message}`);
+                }
+                indicator.classList.remove('is-downloading', 'is-active');
+            } finally {
+                downloadAbortController = null;
+                setTimeout(() => updateProgress(0), 400);
+            }
+        };
+
+        performDownloads();
+    }
+
     itemContextMenu.addEventListener('click', async (e) => {
         const targetId = e.target.id;
         if (!targetId) return;
@@ -3524,115 +3646,134 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             }
             case 'context-menu-save': {
-                if (downloadAbortController) {
-                    downloadAbortController.abort();
-                }
-                
-                downloadAbortController = new AbortController();
-                const signal = downloadAbortController.signal;
-
-                const indicator = document.getElementById('download-indicator');
-                const progressCircle = indicator.querySelector('.progress-circle');
-                indicator.classList.add('is-active', 'is-downloading');
-
-                const parseSizeToBytes = (sizeStr) => {
-                    if (!sizeStr) return 0;
-                    const [value, unit] = sizeStr.split(' ');
-                    const num = parseFloat(value);
-                    if (isNaN(num)) return 0;
-                    switch (unit.toUpperCase()) {
-                        case 'KB': return num * 1024;
-                        case 'MB': return num * 1024 * 1024;
-                        case 'GB': return num * 1024 * 1024 * 1024;
-                        default: return num;
-                    }
-                };
-
-                const updateProgress = (percent) => {
-                    progressCircle.style.setProperty('--progress-angle', `${percent * 3.6}deg`);
-                };
-                
-                updateProgress(0);
-
-                const performDownloads = async () => {
-                    let totalDownloaded = 0;
-                    let totalDownloadSize = 0;
-
-                    try {
-                        const itemsToDownload = getDistinctImageItems(selectedItems);
-                        if (itemsToDownload.length === 0) {
-                             indicator.classList.remove('is-active', 'is-downloading');
-                             return;
-                        }
-
-                        itemsToDownload.forEach(item => {
-                            const img = item.querySelector('img');
-                            totalDownloadSize += parseSizeToBytes(img.dataset.size);
-                        });
-
-                        const processInBatches = async (items, batchSize, processFn) => {
-                            let position = 0;
-                            while (position < items.length) {
-                                if (signal.aborted) throw new Error('AbortError');
-                                const itemsForBatch = items.slice(position, position + batchSize);
-                                await Promise.all(itemsForBatch.map(item => processFn(item)));
-                                position += batchSize;
-                            }
-                        };
-
-                        await processInBatches(itemsToDownload, 6, async (item) => {
-                            const img = item.querySelector('img');
-                            const url = img.dataset.fullsrc;
-                            const filename = url.substring(url.lastIndexOf('/') + 1);
-
-                            try {
-                                const response = await fetch(url, { signal, cache: 'no-store' });
-                                if (!response.ok) {
-                                    console.error(`Failed to fetch ${filename}: ${response.statusText}`);
-                                    totalDownloadSize -= parseSizeToBytes(img.dataset.size);
-                                    return;
-                                }
-                                const blob = await response.blob();
-                                saveAs(blob, filename);
-
-                                totalDownloaded += blob.size;
-                                const percent = totalDownloadSize > 0 ? (totalDownloaded / totalDownloadSize) * 100 : 0;
-                                updateProgress(percent);
-
-                            } catch (error) {
-                                if (error.name !== 'AbortError') {
-                                    console.error(`Could not download ${filename}:`, error);
-                                } else {
-                                    throw error;
-                                }
-                            }
-                        });
-                        
-                        updateProgress(100);
-
-                        await new Promise(resolve => setTimeout(resolve, 400));
-                        
-                        indicator.classList.remove('is-active', 'is-downloading');
-
-                    } catch (error) {
-                        if (error.name === 'AbortError') {
-                            console.log('Download canceled by user.');
-                        } else {
-                            console.error("Download failed:", error);
-                            alert(`An error occurred during the download: ${error.message}`);
-                        }
-                        indicator.classList.remove('is-downloading', 'is-active');
-                    } finally {
-                        downloadAbortController = null;
-                        setTimeout(() => updateProgress(0), 400);
-                    }
-                };
-
-                performDownloads();
+                saveImages(selectedItems);
                 break;
             }
         }
         rightClickedItem = null;
+    });
+
+    // --- Download Button ---
+    // Binder's like heart, which is Photos' favourite badge, as a download: the
+    // pointer anywhere over an item's cell shows the button on its picture, and
+    // a click saves that image, or the whole selection when the item is part of
+    // it, as a heart likes the selection with it. The click doesn't reach the
+    // gallery, so the selection stays as it was. One button serves the whole
+    // gallery, moved to the cell under the pointer, as Binder makes a heart
+    // only for a cell that shows one: thousands of cells gain nothing. A pointer
+    // that can't hover, a finger, never shows it.
+    const DOWNLOAD_BUTTON_WIDTH = 16;
+    const DOWNLOAD_BUTTON_HEIGHT = 18;
+    // -[IPXBadgesView badgeEdgeInsets]: 5pt in from each edge of the picture.
+    const DOWNLOAD_BUTTON_INSET = 5;
+
+    const downloadButton = document.createElement('button');
+    downloadButton.type = 'button';
+    downloadButton.className = 'item-download-button';
+    downloadButton.tabIndex = -1;
+    downloadButton.hidden = true;
+    let downloadButtonItem = null;
+
+    // The button follows its picture as the thumbnail lands and as the View
+    // Options resize it or swap it for the kind icon.
+    const downloadButtonObserver = new ResizeObserver(placeDownloadButton);
+
+    // The picture the button sits on, in viewport coordinates: the thumbnail
+    // card or, until it loads, the kind icon's ink, the bounds of its pixels
+    // at least half opaque, as a heart sits on an icon's ink in Binder.
+    function getDownloadButtonArt(item) {
+        if (showsThumbnail(item)) return item.querySelector('img').getBoundingClientRect();
+
+        const icon = getKindIconRect(item, item.querySelector('.image-container').getBoundingClientRect());
+        const mask = icon && getKindIconMask(icon.url);
+        if (!mask) return null;
+
+        const width = icon.right - icon.left;
+        const height = icon.bottom - icon.top;
+        return {
+            left: icon.left + mask.ink.left * width,
+            top: icon.top + mask.ink.top * height,
+            right: icon.left + mask.ink.right * width,
+            bottom: icon.top + mask.ink.bottom * height
+        };
+    }
+
+    // Photos' badge frame: its 16×18 image, 5px in from the picture's
+    // bottom-left corner, on whole device pixels, the same size at every icon
+    // size, and left out where the picture, inset 5px, can't hold it.
+    function placeDownloadButton() {
+        const art = downloadButtonItem && getDownloadButtonArt(downloadButtonItem);
+        if (!art || art.right - art.left - 2 * DOWNLOAD_BUTTON_INSET < DOWNLOAD_BUTTON_WIDTH ||
+            art.bottom - art.top - 2 * DOWNLOAD_BUTTON_INSET < DOWNLOAD_BUTTON_HEIGHT) {
+            downloadButton.hidden = true;
+            return;
+        }
+
+        const snap = u => Math.round(u * window.devicePixelRatio) / window.devicePixelRatio;
+        const container = downloadButton.parentElement.getBoundingClientRect();
+        downloadButton.style.left = `${snap(art.left + DOWNLOAD_BUTTON_INSET) - container.left}px`;
+        downloadButton.style.top = `${snap(art.bottom - DOWNLOAD_BUTTON_INSET - DOWNLOAD_BUTTON_HEIGHT) - container.top}px`;
+        downloadButton.hidden = false;
+    }
+
+    function getDownloadButtonFigures() {
+        return isSelected(downloadButtonItem) ? selectedItems : [downloadButtonItem];
+    }
+
+    // The tooltip names what a click saves, as the item menu does.
+    function updateDownloadButtonTitle() {
+        const title = getSaveImagesTitle(getDownloadButtonFigures());
+        downloadButton.title = title;
+        downloadButton.setAttribute('aria-label', title);
+    }
+
+    // One pointer hovers one item. The button goes into the thumbnail's box,
+    // so it scrolls, and is clipped, with its cell.
+    function setDownloadButtonItem(item) {
+        if (item === downloadButtonItem) return;
+
+        if (downloadButtonItem) {
+            downloadButtonObserver.disconnect();
+            downloadButtonItem.querySelector('img').removeEventListener('load', placeDownloadButton);
+        }
+        downloadButtonItem = item;
+        if (!item) {
+            downloadButton.hidden = true;
+            return;
+        }
+
+        const container = item.querySelector('.image-container');
+        const img = container.querySelector('img');
+        container.appendChild(downloadButton);
+        downloadButtonObserver.observe(container);
+        downloadButtonObserver.observe(img);
+        img.addEventListener('load', placeDownloadButton);
+        updateDownloadButtonTitle();
+        placeDownloadButton();
+    }
+
+    // Entries catch a cell scrolled under a still pointer; moves bring the
+    // button back after a band is let go over a cell.
+    function trackDownloadButtonItem(e) {
+        // A tracking area takes no entries while the band is dragged.
+        if (isMarquee && hasDragged) {
+            setDownloadButtonItem(null);
+            return;
+        }
+        setDownloadButtonItem(e.target.closest('#photo-gallery figure'));
+    }
+
+    if (window.matchMedia('(hover: hover)').matches) {
+        gallery.addEventListener('mouseover', trackDownloadButtonItem);
+        gallery.addEventListener('mousemove', trackDownloadButtonItem);
+        gallery.addEventListener('mouseleave', () => setDownloadButtonItem(null));
+    }
+
+    downloadButton.addEventListener('mouseenter', updateDownloadButtonTitle);
+    downloadButton.addEventListener('click', (e) => {
+        // The second click of a double-click doesn't save it again.
+        if (e.detail > 1 || !downloadButtonItem) return;
+        saveImages(getDownloadButtonFigures());
     });
 
     galleryContextMenu.addEventListener('click', (e) => {
@@ -3867,6 +4008,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     gallery.addEventListener('dblclick', function(event) {
+        if (event.target.closest('.item-download-button')) return;
         const figure = getItemAtPoint(event.clientX, event.clientY);
         if (figure) openItem(figure);
     });
