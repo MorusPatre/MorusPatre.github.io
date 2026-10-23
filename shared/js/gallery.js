@@ -1692,10 +1692,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Corner radius runs 0 to 50% of the thumbnail box in whole percent, as
     // Binder's slider does. The gallery starts at 6%, where Binder starts at 10%.
     // Show item info shows or hides the dimensions line, and the cells keep
-    // room for it only while it shows.
+    // room for it only while it shows. Show icon preview off shows every
+    // image's kind icon in place of its thumbnail.
     const VIEW_OPTIONS_STORAGE_PREFIX = 'galleryViewOptions:';
     const VIEW_OPTIONS_PANEL_STORAGE_KEY = 'galleryViewOptionsPanel';
-    const DEFAULT_VIEW_OPTIONS = { cornerRadius: 0.06, showItemInfo: true };
+    const DEFAULT_VIEW_OPTIONS = { cornerRadius: 0.06, showItemInfo: true, showIconPreview: true };
     const viewOptionsPanel = document.getElementById('view-options-panel');
     const viewOptionsTitleBar = viewOptionsPanel && viewOptionsPanel.querySelector('.view-options-title-bar');
     const viewOptionsCloseButton = viewOptionsPanel && viewOptionsPanel.querySelector('.view-options-close');
@@ -1703,6 +1704,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const cornerRadiusSlider = document.getElementById('view-options-corner-radius');
     const cornerRadiusValue = document.getElementById('view-options-corner-radius-value');
     const showItemInfoCheckbox = document.getElementById('view-options-show-item-info');
+    const showIconPreviewCheckbox = document.getElementById('view-options-show-icon-preview');
     let viewOptions = readViewOptions();
     let viewOptionsPanelPosition = null;
     let viewOptionsDrag = null;
@@ -1722,6 +1724,7 @@ document.addEventListener('DOMContentLoaded', () => {
             options.cornerRadius = Math.min(Math.max(Math.round(stored.cornerRadius * 100), 0), 50) / 100;
         }
         if (stored && typeof stored.showItemInfo === 'boolean') options.showItemInfo = stored.showItemInfo;
+        if (stored && typeof stored.showIconPreview === 'boolean') options.showIconPreview = stored.showIconPreview;
         return options;
     }
 
@@ -1793,6 +1796,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (showItemInfoCheckbox) showItemInfoCheckbox.checked = viewOptions.showItemInfo;
     }
 
+    function applyShowIconPreview() {
+        gallery.classList.toggle('hides-icon-preview', !viewOptions.showIconPreview);
+        if (showIconPreviewCheckbox) showIconPreviewCheckbox.checked = viewOptions.showIconPreview;
+    }
+
+    // Whether an item draws its thumbnail rather than its kind icon.
+    function showsThumbnail(item) {
+        return viewOptions.showIconPreview && item.classList.contains('is-visible');
+    }
+
     function isViewOptionsShown() {
         return Boolean(viewOptionsPanel) && !viewOptionsPanel.hidden;
     }
@@ -1857,6 +1870,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // What an item draws changes, so the hit boxes are measured again.
+    if (showIconPreviewCheckbox) {
+        showIconPreviewCheckbox.addEventListener('change', () => {
+            viewOptions.showIconPreview = showIconPreviewCheckbox.checked;
+            saveViewOptions();
+            applyShowIconPreview();
+            marqueeItemRects = null;
+        });
+    }
+
     if (viewOptionsCloseButton) {
         viewOptionsCloseButton.addEventListener('click', hideViewOptions);
     }
@@ -1907,6 +1930,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     applyCornerRadius();
     applyShowItemInfo();
+    applyShowIconPreview();
     /*
     ==================================================================
     // END: FINDER-STYLE ARROW KEY NAVIGATION LOGIC
@@ -2459,7 +2483,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // comes near, and kept for the rest of the drag, until the thumbnail loads.
     function getItemHitBox(entry, galleryRect) {
         const item = entry.item;
-        if (entry.hitBox && (entry.hitBox.isLoaded || !item.classList.contains('is-visible'))) {
+        if (entry.hitBox && entry.hitBox.isLoaded === showsThumbnail(item)) {
             return entry.hitBox;
         }
 
@@ -2485,7 +2509,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return toGallery(hitTextRange.getBoundingClientRect());
         };
         const hitBox = {
-            isLoaded: item.classList.contains('is-visible'),
+            isLoaded: showsThumbnail(item),
             canvas: toGallery(item.querySelector('.image-container').getBoundingClientRect()),
             name: textRect(item.querySelector('.filename')),
             info: textRect(item.querySelector('.dimensions'))

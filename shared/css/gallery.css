@@ -2788,8 +2788,16 @@ html, body {
     background-image: url("../images/kind-icons/avif.webp");
 }
 
-#photo-gallery figure.is-visible {
+#photo-gallery:not(.hides-icon-preview) figure.is-visible {
     background-image: none;
+}
+
+/* View Options ▸ Show icon preview off: every figure keeps its kind icon, as
+   Finder's icons do without previews. A thumbnail not yet shown isn't
+   loaded either, since an image that isn't rendered isn't lazy-loaded. Its
+   container is sized on its own, so this doesn't move anything. */
+#photo-gallery.hides-icon-preview figure img {
+    display: none;
 }
 
 /* The thumbnail's container is hidden until it loads, then shown at once. The
@@ -2802,7 +2810,7 @@ html, body {
     visibility: hidden;
 }
 
-#photo-gallery figure.is-visible .image-container {
+#photo-gallery:not(.hides-icon-preview) figure.is-visible .image-container {
     visibility: visible;
 }
 
