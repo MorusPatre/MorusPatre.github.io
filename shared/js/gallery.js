@@ -1691,15 +1691,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // as Binder keeps them per folder; Group By keeps its own key.
     // Corner radius runs 0 to 50% of the thumbnail box in whole percent, as
     // Binder's slider does. The gallery starts at 6%, where Binder starts at 10%.
+    // Show item info shows or hides the dimensions line, and the cells keep
+    // room for it only while it shows.
     const VIEW_OPTIONS_STORAGE_PREFIX = 'galleryViewOptions:';
     const VIEW_OPTIONS_PANEL_STORAGE_KEY = 'galleryViewOptionsPanel';
-    const DEFAULT_VIEW_OPTIONS = { cornerRadius: 0.06 };
+    const DEFAULT_VIEW_OPTIONS = { cornerRadius: 0.06, showItemInfo: true };
     const viewOptionsPanel = document.getElementById('view-options-panel');
     const viewOptionsTitleBar = viewOptionsPanel && viewOptionsPanel.querySelector('.view-options-title-bar');
     const viewOptionsCloseButton = viewOptionsPanel && viewOptionsPanel.querySelector('.view-options-close');
     const viewOptionsMenuRow = document.getElementById('gallery-context-view');
     const cornerRadiusSlider = document.getElementById('view-options-corner-radius');
     const cornerRadiusValue = document.getElementById('view-options-corner-radius-value');
+    const showItemInfoCheckbox = document.getElementById('view-options-show-item-info');
     let viewOptions = readViewOptions();
     let viewOptionsPanelPosition = null;
     let viewOptionsDrag = null;
@@ -1718,11 +1721,63 @@ document.addEventListener('DOMContentLoaded', () => {
         if (stored && Number.isFinite(stored.cornerRadius)) {
             options.cornerRadius = Math.min(Math.max(Math.round(stored.cornerRadius * 100), 0), 50) / 100;
         }
+        if (stored && typeof stored.showItemInfo === 'boolean') options.showItemInfo = stored.showItemInfo;
         return options;
     }
 
     function saveViewOptions() {
         writeGroupStorage(VIEW_OPTIONS_STORAGE_PREFIX + galleryStorageId, JSON.stringify(viewOptions));
+    }
+
+    // Binder's relayout after the cells change size (relayoutGrid, after
+    // Finder): the row at the top of the window stays there. The anchor is
+    // that row's first item, the row being the cell and the gap under it. A
+    // row partly scrolled off keeps the same share of itself off; space above
+    // the first row stays as it was. At the very top nothing is anchored, so
+    // the gallery stays at the top.
+    function getRowPitch() {
+        const metrics = getGroupCellMetrics();
+        return metrics.cellHeight + metrics.rowGap;
+    }
+
+    function getViewportAnchor() {
+        if (window.scrollY < 1) return null;
+
+        // Grouped, the rows are those of the group at the top of the window.
+        let candidates = null;
+        if (isGalleryGrouped()) {
+            const section = shownGroupSections.find(shown => shown.element.getBoundingClientRect().bottom > 0);
+            if (section) candidates = section.figures.filter(figure => figure.style.display !== 'none');
+        } else {
+            candidates = Array.from(items).filter(item => item.style.display !== 'none');
+        }
+        if (!candidates || candidates.length === 0) return null;
+
+        const pitch = getRowPitch();
+        let low = 0;
+        let high = candidates.length - 1;
+        while (low < high) {
+            const middle = (low + high) >> 1;
+            if (candidates[middle].getBoundingClientRect().top + pitch > 0) high = middle;
+            else low = middle + 1;
+        }
+        return { item: candidates[low], offset: candidates[low].getBoundingClientRect().top, pitch };
+    }
+
+    function restoreViewportAnchor(anchor) {
+        if (!anchor || !anchor.item.isConnected) return;
+
+        const offset = anchor.offset < 0 ? anchor.offset * getRowPitch() / anchor.pitch : anchor.offset;
+        const scale = window.devicePixelRatio || 1;
+        const top = window.scrollY + anchor.item.getBoundingClientRect().top - offset;
+        window.scrollTo(window.scrollX, Math.round(top * scale) / scale);
+    }
+
+    function relayoutGallery(change) {
+        const anchor = getViewportAnchor();
+        change();
+        refreshIconGrid();
+        restoreViewportAnchor(anchor);
     }
 
     // The thumbnails take the radius from the gallery's --corner-radius.
@@ -1731,6 +1786,11 @@ document.addEventListener('DOMContentLoaded', () => {
         gallery.style.setProperty('--corner-radius', String(viewOptions.cornerRadius));
         if (cornerRadiusSlider) cornerRadiusSlider.value = String(percent);
         if (cornerRadiusValue) cornerRadiusValue.textContent = `${percent}%`;
+    }
+
+    function applyShowItemInfo() {
+        gallery.classList.toggle('hides-item-info', !viewOptions.showItemInfo);
+        if (showItemInfoCheckbox) showItemInfoCheckbox.checked = viewOptions.showItemInfo;
     }
 
     function isViewOptionsShown() {
@@ -1789,6 +1849,14 @@ document.addEventListener('DOMContentLoaded', () => {
         cornerRadiusSlider.addEventListener('change', saveViewOptions);
     }
 
+    if (showItemInfoCheckbox) {
+        showItemInfoCheckbox.addEventListener('change', () => {
+            viewOptions.showItemInfo = showItemInfoCheckbox.checked;
+            saveViewOptions();
+            relayoutGallery(applyShowItemInfo);
+        });
+    }
+
     if (viewOptionsCloseButton) {
         viewOptionsCloseButton.addEventListener('click', hideViewOptions);
     }
@@ -1838,6 +1906,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     applyCornerRadius();
+    applyShowItemInfo();
     /*
     ==================================================================
     // END: FINDER-STYLE ARROW KEY NAVIGATION LOGIC

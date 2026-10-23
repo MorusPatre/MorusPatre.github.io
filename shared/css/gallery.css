@@ -1641,6 +1641,9 @@ Styling for the Finder-Style Photo Gallery
     /* View Options ▸ Grid spacing runs 1 to 100; 54 is Finder's default. */
     --grid-spacing: 54;
     --info-font-size: 0.55rem;
+    /* View Options ▸ Show item info: the dimensions line and its room in the
+       cell, 1 or 0. */
+    --info-lines: 1;
     /* +[TIconSelectionView selectionPaddingForIconSize:]: the selection box is
        the icon grown by s/16 a side, unrounded. */
     --icon-padding: calc(var(--icon-size) / 16);
@@ -1669,7 +1672,7 @@ Styling for the Finder-Style Photo Gallery
        box, the name's lines, the dimensions line and margins tall. Each is
        rounded up to even. */
     --cell-width: round(up, var(--wrap-width) + 8px, 2px);
-    --cell-height: round(up, var(--icon-box) + 2px + round(up, var(--name-lines) * 1lh, 1px) + round(up, var(--info-font-size) * 1.4, 1px) + 6px, 2px);
+    --cell-height: round(up, var(--icon-box) + 2px + round(up, var(--name-lines) * 1lh, 1px) + var(--info-lines) * round(up, var(--info-font-size) * 1.4, 1px) + 6px, 2px);
 
     display: grid;
     /* As many cells as fit with 2px between them. Packed left like this while
@@ -1831,6 +1834,15 @@ body.is-sidebar-collapsed #gallery-blur-layer {
     font-size: var(--info-font-size);
     color: rgba(var(--ink-rgb), 0.56);
     margin-top: 0.2em;
+}
+
+/* Show item info off: the line goes, and the cell loses its room. */
+#photo-gallery.hides-item-info {
+    --info-lines: 0;
+}
+
+#photo-gallery.hides-item-info figure figcaption .dimensions {
+    display: none;
 }
 
 /* A zero line height keeps the lowered × from deepening the line. */
@@ -2543,14 +2555,53 @@ View Options Panel
     font: inherit;
 }
 
+/* Binder places each row by its frame. Here each row keeps its distance from
+   the one above it, which depends on what that is. */
 .view-options-separator {
     height: 1px;
-    margin: calc(8 * var(--pt)) 0 calc(6 * var(--pt));
+    margin-top: calc(7 * var(--pt));
     background-color: rgba(var(--ink-rgb), 0.15);
 }
 
-/* A slider: its title and value on one line, the slider under them, 26pt in
-   and 68pt short of the margin, where the other sliders keep their icons. */
+.view-options-slider + .view-options-separator {
+    margin-top: calc(15 * var(--pt));
+}
+
+.view-options-check + .view-options-separator {
+    margin-top: calc(6 * var(--pt));
+}
+
+.view-options-separator + .view-options-slider,
+.view-options-separator + .view-options-check {
+    margin-top: calc(8 * var(--pt));
+}
+
+.view-options-check + .view-options-check {
+    margin-top: calc(2 * var(--pt));
+}
+
+/* A small checkbox: its 14pt box 2pt in from the margin and its title 4pt
+   past the box, on an 18pt line. A native one, as Binder's is. */
+.view-options-panel .view-options-check {
+    display: flex;
+    align-items: center;
+    height: calc(18 * var(--pt));
+    padding: 0 calc(18 * var(--pt)) 0 calc(20 * var(--pt));
+}
+
+.view-options-panel input[type="checkbox"] {
+    all: revert;
+    flex: none;
+    width: calc(14 * var(--pt));
+    height: calc(14 * var(--pt));
+    margin: 0 calc(4 * var(--pt)) 0 0;
+    font: inherit;
+    accent-color: var(--accent);
+}
+
+/* A slider: its title and value on one line, the slider under them, 1pt up,
+   26pt in and 68pt short of the margin, where the other sliders keep their
+   icons. */
 .view-options-slider {
     display: grid;
     grid-template-columns: calc(86 * var(--pt)) 1fr;
@@ -2564,7 +2615,7 @@ View Options Panel
     grid-column: 1 / -1;
     width: calc(132 * var(--pt));
     height: calc(18 * var(--pt));
-    margin: 0 0 0 calc(26 * var(--pt));
+    margin: calc(-1 * var(--pt)) 0 0 calc(26 * var(--pt));
     accent-color: var(--accent);
 }
 
