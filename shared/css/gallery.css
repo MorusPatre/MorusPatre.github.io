@@ -1952,6 +1952,20 @@ body.is-sidebar-collapsed #gallery-blur-layer {
     overscroll-behavior-x: contain;
 }
 
+/* View Options ▸ Background ▸ Color: the colour fills the area right of the
+   sidebar, under the items, in place of the page's own background. As in
+   Binder, the items are drawn in the light appearance over it, whatever the
+   system's, so the gallery and its footer take the light tokens. */
+#photo-gallery.has-custom-background,
+#photo-gallery.has-custom-background ~ #footer {
+    --ink-rgb: 31, 27, 24;
+    --thumb-glow: 0 calc(4px * var(--thumb-shadow-offset-scale, 1)) calc(14px * var(--thumb-shadow-blur-scale, 1)) rgba(0, 0, 0, 0.28);
+    --accent: #9c6247;
+    --accent-glow: 0 0 calc(16px * var(--selection-glow-scale, 1)) rgba(176, 108, 70, 0.4);
+    --accent-text-glow: 0 0 22px rgba(176, 108, 70, 0.25);
+    color: rgb(var(--ink-rgb));
+}
+
 .modal-info-panel .dimensions-x {
     display: inline-block;
     transform: translateY(1px);
@@ -2696,6 +2710,14 @@ View Options Panel
     margin-top: calc(2 * var(--pt));
 }
 
+.view-options-separator + .view-options-line {
+    margin-top: calc(8 * var(--pt));
+}
+
+.view-options-line + .view-options-radios--stacked {
+    margin-top: calc(-3 * var(--pt));
+}
+
 .view-options-separator + .view-options-slider,
 .view-options-separator + .view-options-check {
     margin-top: calc(8 * var(--pt));
@@ -2743,6 +2765,28 @@ View Options Panel
     display: flex;
     flex: 0 0 calc(64.5 * var(--pt));
     align-items: center;
+}
+
+/* Radio buttons one under another, Background's. */
+.view-options-radios--stacked {
+    flex-direction: column;
+    height: auto;
+}
+
+.view-options-panel .view-options-radios--stacked label {
+    flex: 0 0 calc(18 * var(--pt));
+}
+
+/* The colour picker the Color button opens, out of sight beside it. */
+.view-options-panel input[type="color"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    opacity: 0;
+    pointer-events: none;
 }
 
 .view-options-panel input[type="checkbox"],

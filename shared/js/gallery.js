@@ -1744,10 +1744,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // image's kind icon in place of its thumbnail. Text size runs 10 to 16
     // points, Finder's 12 by default, and the cells follow the caption's type.
     // Label position Right puts the name beside the icon; ungrouped, the
-    // gallery then runs sideways, as Finder's does.
+    // gallery then runs sideways, as Finder's does. Background is Default or
+    // a Color, picked as Binder picks it; Binder's Picture is left out.
     const VIEW_OPTIONS_STORAGE_PREFIX = 'galleryViewOptions:';
     const VIEW_OPTIONS_PANEL_STORAGE_KEY = 'galleryViewOptionsPanel';
-    const DEFAULT_VIEW_OPTIONS = { sortBy: 'none', sortReversed: false, iconSize: 253, gridSpacing: 54, cornerRadius: 0.06, textSize: 12, labelPosition: 'bottom', showItemInfo: true, showIconPreview: true };
+    const DEFAULT_VIEW_OPTIONS = { sortBy: 'none', sortReversed: false, iconSize: 253, gridSpacing: 54, cornerRadius: 0.06, textSize: 12, labelPosition: 'bottom', showItemInfo: true, showIconPreview: true, background: 'default', backgroundColor: null };
     const viewOptionsPanel = document.getElementById('view-options-panel');
     const viewOptionsTitleBar = viewOptionsPanel && viewOptionsPanel.querySelector('.view-options-title-bar');
     const viewOptionsCloseButton = viewOptionsPanel && viewOptionsPanel.querySelector('.view-options-close');
@@ -1761,6 +1762,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const labelPositionRadios = viewOptionsPanel ? Array.from(viewOptionsPanel.querySelectorAll('input[name="view-options-label-position"]')) : [];
     const showItemInfoCheckbox = document.getElementById('view-options-show-item-info');
     const showIconPreviewCheckbox = document.getElementById('view-options-show-icon-preview');
+    const backgroundRadios = viewOptionsPanel ? Array.from(viewOptionsPanel.querySelectorAll('input[name="view-options-background"]')) : [];
+    const backgroundColorInput = document.getElementById('view-options-background-color');
     let viewOptions = readViewOptions();
     let viewOptionsPanelPosition = null;
     let viewOptionsDrag = null;
@@ -1795,6 +1798,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (stored && typeof stored.showItemInfo === 'boolean') options.showItemInfo = stored.showItemInfo;
         if (stored && typeof stored.showIconPreview === 'boolean') options.showIconPreview = stored.showIconPreview;
+        if (stored && (stored.background === 'default' || stored.background === 'color')) options.background = stored.background;
+        if (stored && /^#[0-9a-f]{6}$/i.test(stored.backgroundColor)) options.backgroundColor = stored.backgroundColor;
         return options;
     }
 
@@ -1994,6 +1999,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (showIconPreviewCheckbox) showIconPreviewCheckbox.checked = viewOptions.showIconPreview;
     }
 
+    // Color fills the area right of the sidebar, and the gallery takes the
+    // light appearance over it. Until a colour is picked, Color shows as
+    // Default, as in Binder; the colour is kept while Default is chosen.
+    function applyBackground() {
+        const color = viewOptions.background === 'color' ? viewOptions.backgroundColor : null;
+        wrapper.style.backgroundColor = color || '';
+        gallery.classList.toggle('has-custom-background', Boolean(color));
+        backgroundRadios.forEach(radio => {
+            radio.checked = radio.value === (color ? 'color' : 'default');
+        });
+        if (backgroundColorInput && viewOptions.backgroundColor) backgroundColorInput.value = viewOptions.backgroundColor;
+    }
+
     // Whether an item draws its thumbnail rather than its kind icon.
     function showsThumbnail(item) {
         return viewOptions.showIconPreview && item.classList.contains('is-visible');
@@ -2119,6 +2137,45 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Binder's Color button opens the colour panel on every click, chosen or
+    // not; here the browser's colour picker. Each colour picked applies and
+    // is kept at once. The selection's glow and the thumbnails' shadows change
+    // with the appearance, so the hit test reads them again.
+    function setBackground(background) {
+        viewOptions.background = background;
+        saveViewOptions();
+        applyBackground();
+        thumbnailShadows = null;
+    }
+
+    backgroundRadios.forEach(radio => {
+        radio.addEventListener('click', () => {
+            if (radio.value === 'default') {
+                setBackground('default');
+                return;
+            }
+
+            if (viewOptions.backgroundColor) {
+                setBackground('color');
+            } else {
+                applyBackground();
+            }
+            if (!backgroundColorInput) return;
+            try {
+                backgroundColorInput.showPicker();
+            } catch (error) {
+                backgroundColorInput.click();
+            }
+        });
+    });
+
+    if (backgroundColorInput) {
+        backgroundColorInput.addEventListener('input', () => {
+            viewOptions.backgroundColor = backgroundColorInput.value;
+            setBackground('color');
+        });
+    }
+
     if (showItemInfoCheckbox) {
         showItemInfoCheckbox.addEventListener('change', () => {
             viewOptions.showItemInfo = showItemInfoCheckbox.checked;
@@ -2192,6 +2249,7 @@ document.addEventListener('DOMContentLoaded', () => {
     applyLabelPosition();
     applyShowItemInfo();
     applyShowIconPreview();
+    applyBackground();
 
     // --- Sort By ---
     // Binder's Sort By, after Finder's, with the keys these galleries have.
@@ -2692,13 +2750,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // The thumbnail shadow and the selection glow for the current appearance.
-    // A probe resolves the tokens, since computed values come in px and rgba().
+    // A probe in the gallery resolves the tokens as the gallery has them (its
+    // background can give it the light ones), in px and rgba().
     function getThumbnailShadows() {
         if (thumbnailShadows) return thumbnailShadows;
 
         const probe = document.createElement('div');
         probe.style.display = 'none';
-        document.body.appendChild(probe);
+        gallery.appendChild(probe);
         const resolve = token => {
             probe.style.boxShadow = `var(${token})`;
             return parseBoxShadow(getComputedStyle(probe).boxShadow);
