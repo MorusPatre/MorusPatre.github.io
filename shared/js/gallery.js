@@ -2077,7 +2077,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // selection box: a click tests whichever of the two is drawn, the marquee
     // always the shadow.
 
-    // Safari, and every iOS browser, draws shadows with WebKit's own blur.
+    // Safari, and every iOS browser, is WebKit, which leaves the shadows it
+    // paints on screen to Core Graphics.
     const drawsShadowsLikeWebKit = navigator.vendor === 'Apple Computer, Inc.';
     const hitTextRange = document.createRange();
     const kindIconMasks = new Map();
@@ -2117,7 +2118,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const alpha = channels.length > 3 ? channels[3] : 1;
         const [x = 0, y = 0, blur = 0, spread = 0] =
             shadow.replace(color[0], '').trim().split(/\s+/).map(parseFloat);
-        return alpha > 0 ? { x, y, blur, spread, alpha, template: null } : null;
+        return alpha > 0 ? { x, y, blur, spread, alpha } : null;
     }
 
     // The thumbnail shadow and the selection glow for the current appearance.
@@ -2154,107 +2155,139 @@ document.addEventListener('DOMContentLoaded', () => {
         return x < 0 ? -y : y;
     }
 
-    // A shadow's 8-bit alpha as the spec has it, which Chrome draws to within a
-    // pixel or two: the rect blurred by a Gaussian of σ = blur / 2. A sharp
-    // rect blurs one axis at a time, so its alpha is the product of the two.
-    function getGaussianShadowAlpha(x, y, rect, shadow) {
-        const coverage = (u, from, to) => {
-            if (shadow.blur === 0) return u >= from && u < to ? 1 : 0;
-            const scale = shadow.blur / 2 * Math.SQRT2;
-            return (erf((to - u) / scale) - erf((from - u) / scale)) / 2;
-        };
-        return Math.round(shadow.alpha * 255 *
-            coverage(x, rect.left, rect.right) * coverage(y, rect.top, rect.bottom));
+    // The card's corner radius as it is drawn. CSS scales a box's radii down
+    // until adjacent ones fit along each side, which for four equal radii
+    // clamps them to half the shorter side.
+    function clampCardRadius(card, radius) {
+        return clamp(radius, 0, Math.min(card.right - card.left, card.bottom - card.top) / 2);
     }
 
-    // One box blur along a row or column, as WebKit's ShadowBlur::blurLayerImage
-    // runs it: a sliding sum in 17.15 fixed point, the ends held at the edge pixels.
-    function webKitBoxBlur(pixels, left, right) {
-        const length = pixels.length;
-        const blurred = new Uint8Array(length);
-        const count = left + 1 + right;
-        const inverse = Math.floor(((1 << 15) + count - 1) / count);
-        const at = i => pixels[clamp(i, 0, length - 1)];
+    // The thumbnail's radius, in px. CSS would take a percentage of each side,
+    // an ellipse; this takes it of the shorter one, keeping the corner a circle.
+    function getCardRadius(img, card) {
+        const value = getComputedStyle(img).borderTopLeftRadius;
+        const shorter = Math.min(card.right - card.left, card.bottom - card.top);
+        const radius = value.endsWith('%') ? parseFloat(value) / 100 * shorter : parseFloat(value);
+        return clampCardRadius(card, radius || 0);
+    }
+
+    // Whether `probe` touches the rounded card: between the corners the card is
+    // its rect, in a corner the quarter circle. A pixel the curve only grazes
+    // still draws some alpha, so touching counts.
+    function roundedRectIntersects(probe, card, radius) {
+        if (!rectsIntersect(probe, card)) return false;
+        if (radius <= 0) return true;
+
+        // How far the probe stays from the rect the corner circles are centred on.
+        const dx = Math.max(card.left + radius - probe.right, probe.left - (card.right - radius), 0);
+        const dy = Math.max(card.top + radius - probe.bottom, probe.top - (card.bottom - radius), 0);
+        return dx * dx + dy * dy < radius * radius;
+    }
+
+    // 16-point Gauss-Legendre on [-1, 1], one half of its symmetric nodes.
+    const legendreNodes = [0.0950125098376374, 0.2816035507792589, 0.4580167776572274, 0.6178762444026438,
+        0.7554044083550030, 0.8656312023878318, 0.9445750230732326, 0.9894009349916499];
+    const legendreWeights = [0.1894506104550685, 0.1826034150449236, 0.1691565193950025, 0.1495959888165767,
+        0.1246289712555339, 0.0951585116824928, 0.0622535239386479, 0.0271524594117541];
+
+    // What one corner cap of a blurred rounded rect gives a point: the cap's
+    // rows, each a sharp span blurred across, weighted by the Gaussian down.
+    // `offset` is how far past the cap's base line the point lies, toward the
+    // cap. Rows rise d = r sin φ from the base, which keeps the integrand
+    // smooth; only rows within the kernel's reach of the point count.
+    function getGaussianCapCoverage(x, offset, left, right, radius, sigma, reach, coverage) {
+        const from = Math.max(0, offset - reach);
+        const to = Math.min(radius, offset + reach);
+        if (to <= from) return 0;
+
+        const start = Math.asin(from / radius);
+        const end = Math.asin(Math.min(1, to / radius));
+        const middle = (start + end) / 2;
+        const half = (end - start) / 2;
         let sum = 0;
-        for (let i = -left; i <= right; i++) sum += at(i);
-        for (let i = 0; i < length; i++) {
-            blurred[i] = (sum * inverse) >> 15;
-            sum += at(i + right + 1) - at(i - left);
+        for (let i = 0; i < 16; i++) {
+            const angle = middle + half * (i < 8 ? -legendreNodes[i] : legendreNodes[i - 8]);
+            const rise = radius * Math.sin(angle);
+            const width = radius * Math.cos(angle);
+            const z = (offset - rise) / sigma;
+            sum += legendreWeights[i % 8] * Math.exp(-z * z / 2) * width *
+                coverage(x, left + radius - width, right - radius + width);
         }
-        return blurred;
+        return sum * half / (sigma * Math.sqrt(2 * Math.PI));
     }
 
-    // WebKit's shadow template (ShadowBlur::drawRectShadowWithTiling): a black
-    // square on a (4e + 1) px canvas at one pixel per CSS px, e = ceil(blur),
-    // blurred along the rows and then the columns, three boxes each, then
-    // tinted with the shadow colour.
-    function getWebKitShadowTemplate(shadow) {
-        if (shadow.template) return shadow.template;
+    // How an engine blurs a shadow on screen: a Gaussian of σ = blur / 2, as
+    // the spec has it, cut off `reach` σ out; whether the coverage becomes an
+    // 8-bit mask before the colour's alpha scales it; and the least alpha, in
+    // 255ths, that still draws. Measured against each, to a device px on a
+    // straight edge.
+    // Safari's layers paint into IOSurfaces, where WebKit leaves shadows to
+    // Core Graphics (GraphicsContextCG::canUseShadowBlur is for bitmaps only):
+    // CG works a rect's shadow out exactly, and blurs a rounded rect's from a
+    // mask, floored. Chrome's Skia multiplies two 8-bit edge profiles for a
+    // rect, and keeps a rounded rect's as an 8-bit mask.
+    const shadowKernels = drawsShadowsLikeWebKit ? {
+        rect: { reach: 2.85, mask: 'none', least: 0.5 },
+        rounded: { reach: 3.1, mask: 'floor', least: 0.58 }
+    } : {
+        rect: { reach: Infinity, mask: 'axes', least: 0.5 },
+        rounded: { reach: 3.2, mask: 'round', least: 0.5 }
+    };
 
-        const blur = Math.min(shadow.blur, 128);
-        const edge = Math.max(2, Math.ceil(blur));
-        const size = 4 * edge + 1;
-
-        // calculateLobes: three boxes for a Gaussian of σ = blur / 2, narrowed
-        // by WebKit's 0.88 fudge factor.
-        const diameter = Math.max(2, Math.floor(blur / 2 * 0.75 * Math.sqrt(2 * Math.PI) * 0.88 + 0.5));
-        const half = diameter >> 1;
-        const lobes = diameter & 1
-            ? [[half, half], [half, half], [half, half]]
-            : [[half, half - 1], [half - 1, half], [half, half]];
-
-        const alpha = new Uint8Array(size * size);
-        for (let y = edge; y < size - edge; y++) {
-            alpha.fill(255, y * size + edge, (y + 1) * size - edge);
-        }
-        for (let y = 0; y < size; y++) {
-            let row = alpha.subarray(y * size, (y + 1) * size);
-            for (const [left, right] of lobes) row = webKitBoxBlur(row, left, right);
-            alpha.set(row, y * size);
-        }
-        const column = new Uint8Array(size);
-        for (let x = 0; x < size; x++) {
-            for (let y = 0; y < size; y++) column[y] = alpha[y * size + x];
-            let blurred = column;
-            for (const [left, right] of lobes) blurred = webKitBoxBlur(blurred, left, right);
-            for (let y = 0; y < size; y++) alpha[y * size + x] = Math.floor(blurred[y] * shadow.alpha + 0.5);
+    // A shadow's 8-bit alpha at (x, y): its rounded rect blurred by the
+    // engine's Gaussian. The straight band between the corners blurs one axis
+    // at a time; the two corner caps are summed row by row.
+    function getGaussianShadowAlpha(x, y, rect, shadow, radius = 0,
+        kernel = radius > 0 ? shadowKernels.rounded : shadowKernels.rect) {
+        if (shadow.blur === 0) {
+            const dx = Math.max(rect.left + radius - x, x - (rect.right - radius), 0);
+            const dy = Math.max(rect.top + radius - y, y - (rect.bottom - radius), 0);
+            const isInside = x >= rect.left && x < rect.right && y >= rect.top && y < rect.bottom &&
+                dx * dx + dy * dy <= radius * radius;
+            return isInside ? Math.round(shadow.alpha * 255) : 0;
         }
 
-        shadow.template = { edge, size, alpha, fill: Math.floor(255 * shadow.alpha + 0.5) };
-        return shadow.template;
-    }
+        const sigma = shadow.blur / 2;
+        const scale = sigma * Math.SQRT2;
+        // Past 5σ an uncut Gaussian adds less than a 255th of a 255th. A cut
+        // one is weighted up to sum to 1.
+        const reach = Math.min(kernel.reach, 5) * sigma;
+        const total = kernel.reach < 5 ? erf(kernel.reach / Math.SQRT2) : 1;
+        const coverage = (u, from, to) => to <= from ? 0 :
+            (erf(clamp(to - u, -reach, reach) / scale) - erf(clamp(from - u, -reach, reach) / scale)) / 2 / total;
 
-    // The template pixel ShadowBlur::drawLayerPieces lays over `u` along one
-    // axis of a shadow rect: the template's ends over the rect's ends, its
-    // middle pixel stretched across a span WebKit truncates to whole px. -1 is
-    // outside the shadow.
-    function getWebKitTemplateIndex(u, from, to, edge) {
-        const middleEnd = from + edge + Math.trunc(to - from - 2 * edge);
-        if (u < from - edge || u >= middleEnd + 2 * edge) return -1;
-        if (u < from + edge) return Math.floor(u - from + edge);
-        if (u >= middleEnd) return Math.floor(u - middleEnd) + 2 * edge + 1;
-        return 2 * edge;
-    }
-
-    // A shadow's 8-bit alpha as Safari draws it. Against WebKit snapshots of
-    // these shadows it takes in every drawn pixel, and overshoots by at most a
-    // pixel of alpha 1/255 below the thumbnail.
-    function getWebKitShadowAlpha(x, y, rect, shadow) {
-        if (shadow.blur === 0) return getGaussianShadowAlpha(x, y, rect, shadow);
-
-        const template = getWebKitShadowTemplate(shadow);
-        const column = getWebKitTemplateIndex(x, rect.left, rect.right, template.edge);
-        const row = getWebKitTemplateIndex(y, rect.top, rect.bottom, template.edge);
-        if (column < 0 || row < 0) return 0;
-        // Between the stretched edges WebKit fills the plain colour.
-        if (column === 2 * template.edge && row === 2 * template.edge) return template.fill;
-        return template.alpha[row * template.size + column];
+        // Past the kernel's reach of the rect nothing is drawn.
+        if (!roundedRectIntersects({ left: x - reach, top: y - reach, right: x + reach, bottom: y + reach }, rect, radius)) {
+            return 0;
+        }
+        // Beside a straight edge, out of the corners' reach, only that edge counts.
+        let across = 1;
+        let down = 1;
+        let sum;
+        if (x >= rect.left + radius + reach && x <= rect.right - radius - reach) {
+            sum = down = coverage(y, rect.top, rect.bottom);
+        } else if (y >= rect.top + radius + reach && y <= rect.bottom - radius - reach) {
+            sum = across = coverage(x, rect.left, rect.right);
+        } else {
+            across = coverage(x, rect.left, rect.right);
+            down = coverage(y, rect.top + radius, rect.bottom - radius);
+            sum = across * down;
+            if (radius > 0) {
+                sum += getGaussianCapCoverage(x, rect.top + radius - y, rect.left, rect.right, radius, sigma, reach, coverage) / total;
+                sum += getGaussianCapCoverage(x, y - (rect.bottom - radius), rect.left, rect.right, radius, sigma, reach, coverage) / total;
+            }
+        }
+        const covered =
+            kernel.mask === 'axes' ? Math.round(255 * across) * Math.round(255 * down) / 255 :
+            kernel.mask === 'floor' ? Math.floor(255 * sum + 1e-9) :
+            kernel.mask === 'round' ? Math.round(255 * sum) : 255 * sum;
+        return Math.floor(covered * shadow.alpha + 1 - kernel.least);
     }
 
     // Whether a shadow draws a device pixel with any alpha in `probe`. Its alpha
-    // only falls off away from the middle of its rect, so the probe's pixel
-    // nearest that middle decides.
-    function shadowDrawsIn(probe, card, shadow) {
+    // only falls off away from the middle of its rect, rounded or not, so the
+    // probe's pixel nearest that middle decides.
+    function shadowDrawsIn(probe, card, shadow, radius = 0) {
         if (!shadow) return false;
 
         const rect = {
@@ -2263,12 +2296,13 @@ document.addEventListener('DOMContentLoaded', () => {
             right: card.right + shadow.x + shadow.spread,
             bottom: card.bottom + shadow.y + shadow.spread
         };
+        // A spread grows a rounded corner with it.
+        const shadowRadius = radius > 0 ? clampCardRadius(rect, radius + shadow.spread) : 0;
         const half = 0.5 / window.devicePixelRatio;
         const nearest = (middle, from, to) => clamp(middle, from + half, Math.max(from + half, to - half));
         const x = nearest((rect.left + rect.right) / 2, probe.left, probe.right);
         const y = nearest((rect.top + rect.bottom) / 2, probe.top, probe.bottom);
-        const getAlpha = drawsShadowsLikeWebKit ? getWebKitShadowAlpha : getGaussianShadowAlpha;
-        return getAlpha(x, y, rect, shadow) > 0;
+        return getGaussianShadowAlpha(x, y, rect, shadow, shadowRadius) > 0;
     }
 
     // The kind icon a figure draws until its thumbnail loads: the figure's
@@ -2388,7 +2422,9 @@ document.addEventListener('DOMContentLoaded', () => {
             info: textRect(item.querySelector('.dimensions'))
         };
         if (hitBox.isLoaded) {
-            hitBox.card = toGallery(snapped(item.querySelector('img').getBoundingClientRect()));
+            const img = item.querySelector('img');
+            hitBox.card = toGallery(snapped(img.getBoundingClientRect()));
+            hitBox.radius = getCardRadius(img, hitBox.card);
         } else {
             hitBox.icon = getKindIconRect(item, hitBox.canvas);
         }
@@ -2397,13 +2433,14 @@ document.addEventListener('DOMContentLoaded', () => {
         return hitBox;
     }
 
-    // Finder's image view: the band or click touches the thumbnail or a pixel
-    // of its shadow, or a pixel of the kind icon before the thumbnail loads. A
-    // band around the whole canvas counts either way.
+    // Finder's image view: the band or click touches the rounded thumbnail or a
+    // pixel of its shadow, or a pixel of the kind icon before the thumbnail
+    // loads. A band around the whole canvas counts either way.
     function hitsArtwork(probe, hitBox, shadow) {
         if (rectContains(probe, hitBox.canvas)) return true;
         if (!hitBox.isLoaded) return kindIconDrawsIn(probe, hitBox.icon);
-        return rectsIntersect(probe, hitBox.card) || shadowDrawsIn(probe, hitBox.card, shadow);
+        return roundedRectIntersects(probe, hitBox.card, hitBox.radius) ||
+            shadowDrawsIn(probe, hitBox.card, shadow, hitBox.radius);
     }
 
     // Finder's -[TIconView _hitTestWithLocalPoint:]: the thumbnail and its
