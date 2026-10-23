@@ -43,6 +43,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 img.src = item.thumbnail;
                 img.alt = item.alt;
                 img.addEventListener('load', () => {
+                    // Which side spans the thumbnail box.
+                    img.classList.toggle('is-portrait', img.naturalHeight > img.naturalWidth);
                     figure.classList.add('is-visible');
                     
                     // When the first image loads, make the footer visible.

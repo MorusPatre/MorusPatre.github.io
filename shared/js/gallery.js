@@ -1108,7 +1108,9 @@ document.addEventListener('DOMContentLoaded', () => {
         clone.classList.remove('selected');
         clone.querySelector('.item-download-button')?.remove();
         if (!clone.classList.contains('is-visible')) {
-            clone.querySelector('img').addEventListener('load', () => {
+            const img = clone.querySelector('img');
+            img.addEventListener('load', () => {
+                img.classList.toggle('is-portrait', img.naturalHeight > img.naturalWidth);
                 clone.classList.add('is-visible');
             }, { once: true });
         }
