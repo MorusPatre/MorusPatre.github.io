@@ -101,6 +101,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             document.dispatchEvent(new CustomEvent('galleryLoaded'));
             fitFilenamesToTwoLines(galleryContainer);
+            // Fitted again whenever the View Options change the caption's
+            // font or width.
+            document.addEventListener('galleryCaptionsChanged', () => fitFilenamesToTwoLines(galleryContainer));
         })
         .catch(error => {
             console.error('Error loading gallery data:', error);
@@ -120,7 +123,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // in a hidden copy of the caption once its font has loaded; only a name
     // wider than one line can need it.
     function fitFilenamesToTwoLines(gallery) {
-        const firstName = gallery.querySelector('figure .filename');
+        // Measured on a caption that is shown: the search or the sidebar may
+        // hide the first.
+        let firstName = null;
+        for (const span of gallery.querySelectorAll('figure .filename')) {
+            if (span.parentElement.clientWidth > 0) {
+                firstName = span;
+                break;
+            }
+        }
         if (!firstName) return;
 
         const caption = firstName.parentElement;
@@ -146,12 +157,24 @@ document.addEventListener('DOMContentLoaded', function() {
             document.body.appendChild(probe);
             const range = document.createRange();
 
+            // A name cut short before keeps its whole self, to fit again from.
             for (const span of gallery.querySelectorAll('figure .filename')) {
-                const name = span.textContent;
-                if (measure(name) <= width) continue;
+                const name = span.dataset.name || span.textContent;
+                const restore = () => {
+                    if (!span.dataset.name) return;
+                    span.textContent = name;
+                    delete span.dataset.name;
+                };
+                if (measure(name) <= width) {
+                    restore();
+                    continue;
+                }
 
                 probe.textContent = name;
-                if (probe.getBoundingClientRect().height <= lineHeight * 2.5) continue;
+                if (probe.getBoundingClientRect().height <= lineHeight * 2.5) {
+                    restore();
+                    continue;
+                }
 
                 // Where the second line starts: the first character below the first line.
                 const text = probe.firstChild;
@@ -177,6 +200,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 let tail = 0;
                 while (tail < rest.length - head - 1 && measure(rest.slice(rest.length - tail - 1)) <= half) tail++;
 
+                span.dataset.name = name;
                 span.textContent = name.slice(0, low);
                 span.appendChild(document.createElement('br'));
                 span.appendChild(document.createTextNode(`${rest.slice(0, head)}…${rest.slice(rest.length - tail)}`));

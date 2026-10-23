@@ -1693,16 +1693,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // Binder's slider does. The gallery starts at 6%, where Binder starts at 10%.
     // Show item info shows or hides the dimensions line, and the cells keep
     // room for it only while it shows. Show icon preview off shows every
-    // image's kind icon in place of its thumbnail.
+    // image's kind icon in place of its thumbnail. Text size runs 10 to 16
+    // points, Finder's 12 by default, and the cells follow the caption's type.
     const VIEW_OPTIONS_STORAGE_PREFIX = 'galleryViewOptions:';
     const VIEW_OPTIONS_PANEL_STORAGE_KEY = 'galleryViewOptionsPanel';
-    const DEFAULT_VIEW_OPTIONS = { cornerRadius: 0.06, showItemInfo: true, showIconPreview: true };
+    const DEFAULT_VIEW_OPTIONS = { cornerRadius: 0.06, textSize: 12, showItemInfo: true, showIconPreview: true };
     const viewOptionsPanel = document.getElementById('view-options-panel');
     const viewOptionsTitleBar = viewOptionsPanel && viewOptionsPanel.querySelector('.view-options-title-bar');
     const viewOptionsCloseButton = viewOptionsPanel && viewOptionsPanel.querySelector('.view-options-close');
     const viewOptionsMenuRow = document.getElementById('gallery-context-view');
     const cornerRadiusSlider = document.getElementById('view-options-corner-radius');
     const cornerRadiusValue = document.getElementById('view-options-corner-radius-value');
+    const textSizePopup = document.getElementById('view-options-text-size');
     const showItemInfoCheckbox = document.getElementById('view-options-show-item-info');
     const showIconPreviewCheckbox = document.getElementById('view-options-show-icon-preview');
     let viewOptions = readViewOptions();
@@ -1722,6 +1724,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const options = { ...DEFAULT_VIEW_OPTIONS };
         if (stored && Number.isFinite(stored.cornerRadius)) {
             options.cornerRadius = Math.min(Math.max(Math.round(stored.cornerRadius * 100), 0), 50) / 100;
+        }
+        if (stored && Number.isInteger(stored.textSize) && stored.textSize >= 10 && stored.textSize <= 16) {
+            options.textSize = stored.textSize;
         }
         if (stored && typeof stored.showItemInfo === 'boolean') options.showItemInfo = stored.showItemInfo;
         if (stored && typeof stored.showIconPreview === 'boolean') options.showIconPreview = stored.showIconPreview;
@@ -1789,6 +1794,12 @@ document.addEventListener('DOMContentLoaded', () => {
         gallery.style.setProperty('--corner-radius', String(viewOptions.cornerRadius));
         if (cornerRadiusSlider) cornerRadiusSlider.value = String(percent);
         if (cornerRadiusValue) cornerRadiusValue.textContent = `${percent}%`;
+    }
+
+    // The caption's type is the gallery's, which its cells are measured in.
+    function applyTextSize() {
+        gallery.style.setProperty('--text-size', String(viewOptions.textSize));
+        if (textSizePopup) textSizePopup.value = String(viewOptions.textSize);
     }
 
     function applyShowItemInfo() {
@@ -1862,6 +1873,16 @@ document.addEventListener('DOMContentLoaded', () => {
         cornerRadiusSlider.addEventListener('change', saveViewOptions);
     }
 
+    // The names wrap at a new width in a new type, so they are fitted again.
+    if (textSizePopup) {
+        textSizePopup.addEventListener('change', () => {
+            viewOptions.textSize = Number(textSizePopup.value);
+            saveViewOptions();
+            relayoutGallery(applyTextSize);
+            document.dispatchEvent(new CustomEvent('galleryCaptionsChanged'));
+        });
+    }
+
     if (showItemInfoCheckbox) {
         showItemInfoCheckbox.addEventListener('change', () => {
             viewOptions.showItemInfo = showItemInfoCheckbox.checked;
@@ -1929,6 +1950,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     applyCornerRadius();
+    applyTextSize();
     applyShowItemInfo();
     applyShowIconPreview();
     /*
