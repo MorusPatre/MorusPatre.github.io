@@ -767,15 +767,74 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- Initial Setup and Observers ---
+    // --- Icon Grid ---
+    // Binder's icon grid, after Finder's (TIconCollectionViewKeepArrangedLayout):
+    // as many cells as fit between the 4px side insets with 2px between them.
+    // While they fill one row or less they stay packed left, as the stylesheet
+    // lays them out. Past one row the spare width is spread into cols + 1 equal
+    // gaps, each column's distance from its packed place floored to a whole
+    // pixel by Finder's own loop, so neighbouring gaps can differ by a pixel.
+    const ICON_GRID_INSET = 4;
+    const ICON_GRID_MINIMUM_GAP = 2;
+    const galleryWidthProbe = document.createElement('div');
+    galleryWidthProbe.id = 'gallery-width-probe';
+    galleryWidthProbe.setAttribute('aria-hidden', 'true');
+    gallery.appendChild(galleryWidthProbe);
+    let iconGridColumns = '';
 
-    calculateGridMetrics();
+    function layoutIconGrid() {
+        const cellWidth = parseFloat(getComputedStyle(gallery).getPropertyValue('--cell-width'));
+        const width = galleryWidthProbe.getBoundingClientRect().width;
+        if (!(cellWidth > 0)) return;
 
-    const galleryObserver = new ResizeObserver(() => {
+        const pitch = cellWidth + ICON_GRID_MINIMUM_GAP;
+        const cols = Math.max(1, Math.floor((width + ICON_GRID_MINIMUM_GAP) / pitch));
+        let visibleCount = 0;
+        for (const item of items) {
+            if (item.style.display !== 'none' && ++visibleCount > cols) break;
+        }
+
+        // Each track ends at its cell's right edge, and the cell sits at the end.
+        let columns = '';
+        if (visibleCount > cols) {
+            const spacing = Math.max(0, (width - cols * cellWidth) / (cols + 1));
+            const tracks = [];
+            let center = ICON_GRID_INSET + cellWidth * 0.5 + spacing;
+            let trackStart = ICON_GRID_INSET;
+            for (let col = 0; col < cols; col++) {
+                const base = ICON_GRID_INSET + col * pitch;
+                const right = base + Math.floor(center - (base + cellWidth * 0.5)) + cellWidth;
+                tracks.push(`${right - trackStart}px`);
+                trackStart = right;
+                center += cellWidth + spacing;
+            }
+            columns = tracks.join(' ');
+        }
+
+        if (columns === iconGridColumns) return;
+        iconGridColumns = columns;
+        gallery.style.gridTemplateColumns = columns;
+        gallery.style.columnGap = columns ? '0px' : '';
+    }
+
+    function refreshIconGrid() {
+        layoutIconGrid();
         calculateGridMetrics();
         marqueeItemRects = null;
-    });
-    galleryObserver.observe(gallery);
+    }
+
+    // --- Initial Setup and Observers ---
+
+    refreshIconGrid();
+
+    // The probe, not the gallery, is watched: justifying the grid can change
+    // the gallery's height, and a size changed inside an observer's own
+    // callback is only reported the frame after, as an error. The gallery
+    // filling and its filters are what else moves the items.
+    const galleryObserver = new ResizeObserver(refreshIconGrid);
+    galleryObserver.observe(galleryWidthProbe);
+    document.addEventListener('galleryLoaded', refreshIconGrid);
+    window.addEventListener('galleryFiltered', refreshIconGrid);
 
     if (searchInput) {
         searchInput.addEventListener('keyup', () => {
@@ -1011,14 +1070,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // As in Binder's icon view, after Finder, an item is hit where it draws: its
     // thumbnail, every pixel of the thumbnail's shadow with any alpha (Finder
     // tests QuickLook's thumbnail image, which has the shadow baked in), the
-    // filename and the dimensions line. The rest of the figure is background,
-    // like the space around a Finder icon. A selected thumbnail trades its
-    // shadow for the gold glow, which plays Finder's selection box: a click
-    // tests whichever of the two is drawn, the marquee always the shadow.
+    // filename and the dimensions line. Until the thumbnail loads, the kind icon
+    // drawn in its place is hit wherever it has any alpha. The rest of the
+    // figure is background, like the space around a Finder icon. A selected
+    // thumbnail trades its shadow for the gold glow, which plays Finder's
+    // selection box: a click tests whichever of the two is drawn, the marquee
+    // always the shadow.
 
     // Safari, and every iOS browser, draws shadows with WebKit's own blur.
     const drawsShadowsLikeWebKit = navigator.vendor === 'Apple Computer, Inc.';
     const hitTextRange = document.createRange();
+    const kindIconMasks = new Map();
     let thumbnailShadows = null;
 
     window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
@@ -1209,14 +1271,95 @@ document.addEventListener('DOMContentLoaded', () => {
         return getAlpha(x, y, rect, shadow) > 0;
     }
 
-    // What an item draws, in gallery coordinates: its canvas (the thumbnail's
-    // container), the thumbnail, the filename and the dimensions text. Measured
-    // only for items a click or the band comes near, and kept for the rest of
-    // the drag once the thumbnail has loaded; until then the item draws nothing.
-    function getItemHitBox(entry, galleryRect) {
-        if (entry.hitBox && entry.hitBox.isLoaded) return entry.hitBox;
+    // The kind icon a figure draws until its thumbnail loads: the figure's
+    // background, a square concentric with the thumbnail's container.
+    function getKindIconURL(style) {
+        const url = style.backgroundImage.match(/url\("?(.*?)"?\)/);
+        return url ? url[1] : null;
+    }
 
+    function getKindIconRect(item, canvas) {
+        const style = getComputedStyle(item);
+        const url = getKindIconURL(style);
+        if (!url) return null;
+
+        const half = parseFloat(style.backgroundSize) / 2;
+        const x = (canvas.left + canvas.right) / 2;
+        const y = (canvas.top + canvas.bottom) / 2;
+        return { url, left: x - half, top: y - half, right: x + half, bottom: y + half };
+    }
+
+    // Which pixels of a kind icon have any alpha, as a summed-area table so a
+    // band's whole overlap is counted at once. Finder tests an icon with
+    // -[NSImage hitTestRect:withImageDestinationRect:...], alpha > 0. The table
+    // is built once the image decodes; until then the icon is not hit.
+    function getKindIconMask(url) {
+        if (kindIconMasks.has(url)) return kindIconMasks.get(url);
+
+        kindIconMasks.set(url, null);
+        const image = new Image();
+        image.onload = () => {
+            const width = image.naturalWidth;
+            const height = image.naturalHeight;
+            const context = Object.assign(document.createElement('canvas'), { width, height })
+                .getContext('2d', { willReadFrequently: true });
+            context.drawImage(image, 0, 0);
+            const pixels = context.getImageData(0, 0, width, height).data;
+            const stride = width + 1;
+            const sums = new Uint32Array(stride * (height + 1));
+            for (let y = 0; y < height; y++) {
+                let row = 0;
+                for (let x = 0; x < width; x++) {
+                    if (pixels[(y * width + x) * 4 + 3] > 0) row++;
+                    sums[(y + 1) * stride + x + 1] = sums[y * stride + x + 1] + row;
+                }
+            }
+            kindIconMasks.set(url, { width, height, sums });
+        };
+        image.src = url;
+        return null;
+    }
+
+    // The masks are ready by the first click: every kind in the gallery.
+    document.addEventListener('galleryLoaded', () => {
+        const kinds = new Set();
+        for (const item of items) {
+            if (kinds.has(item.dataset.kind)) continue;
+            kinds.add(item.dataset.kind);
+            const url = getKindIconURL(getComputedStyle(item));
+            if (url) getKindIconMask(url);
+        }
+    });
+
+    // Whether a kind icon draws a pixel with any alpha in `probe`.
+    function kindIconDrawsIn(probe, icon) {
+        const mask = icon && getKindIconMask(icon.url);
+        if (!mask) return false;
+
+        const scaleX = mask.width / (icon.right - icon.left);
+        const scaleY = mask.height / (icon.bottom - icon.top);
+        const left = clamp(Math.floor((probe.left - icon.left) * scaleX), 0, mask.width);
+        const right = clamp(Math.ceil((probe.right - icon.left) * scaleX), 0, mask.width);
+        const top = clamp(Math.floor((probe.top - icon.top) * scaleY), 0, mask.height);
+        const bottom = clamp(Math.ceil((probe.bottom - icon.top) * scaleY), 0, mask.height);
+        if (right <= left || bottom <= top) return false;
+
+        const stride = mask.width + 1;
+        const sums = mask.sums;
+        return sums[bottom * stride + right] - sums[top * stride + right] -
+            sums[bottom * stride + left] + sums[top * stride + left] > 0;
+    }
+
+    // What an item draws, in gallery coordinates: its canvas (the thumbnail's
+    // container), the thumbnail or, until it loads, the kind icon, the filename
+    // and the dimensions text. Measured only for items a click or the band
+    // comes near, and kept for the rest of the drag, until the thumbnail loads.
+    function getItemHitBox(entry, galleryRect) {
         const item = entry.item;
+        if (entry.hitBox && (entry.hitBox.isLoaded || !item.classList.contains('is-visible'))) {
+            return entry.hitBox;
+        }
+
         const toGallery = rect => ({
             left: rect.left - galleryRect.left,
             top: rect.top - galleryRect.top,
@@ -1240,12 +1383,14 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         const hitBox = {
             isLoaded: item.classList.contains('is-visible'),
-            canvas: toGallery(item.querySelector('.image-container').getBoundingClientRect())
+            canvas: toGallery(item.querySelector('.image-container').getBoundingClientRect()),
+            name: textRect(item.querySelector('.filename')),
+            info: textRect(item.querySelector('.dimensions'))
         };
         if (hitBox.isLoaded) {
             hitBox.card = toGallery(snapped(item.querySelector('img').getBoundingClientRect()));
-            hitBox.name = textRect(item.querySelector('.filename'));
-            hitBox.info = textRect(item.querySelector('.dimensions'));
+        } else {
+            hitBox.icon = getKindIconRect(item, hitBox.canvas);
         }
 
         entry.hitBox = hitBox;
@@ -1253,21 +1398,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Finder's image view: the band or click touches the thumbnail or a pixel
-    // of its shadow. A band around the whole canvas counts even before the
-    // thumbnail has loaded.
+    // of its shadow, or a pixel of the kind icon before the thumbnail loads. A
+    // band around the whole canvas counts either way.
     function hitsArtwork(probe, hitBox, shadow) {
         if (rectContains(probe, hitBox.canvas)) return true;
-        return hitBox.isLoaded &&
-            (rectsIntersect(probe, hitBox.card) || shadowDrawsIn(probe, hitBox.card, shadow));
+        if (!hitBox.isLoaded) return kindIconDrawsIn(probe, hitBox.icon);
+        return rectsIntersect(probe, hitBox.card) || shadowDrawsIn(probe, hitBox.card, shadow);
     }
 
     // Finder's -[TIconView _hitTestWithLocalPoint:]: the thumbnail and its
     // shadow, or the selection glow that replaces the shadow while it shows,
-    // the filename, the dimensions.
+    // or the kind icon, the filename, the dimensions.
     function isPointInItemHitBox(entry, x, y, galleryRect) {
         const hitBox = getItemHitBox(entry, galleryRect);
-        if (!hitBox.isLoaded) return false;
-
         const probe = { left: x, top: y, right: x + 1, bottom: y + 1 };
         const shadows = getThumbnailShadows();
         const shadow = isSelected(entry.item) ? shadows.selection : shadows.artwork;
@@ -1284,8 +1427,7 @@ document.addEventListener('DOMContentLoaded', () => {
             band.top >= entry.bottom + shadows.reach || band.bottom <= entry.top - shadows.reach) {
             return false;
         }
-        // A band around the whole figure takes in its thumbnail, or its canvas
-        // while the thumbnail loads.
+        // A band around the whole figure takes in its thumbnail or kind icon.
         if (rectContains(band, entry)) return true;
 
         const hitBox = getItemHitBox(entry, galleryRect);

@@ -1622,23 +1622,81 @@ Styling for the Finder-Style Photo Gallery
 */
 
 /* 1. The Main Gallery Container */
-/* NEW: The photo gallery's position is now controlled by its own margin and padding.
-   'margin-top' controls the space between the gallery and the header.
-   'padding' controls the space between the gallery's edge and the photos inside it.
-*/
+/* The gallery is laid out as Binder's icon view, after Finder's: each figure is
+   a cell, and every measure of it follows from the icon size, the grid spacing
+   and the caption's text by Finder's own formulas (Binder's
+   IconViewGeometry.swift). The caption's font is the gallery's, so 1ch is the
+   width of its "0" and 1lh its line. The cell width is registered so the
+   gallery's script can read it in pixels. */
+@property --cell-width {
+    syntax: '<length>';
+    inherits: true;
+    initial-value: 0px;
+}
+
 #photo-gallery {
+    /* The icon whose thumbnail box is 225px, as QuickLook insets it. */
+    --icon-size: 253px;
+    /* View Options ▸ Grid spacing runs 1 to 100; 54 is Finder's default. */
+    --grid-spacing: 54;
+    --info-font-size: 0.55rem;
+    /* +[TIconSelectionView selectionPaddingForIconSize:]: the selection box is
+       the icon grown by s/16 a side, unrounded. */
+    --icon-padding: calc(var(--icon-size) / 16);
+    --icon-box: calc(var(--icon-size) + 2 * var(--icon-padding));
+    /* The icon sits the padding, truncated, below the cell's top, centred
+       across and floored. */
+    --icon-top: round(to-zero, var(--icon-padding), 1px);
+    --icon-left: round(down, (var(--cell-width) - var(--icon-size)) / 2, 1px);
+    /* QuickLook insets a thumbnail 7/128 of the icon a side (128 to 256). */
+    --thumb-inset: round(var(--icon-size) * 7 / 128, 1px);
+    --thumb-box: calc(var(--icon-size) - 2 * var(--thumb-inset));
+    /* The name starts 2px below the selection box, floored. */
+    --name-top: round(down, var(--icon-top) + var(--icon-size) + var(--icon-padding) + 2px, 1px);
+    /* The name wraps at 4 to 20 widths of "0" across the grid spacing range,
+       never narrower than the selection box, rounded up, plus 1px. */
+    --wrap-width: calc(round(up, max(var(--icon-box), round(up, 1ch, 1px) * (4 + 16 * var(--grid-spacing) / 100)), 1px) + 1px);
+    /* Lines the cell keeps for the name: 1 at spacing 1, growing to 2 at 26. */
+    --name-lines: clamp(1, 1 + (var(--grid-spacing) - 1) / 25, 2);
+    /* The cell: the wrap width and the name's 4px padding a side wide; the
+       box, the name's lines, the dimensions line and margins tall. Each is
+       rounded up to even. */
+    --cell-width: round(up, var(--wrap-width) + 8px, 2px);
+    --cell-height: round(up, var(--icon-box) + 2px + round(up, var(--name-lines) * 1lh, 1px) + round(up, var(--info-font-size) * 1.4, 1px) + 6px, 2px);
+
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 3rem;
+    /* As many cells as fit with 2px between them. Packed left like this while
+       they fill one row or less; past that the gallery's script spreads the
+       spare width into equal gaps, as Finder does. */
+    grid-template-columns: repeat(auto-fill, var(--cell-width));
+    column-gap: 2px;
+    /* s/16, rounded up. */
+    row-gap: round(up, var(--icon-padding), 1px);
+    justify-items: end;
     width: 100%;
     position: relative; /* Needed for the marquee positioning */
     -webkit-user-select: none; /* Safari */
     -ms-user-select: none; /* IE 10+ and Edge */
     user-select: none; /* Standard syntax */
+    /* Finder's section insets. */
+    padding: 20px 4px 2px;
+    font-family: "Source Sans Pro", sans-serif;
+    font-weight: 300;
+    font-size: 0.65rem;
+    line-height: 1.4;
+}
 
-    /* === ADJUSTABLE SPACING === */
-    margin-top: 1rem; /* Controls the space between the header and the photo gallery */
-    padding: 0 2rem;  /* Controls the left/right space for the entire gallery */
+/* The width the cells are fitted to, inside the side insets. Its height never
+   changes, so the script that justifies the grid can watch it without laying
+   the gallery out twice. */
+#gallery-width-probe {
+    position: absolute;
+    top: 0;
+    left: 4px;
+    right: 4px;
+    height: 0;
+    visibility: hidden;
+    pointer-events: none;
 }
 
 #gallery-blur-layer {
@@ -1672,31 +1730,34 @@ body.is-sidebar-collapsed #gallery-blur-layer {
 
 
 /* 2. Each Individual Grid Item (Figure) */
-/* No height: grid items stretch to their row anyway. A percentage height made
-   Safari lay out the whole grid again on every scroll step, ~20 ms a frame
-   with thousands of figures. */
+/* A cell of fixed size, in pixels. Never a percentage height: that made Safari
+   lay out the whole grid again on every scroll step, ~20 ms a frame with
+   thousands of figures. */
 #photo-gallery figure {
     margin: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
+    width: var(--cell-width);
+    height: var(--cell-height);
     text-align: center;
-    padding: 10px;
-    border-radius: 8px;
     cursor: default;
 }
 
 /* 3. The Container for the Image */
-/* The image is positioned, not a flex item, and the container is sized and
+/* QuickLook's thumbnail box: a square inset into the icon, so a thumbnail of
+   either orientation fits the same size, as in Finder.
+   The image is positioned, not a flex item, and the container is sized and
    laid out on its own, so a thumbnail that finishes loading only lays out its
    own box. In normal flow every lazy-load relaid the whole grid, which takes
    tens of ms with thousands of figures, once per image as you scroll. */
 #photo-gallery figure .image-container {
     position: relative;
     contain: size layout;
-    height: 225px;
-    width: 100%;
-    margin-bottom: 1rem;
+    align-self: flex-start;
+    width: var(--thumb-box);
+    height: var(--thumb-box);
+    margin: calc(var(--icon-top) + var(--thumb-inset)) 0 0 calc(var(--icon-left) + var(--thumb-inset));
 }
 
 /* 4. The Image Itself */
@@ -1716,30 +1777,36 @@ body.is-sidebar-collapsed #gallery-blur-layer {
 }
 
 /* 5. The Filename Caption */
+/* Finder's title: as wide as the cell, wrapping 4px in from either side,
+   starting at the name's top. The gallery's script keeps it to two lines. */
 #photo-gallery figure figcaption {
-    font-family: "Source Sans Pro", sans-serif;
-    font-weight: 300;
-    font-size: 0.65rem;
+    align-self: stretch;
+    margin-top: calc(var(--name-top) - var(--icon-top) - var(--icon-size) + var(--thumb-inset));
+    padding: 0 4px;
     color: rgba(var(--ink-rgb), 0.8);
-    line-height: 1.4;
-    word-break: break-all;
-    padding: 0 0.25rem;
+    overflow-wrap: anywhere;
     pointer-events: none; /* Makes sure clicks go to the parent figure */
 }
 
+/* Dimmed by its colour, 0.7 of the caption's 0.8, not by opacity, and its ×
+   lowered by vertical-align, not a transform: in Safari either one gives every
+   caption a layer of its own, and with thousands of captions showing, each
+   scroll step costs milliseconds more. */
 #photo-gallery figure figcaption .dimensions {
     display: block;
-    font-size: 0.55rem;
-    opacity: 0.7;
+    font-size: var(--info-font-size);
+    color: rgba(var(--ink-rgb), 0.56);
     margin-top: 0.2em;
 }
 
-.dimensions-x {
-    display: inline-block;
-    transform: translateY(0.55px);
+/* A zero line height keeps the lowered × from deepening the line. */
+#photo-gallery figure figcaption .dimensions-x {
+    vertical-align: -0.55px;
+    line-height: 0;
 }
 
 .modal-info-panel .dimensions-x {
+    display: inline-block;
     transform: translateY(1px);
 }
 
@@ -2239,17 +2306,47 @@ html, body {
 ==================================================================
 */
 
-/* Hidden until the thumbnail loads, then shown at once. Not opacity: below 1
-   it gives each waiting figure two layers of its own, thousands in a big
-   gallery, and a fade-in starts and ends more of them on every frame while
-   you scroll. Both made Safari and Chrome miss frames. */
-#photo-gallery figure .image-container,
-#photo-gallery figure figcaption {
+/* Until its thumbnail loads, a figure shows its file's kind icon above the
+   filename and dimensions, as Binder's icon view shows a file's type icon until
+   QuickLook has its thumbnail. Finder draws such an icon on a canvas of the icon
+   size, concentric with the thumbnail box, which QuickLook insets by 7/128 of
+   the icon size a side: a 225px box is a 253px icon. The icon is the figure's
+   background rather than an element of its own, so a gallery of thousands gains
+   no boxes, and swapping it for the thumbnail only repaints. The icons are
+   macOS's own, rendered at 2x, and look the same in light and dark mode. */
+#photo-gallery figure {
+    background: url("../images/kind-icons/jpeg.webp") no-repeat;
+    background-position: var(--icon-left) var(--icon-top);
+    background-size: var(--icon-size) var(--icon-size);
+}
+
+#photo-gallery figure[data-kind="png"] {
+    background-image: url("../images/kind-icons/png.webp");
+}
+
+#photo-gallery figure[data-kind="webp"] {
+    background-image: url("../images/kind-icons/webp.webp");
+}
+
+#photo-gallery figure[data-kind="avif"] {
+    background-image: url("../images/kind-icons/avif.webp");
+}
+
+#photo-gallery figure.is-visible {
+    background-image: none;
+}
+
+/* The thumbnail's container is hidden until it loads, then shown at once. The
+   container and the image are layers in Safari, and hidden ones cost a scroll
+   step nothing, while shown ones add up over thousands of waiting figures.
+   Not opacity: below 1 it gives each waiting figure two more layers, and a
+   fade-in starts and ends more of them on every frame while you scroll. Both
+   made Safari and Chrome miss frames. */
+#photo-gallery figure .image-container {
     visibility: hidden;
 }
 
-#photo-gallery figure.is-visible .image-container,
-#photo-gallery figure.is-visible figcaption {
+#photo-gallery figure.is-visible .image-container {
     visibility: visible;
 }
 
@@ -2823,10 +2920,6 @@ body.is-sidebar-collapsed #app-shell::before {
     z-index: 1;
 }
 
-#app-shell #photo-gallery {
-    margin-top: 2.5rem;
-}
-
 @media screen and (max-width: 736px) {
 
     :root {
@@ -2842,12 +2935,6 @@ body.is-sidebar-collapsed #app-shell::before {
         padding-top: 0;
         padding-right: 1rem;
         padding-bottom: 0.5rem;
-        padding-left: 1rem;
-    }
-
-    #app-shell #photo-gallery {
-        margin-top: 1.5rem;
-        padding-right: 1rem;
         padding-left: 1rem;
     }
 
@@ -2912,7 +2999,7 @@ All People Column
     overflow-y: auto;
     overscroll-behavior: contain;
     /* The first name lines up with the gallery's first row, below the top bar's fade. */
-    padding: calc(var(--top-bar-height) + 2.5rem) 0 1.6rem;
+    padding: calc(var(--top-bar-height) + 20px) 0 1.6rem;
     scrollbar-width: none;
     outline: none;
 }
@@ -3030,10 +3117,6 @@ body.is-resizing-all-people-column * {
     color: rgba(var(--ink-rgb), 0.95) !important;
 }
 
-#app-shell .all-people-match-row + #photo-gallery {
-    margin-top: 1.4rem;
-}
-
 .all-people-empty-state {
     position: absolute;
     top: 50vh;
@@ -3073,10 +3156,6 @@ body.is-resizing-all-people-column * {
         --all-people-column-min-width: 88px;
         --all-people-row-height: 1rem;
         --all-people-pill-inset: 0.2rem;
-    }
-
-    .all-people-list {
-        padding-top: calc(var(--top-bar-height) + 1.5rem);
     }
 
     .all-people-row {
