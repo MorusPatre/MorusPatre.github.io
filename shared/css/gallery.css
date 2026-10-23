@@ -1627,12 +1627,18 @@ Styling for the Finder-Style Photo Gallery
    a cell, and every measure of it follows from the icon size, the grid spacing
    and the caption's text by Finder's own formulas (Binder's
    IconViewGeometry.swift). The caption's font is the gallery's, so 1ch is the
-   width of its "0" and 1lh its line. The cell width is registered so the
-   gallery's script can read it in pixels. */
+   width of its "0" and 1lh its line. The cell width and the name's lines are
+   registered so the gallery's scripts can read them as numbers. */
 @property --cell-width {
     syntax: '<length>';
     inherits: true;
     initial-value: 0px;
+}
+
+@property --name-lines {
+    syntax: '<number>';
+    inherits: true;
+    initial-value: 2;
 }
 
 #photo-gallery {
@@ -1670,7 +1676,8 @@ Styling for the Finder-Style Photo Gallery
     /* The name wraps at 4 to 20 widths of "0" across the grid spacing range,
        never narrower than the selection box, rounded up, plus 1px. */
     --wrap-width: calc(round(up, max(var(--icon-box), round(up, 1ch, 1px) * (4 + 16 * var(--grid-spacing) / 100)), 1px) + 1px);
-    /* Lines the cell keeps for the name: 1 at spacing 1, growing to 2 at 26. */
+    /* Lines the cell keeps for the name: 1 at spacing 1, growing to 2 at 26.
+       The name may draw as many as are whole. */
     --name-lines: clamp(1, 1 + (var(--grid-spacing) - 1) / 25, 2);
     /* The cell: the wrap width and the name's 4px padding a side wide; the
        box, the name's lines, the dimensions line and margins tall. Each is
@@ -2597,6 +2604,10 @@ View Options Panel
     margin-top: calc(2 * var(--pt));
 }
 
+.view-options-slider + .view-options-slider {
+    margin-top: calc(10 * var(--pt));
+}
+
 /* A small checkbox: its 14pt box 2pt in from the margin and its title 4pt
    past the box, on an 18pt line. A native one, as Binder's is. */
 .view-options-panel .view-options-check {
@@ -2620,9 +2631,36 @@ View Options Panel
    26pt in and 68pt short of the margin, where the other sliders keep their
    icons. */
 .view-options-slider {
+    position: relative;
     display: grid;
     grid-template-columns: calc(86 * var(--pt)) 1fr;
     padding: 0 calc(18 * var(--pt));
+}
+
+/* The small and large pictures either side of a slider, placed from the top
+   of its title line. Grid spacing's are Binder's square.grid.2x2 and 3x3
+   symbols, redrawn: rounded squares in the secondary label colour. */
+.view-options-slider-icon {
+    position: absolute;
+    background-color: rgba(var(--ink-rgb), 0.5);
+    -webkit-mask: var(--icon) no-repeat center / 100% 100%;
+    mask: var(--icon) no-repeat center / 100% 100%;
+}
+
+.view-options-grid-small {
+    --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 11.25 11.25' fill='none' stroke='black' stroke-width='0.9'%3E%3Crect x='0.45' y='0.45' width='4.1' height='4.1' rx='0.85'/%3E%3Crect x='6.7' y='0.45' width='4.1' height='4.1' rx='0.85'/%3E%3Crect x='0.45' y='6.7' width='4.1' height='4.1' rx='0.85'/%3E%3Crect x='6.7' y='6.7' width='4.1' height='4.1' rx='0.85'/%3E%3C/svg%3E");
+    left: calc(22.5 * var(--pt));
+    top: calc(19.875 * var(--pt));
+    width: calc(11.25 * var(--pt));
+    height: calc(11.25 * var(--pt));
+}
+
+.view-options-grid-large {
+    --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26.6 26.6' fill='none' stroke='black' stroke-width='1.7'%3E%3Crect x='0.85' y='0.85' width='5.9' height='5.9' rx='1.65'/%3E%3Crect x='10.35' y='0.85' width='5.9' height='5.9' rx='1.65'/%3E%3Crect x='19.85' y='0.85' width='5.9' height='5.9' rx='1.65'/%3E%3Crect x='0.85' y='10.35' width='5.9' height='5.9' rx='1.65'/%3E%3Crect x='10.35' y='10.35' width='5.9' height='5.9' rx='1.65'/%3E%3Crect x='19.85' y='10.35' width='5.9' height='5.9' rx='1.65'/%3E%3Crect x='0.85' y='19.85' width='5.9' height='5.9' rx='1.65'/%3E%3Crect x='10.35' y='19.85' width='5.9' height='5.9' rx='1.65'/%3E%3Crect x='19.85' y='19.85' width='5.9' height='5.9' rx='1.65'/%3E%3C/svg%3E");
+    left: calc(187.1 * var(--pt));
+    top: calc(12.3 * var(--pt));
+    width: calc(26.6 * var(--pt));
+    height: calc(26.6 * var(--pt));
 }
 
 /* A native slider too. Its font is the panel's, which its metrics count in. */

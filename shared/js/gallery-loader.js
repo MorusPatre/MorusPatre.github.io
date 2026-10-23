@@ -100,10 +100,10 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             document.dispatchEvent(new CustomEvent('galleryLoaded'));
-            fitFilenamesToTwoLines(galleryContainer);
+            fitFilenamesToLines(galleryContainer);
             // Fitted again whenever the View Options change the caption's
             // font or width.
-            document.addEventListener('galleryCaptionsChanged', () => fitFilenamesToTwoLines(galleryContainer));
+            document.addEventListener('galleryCaptionsChanged', () => fitFilenamesToLines(galleryContainer));
         })
         .catch(error => {
             console.error('Error loading gallery data:', error);
@@ -117,12 +117,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
     // Finder's title (TTitleBubbleView, Binder's TitleBubbleLayout.swift): a
-    // name wraps at the caption's width onto two lines at most. One that runs
-    // longer keeps its first line, and the rest, from where the second line
-    // starts, is truncated in the middle to fit the second. Names are laid out
-    // in a hidden copy of the caption once its font has loaded; only a name
-    // wider than one line can need it.
-    function fitFilenamesToTwoLines(gallery) {
+    // name wraps at the caption's width onto as many lines as the cell keeps
+    // whole, two at most and one below grid spacing 26. One that runs longer
+    // keeps the lines before the last, and the rest, from where the last line
+    // starts, is truncated in the middle to fit it. Names are laid out in a
+    // hidden copy of the caption once its font has loaded; only a name wider
+    // than one line can need it.
+    function fitFilenamesToLines(gallery) {
         // Measured on a caption that is shown: the search or the sidebar may
         // hide the first.
         let firstName = null;
@@ -140,6 +141,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const font = `${nameStyle.fontStyle} ${nameStyle.fontWeight} ${nameStyle.fontSize} ${nameStyle.fontFamily}`;
         const width = caption.clientWidth - parseFloat(captionStyle.paddingLeft) - parseFloat(captionStyle.paddingRight);
         const lineHeight = parseFloat(nameStyle.lineHeight);
+        const maxLines = Math.max(1, Math.floor(parseFloat(getComputedStyle(gallery).getPropertyValue('--name-lines')) || 2));
 
         document.fonts.load(font).then(() => {
             const context = document.createElement('canvas').getContext('2d');
@@ -171,24 +173,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 probe.textContent = name;
-                if (probe.getBoundingClientRect().height <= lineHeight * 2.5) {
+                if (probe.getBoundingClientRect().height <= lineHeight * (maxLines + 0.5)) {
                     restore();
                     continue;
                 }
 
-                // Where the second line starts: the first character below the first line.
-                const text = probe.firstChild;
-                range.setStart(text, 0);
-                range.setEnd(text, 1);
-                const firstTop = range.getBoundingClientRect().top;
-                let low = 1;
-                let high = name.length - 1;
-                while (low < high) {
-                    const middle = (low + high) >> 1;
-                    range.setStart(text, middle);
-                    range.setEnd(text, middle + 1);
-                    if (range.getBoundingClientRect().top > firstTop) high = middle;
-                    else low = middle + 1;
+                // Where the last line starts: the first character below the
+                // lines before it.
+                let low = 0;
+                if (maxLines > 1) {
+                    const text = probe.firstChild;
+                    range.setStart(text, 0);
+                    range.setEnd(text, 1);
+                    const lastTop = range.getBoundingClientRect().top + lineHeight * (maxLines - 1.5);
+                    low = 1;
+                    let high = name.length - 1;
+                    while (low < high) {
+                        const middle = (low + high) >> 1;
+                        range.setStart(text, middle);
+                        range.setEnd(text, middle + 1);
+                        if (range.getBoundingClientRect().top > lastTop) high = middle;
+                        else low = middle + 1;
+                    }
                 }
 
                 // The rest on one line: as CoreText truncates in the middle, as
@@ -202,7 +208,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 span.dataset.name = name;
                 span.textContent = name.slice(0, low);
-                span.appendChild(document.createElement('br'));
+                if (low > 0) span.appendChild(document.createElement('br'));
                 span.appendChild(document.createTextNode(`${rest.slice(0, head)}…${rest.slice(rest.length - tail)}`));
             }
 

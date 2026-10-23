@@ -1689,19 +1689,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // Command-J again or its close button closes it. It opens where it was last
     // left, at first centred in the window. Its options are kept per gallery,
     // as Binder keeps them per folder; Group By keeps its own key.
-    // Corner radius runs 0 to 50% of the thumbnail box in whole percent, as
-    // Binder's slider does. The gallery starts at 6%, where Binder starts at 10%.
+    // Grid spacing runs 1 to 100, Finder's 54 by default, the slider's value
+    // floored. Corner radius runs 0 to 50% of the thumbnail box in whole
+    // percent, as Binder's slider does. The gallery starts at 6%, where Binder
+    // starts at 10%.
     // Show item info shows or hides the dimensions line, and the cells keep
     // room for it only while it shows. Show icon preview off shows every
     // image's kind icon in place of its thumbnail. Text size runs 10 to 16
     // points, Finder's 12 by default, and the cells follow the caption's type.
     const VIEW_OPTIONS_STORAGE_PREFIX = 'galleryViewOptions:';
     const VIEW_OPTIONS_PANEL_STORAGE_KEY = 'galleryViewOptionsPanel';
-    const DEFAULT_VIEW_OPTIONS = { cornerRadius: 0.06, textSize: 12, showItemInfo: true, showIconPreview: true };
+    const DEFAULT_VIEW_OPTIONS = { gridSpacing: 54, cornerRadius: 0.06, textSize: 12, showItemInfo: true, showIconPreview: true };
     const viewOptionsPanel = document.getElementById('view-options-panel');
     const viewOptionsTitleBar = viewOptionsPanel && viewOptionsPanel.querySelector('.view-options-title-bar');
     const viewOptionsCloseButton = viewOptionsPanel && viewOptionsPanel.querySelector('.view-options-close');
     const viewOptionsMenuRow = document.getElementById('gallery-context-view');
+    const gridSpacingSlider = document.getElementById('view-options-grid-spacing');
     const cornerRadiusSlider = document.getElementById('view-options-corner-radius');
     const cornerRadiusValue = document.getElementById('view-options-corner-radius-value');
     const textSizePopup = document.getElementById('view-options-text-size');
@@ -1722,6 +1725,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function readViewOptions() {
         const stored = readStoredJSON(VIEW_OPTIONS_STORAGE_PREFIX + galleryStorageId);
         const options = { ...DEFAULT_VIEW_OPTIONS };
+        if (stored && Number.isInteger(stored.gridSpacing) && stored.gridSpacing >= 1 && stored.gridSpacing <= 100) {
+            options.gridSpacing = stored.gridSpacing;
+        }
         if (stored && Number.isFinite(stored.cornerRadius)) {
             options.cornerRadius = Math.min(Math.max(Math.round(stored.cornerRadius * 100), 0), 50) / 100;
         }
@@ -1786,6 +1792,21 @@ document.addEventListener('DOMContentLoaded', () => {
         change();
         refreshIconGrid();
         restoreViewportAnchor(anchor);
+    }
+
+    // The cells take their width and their name's lines from it. The knob
+    // stays where it was let go, between whole values.
+    function applyGridSpacing() {
+        gallery.style.setProperty('--grid-spacing', String(viewOptions.gridSpacing));
+        if (gridSpacingSlider && Math.floor(Number(gridSpacingSlider.value)) !== viewOptions.gridSpacing) {
+            gridSpacingSlider.value = String(viewOptions.gridSpacing);
+        }
+    }
+
+    // What the names are fitted to: the cell's width and its whole lines.
+    function getCaptionFit() {
+        const style = getComputedStyle(gallery);
+        return `${style.getPropertyValue('--cell-width')} ${Math.floor(parseFloat(style.getPropertyValue('--name-lines')))}`;
     }
 
     // The thumbnails take the radius from the gallery's --corner-radius.
@@ -1863,6 +1884,20 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             showViewOptions();
         }
+    }
+
+    // As in Binder, each whole value the slider passes is applied and kept.
+    if (gridSpacingSlider) {
+        gridSpacingSlider.addEventListener('input', () => {
+            const spacing = Math.min(Math.max(Math.floor(Number(gridSpacingSlider.value)), 1), 100);
+            if (spacing === viewOptions.gridSpacing) return;
+
+            const fit = getCaptionFit();
+            viewOptions.gridSpacing = spacing;
+            saveViewOptions();
+            relayoutGallery(applyGridSpacing);
+            if (getCaptionFit() !== fit) document.dispatchEvent(new CustomEvent('galleryCaptionsChanged'));
+        });
     }
 
     if (cornerRadiusSlider) {
@@ -1949,6 +1984,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    applyGridSpacing();
     applyCornerRadius();
     applyTextSize();
     applyShowItemInfo();
