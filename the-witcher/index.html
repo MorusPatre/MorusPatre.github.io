@@ -8,7 +8,7 @@
 
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
 
-        <link rel="stylesheet" href="../shared/css/gallery.css?v=20261023-14" />
+        <link rel="stylesheet" href="../shared/css/gallery.css?v=20261023-15" />
         <noscript><link rel="stylesheet" href="../shared/css/noscript.css" /></noscript>
         <style>
             :root {
@@ -92,14 +92,9 @@
                         <div id="sidebar-group-by-options" class="sidebar-option-list" role="group" aria-label="Group by"></div>
                     </section>
 
-                    <section class="sidebar-filter-section sidebar-filter-section--placeholder" aria-label="Sort by">
+                    <section class="sidebar-filter-section" aria-label="Sort by">
                         <h2 class="sidebar-filter-heading">Sort by:</h2>
-                        <div class="sidebar-option-list">
-                            <button class="sidebar-option is-active" type="button" aria-disabled="true">Popularity</button>
-                            <button class="sidebar-option" type="button" aria-disabled="true">Date</button>
-                            <button class="sidebar-option" type="button" aria-disabled="true">Set</button>
-                            <button class="sidebar-option" type="button" aria-disabled="true">Episode</button>
-                        </div>
+                        <div id="sidebar-sort-by-options" class="sidebar-option-list" role="group" aria-label="Sort by"></div>
                     </section>
                 </div>
 
@@ -156,7 +151,7 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
         <script type="application/json" id="gallery-episode-titles">{"1":{"1":"The End's Beginning","2":"Four Marks","3":"Betrayer Moon","4":"Of Banquets, Bastards and Burials","5":"Bottled Appetites","6":"Rare Species","7":"Before a Fall","8":"Much More"},"2":{"1":"A Grain of Truth","2":"Kaer Morhen","3":"What Is Lost","4":"Redanian Intelligence","5":"Turn Your Back","6":"Dear Friend...","7":"Voleth Meir","8":"Family"},"3":{"1":"Shaerrawedd","2":"Unbound","3":"Reunion","4":"The Invitation","5":"The Art of Illusion","6":"Everybody Has a Plan 'til They Get Punched in the Face","7":"Out of the Fire, Into the Frying Pan","8":"The Cost of Chaos"},"4":{"1":"What Doesn't Kill You Makes You Stronger","2":"Dream of a Wish Fulfilled","3":"Trial by Ordeal","4":"A Sermon of Survival","5":"The Joy of Cooking","6":"Twilight of the Wolf","7":"What I Love I Do Not Carry","8":"Baptism of Fire"}}</script>
-        <script src="../shared/js/gallery.js?v=20261023-13"></script>
+        <script src="../shared/js/gallery.js?v=20261023-14"></script>
         <script src="../shared/js/gallery-loader.js?v=20261023-3"></script>
 
         <div id="image-modal" class="modal-overlay">
@@ -192,12 +187,16 @@
                 <li id="gallery-context-add">Add Images</li>
                 <li class="separator"></li>
                 <li id="gallery-context-group" class="context-menu-parent">Group By</li>
-                <li id="gallery-context-sort">Sort By</li>
+                <li id="gallery-context-sort" class="context-menu-parent">Sort By</li>
                 <li id="gallery-context-view">Show View Options</li>
             </ul>
         </div>
 
         <div id="gallery-group-by-menu" class="context-menu context-submenu">
+            <ul></ul>
+        </div>
+
+        <div id="gallery-sort-by-menu" class="context-menu context-submenu">
             <ul></ul>
         </div>
 
@@ -209,6 +208,10 @@
             <div class="view-options-row">
                 <label for="view-options-group-by">Group By:</label>
                 <select id="view-options-group-by"></select>
+            </div>
+            <div class="view-options-row">
+                <label for="view-options-sort-by">Sort By:</label>
+                <select id="view-options-sort-by"></select>
             </div>
             <div class="view-options-separator"></div>
             <div class="view-options-slider view-options-slider--icon-size">

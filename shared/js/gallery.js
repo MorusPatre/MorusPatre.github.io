@@ -878,6 +878,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const galleryContextMenuElement = document.getElementById('gallery-context-menu');
     const groupByMenuRow = document.getElementById('gallery-context-group');
     const groupByMenu = document.getElementById('gallery-group-by-menu');
+    const sortByMenuRow = document.getElementById('gallery-context-sort');
+    const sortByMenu = document.getElementById('gallery-sort-by-menu');
     const sidebarGroupByList = document.getElementById('sidebar-group-by-options');
     const viewOptionsGroupBy = document.getElementById('view-options-group-by');
     // Each page lists its show's episode titles, by season and episode.
@@ -1543,33 +1545,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Group By Menus ---
     // The gallery's context menu has Group By above Sort By, as Binder's
-    // background menu does, and the sidebar lists the same choices.
-    function isInGroupByMenu(target) {
-        return Boolean(groupByMenu && groupByMenu.contains(target));
+    // background menu does, each opening a submenu, and the sidebar lists the
+    // same choices.
+    const contextSubmenus = [[groupByMenuRow, groupByMenu], [sortByMenuRow, sortByMenu]]
+        .filter(([row, menu]) => row && menu);
+
+    function isInContextSubmenu(target) {
+        return contextSubmenus.some(([, menu]) => menu.contains(target));
     }
 
-    function showGroupByMenu() {
-        if (!groupByMenu || !groupByMenuRow) return;
+    function showContextSubmenu(row) {
+        const submenu = contextSubmenus.find(([parent]) => parent === row);
+        if (!submenu) return;
 
-        groupByMenu.style.display = 'block';
-        groupByMenuRow.classList.add('is-open');
+        const menu = submenu[1];
+        hideContextSubmenus();
+        menu.style.display = 'block';
+        row.classList.add('is-open');
 
-        const rowRect = groupByMenuRow.getBoundingClientRect();
-        const menuRect = groupByMenu.getBoundingClientRect();
-        const menuPadding = parseFloat(getComputedStyle(groupByMenu).paddingTop) || 0;
+        const rowRect = row.getBoundingClientRect();
+        const menuRect = menu.getBoundingClientRect();
+        const menuPadding = parseFloat(getComputedStyle(menu).paddingTop) || 0;
         let left = rowRect.right;
         if (left + menuRect.width > window.innerWidth) left = rowRect.left - menuRect.width;
         const top = clamp(rowRect.top - menuPadding, 0, Math.max(0, window.innerHeight - menuRect.height));
 
-        groupByMenu.style.left = `${Math.max(0, left)}px`;
-        groupByMenu.style.top = `${top}px`;
+        menu.style.left = `${Math.max(0, left)}px`;
+        menu.style.top = `${top}px`;
     }
 
-    function hideGroupByMenu() {
-        if (!groupByMenu) return;
-
-        groupByMenu.style.display = 'none';
-        if (groupByMenuRow) groupByMenuRow.classList.remove('is-open');
+    function hideContextSubmenus() {
+        contextSubmenus.forEach(([row, menu]) => {
+            menu.style.display = 'none';
+            row.classList.remove('is-open');
+        });
     }
 
     function renderGroupByControls() {
@@ -1633,15 +1642,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (viewOptionsGroupBy) viewOptionsGroupBy.value = groupBy;
     }
 
-    if (galleryContextMenuElement && groupByMenuRow) {
+    if (galleryContextMenuElement) {
         galleryContextMenuElement.addEventListener('mouseover', event => {
             const row = event.target.closest('li');
-            if (!row || row.classList.contains('separator')) return;
+            if (!row || row.classList.contains('separator') || row.classList.contains('is-open')) return;
 
-            if (row === groupByMenuRow) {
-                showGroupByMenu();
+            if (contextSubmenus.some(([parent]) => parent === row)) {
+                showContextSubmenu(row);
             } else {
-                hideGroupByMenu();
+                hideContextSubmenus();
             }
         });
     }
@@ -1652,7 +1661,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!row) return;
 
             if (galleryContextMenuElement) galleryContextMenuElement.style.display = 'none';
-            hideGroupByMenu();
+            hideContextSubmenus();
             setGroupBy(row.dataset.groupBy);
         });
     }
@@ -1677,6 +1686,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         renderGroupByControls();
+        // Sorted before it is grouped, as Binder groups a sorted list.
+        loadSortBy();
 
         const storedKey = readGroupStorage(GROUP_BY_STORAGE_PREFIX + galleryStorageId);
         if (storedKey && getGroupByOption(storedKey)) applyGroupBy(storedKey);
@@ -1688,7 +1699,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Options in the background menu or Command-J opens it; Hide View Options,
     // Command-J again or its close button closes it. It opens where it was last
     // left, at first centred in the window. Its options are kept per gallery,
-    // as Binder keeps them per folder; Group By keeps its own key.
+    // as Binder keeps them per folder; Group By keeps its own key. Sort By is
+    // its own section below.
     // Icon size runs 16 to 512 through Finder's slider curve, in steps of 4;
     // the gallery starts at 253, where its thumbnail box is 225px. Grid
     // spacing runs 1 to 100, Finder's 54 by default, the slider's value
@@ -1701,7 +1713,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // points, Finder's 12 by default, and the cells follow the caption's type.
     const VIEW_OPTIONS_STORAGE_PREFIX = 'galleryViewOptions:';
     const VIEW_OPTIONS_PANEL_STORAGE_KEY = 'galleryViewOptionsPanel';
-    const DEFAULT_VIEW_OPTIONS = { iconSize: 253, gridSpacing: 54, cornerRadius: 0.06, textSize: 12, showItemInfo: true, showIconPreview: true };
+    const DEFAULT_VIEW_OPTIONS = { sortBy: 'none', sortReversed: false, iconSize: 253, gridSpacing: 54, cornerRadius: 0.06, textSize: 12, showItemInfo: true, showIconPreview: true };
     const viewOptionsPanel = document.getElementById('view-options-panel');
     const viewOptionsTitleBar = viewOptionsPanel && viewOptionsPanel.querySelector('.view-options-title-bar');
     const viewOptionsCloseButton = viewOptionsPanel && viewOptionsPanel.querySelector('.view-options-close');
@@ -1729,6 +1741,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function readViewOptions() {
         const stored = readStoredJSON(VIEW_OPTIONS_STORAGE_PREFIX + galleryStorageId);
         const options = { ...DEFAULT_VIEW_OPTIONS };
+        if (stored && typeof stored.sortBy === 'string') options.sortBy = stored.sortBy;
+        if (stored && typeof stored.sortReversed === 'boolean') options.sortReversed = stored.sortReversed;
         if (stored && Number.isInteger(stored.iconSize) && stored.iconSize >= 16 && stored.iconSize <= 512) {
             options.iconSize = stored.iconSize;
         }
@@ -2081,6 +2095,214 @@ document.addEventListener('DOMContentLoaded', () => {
     applyTextSize();
     applyShowItemInfo();
     applyShowIconPreview();
+
+    // --- Sort By ---
+    // Binder's Sort By, after Finder's, with the keys these galleries have.
+    // None keeps the gallery's own order. Name compares filenames as Finder
+    // does, numbers by their value and case ignored; Episode goes by season,
+    // then episode; Size puts the largest first. Each key keeps its own
+    // direction, images without a value come last either way, and ties keep
+    // the gallery's order. Reverse Order, at the end of the background menu's
+    // Sort By, flips the key's direction, as picking the current key there
+    // again does; picking another key sets it back. Grouped, every group is
+    // in this order, as Binder groups a sorted list. A key is offered only
+    // where some image has a value for it.
+    const sortCollator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'accent' });
+    const sidebarSortByList = document.getElementById('sidebar-sort-by-options');
+    const viewOptionsSortBy = document.getElementById('view-options-sort-by');
+    const compareNumbers = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+    const SORT_BY_OPTIONS = [
+        { key: 'none', label: 'None' },
+        {
+            key: 'name',
+            label: 'Name',
+            value: figure => getFigureName(figure) || null,
+            compare: (a, b) => sortCollator.compare(a, b)
+        },
+        {
+            key: 'episode',
+            label: 'Episode',
+            value: figure => {
+                const { season, episode, order } = getEpisodeOrder(figure.querySelector('img'));
+                return season || episode ? order : null;
+            },
+            compare: (a, b) => compareNumbers(a[0], b[0]) || compareNumbers(a[1], b[1])
+        },
+        {
+            key: 'size',
+            label: 'Size',
+            value: figure => parseFileSize(figure.querySelector('img').dataset.size),
+            compare: (a, b) => b - a
+        }
+    ];
+    let galleryOrder = [];
+
+    function getSortByOption(key) {
+        return SORT_BY_OPTIONS.find(option => option.key === key && option.isAvailable !== false) || null;
+    }
+
+    // The name the caption shows, whole even where it is cut short.
+    function getFigureName(figure) {
+        const name = figure.querySelector('.filename');
+        return name ? name.dataset.name || name.textContent : '';
+    }
+
+    // "1,2 MB", "1.250 KB": the data's sizes, in decimal units.
+    function parseFileSize(text) {
+        const match = /^([\d.,]+)\s*([KMGT]?)B$/i.exec((text || '').trim());
+        if (!match) return null;
+
+        const value = parseFloat(match[1].replace(/\./g, '').replace(',', '.'));
+        return value * 1000 ** ' KMGT'.indexOf(match[2].toUpperCase() || ' ');
+    }
+
+    function sortGalleryFigures() {
+        const option = getSortByOption(viewOptions.sortBy) || SORT_BY_OPTIONS[0];
+        if (!option.value) return galleryOrder.slice();
+
+        const direction = viewOptions.sortReversed ? -1 : 1;
+        return galleryOrder
+            .map((figure, index) => ({ figure, index, value: option.value(figure) }))
+            .sort((a, b) => {
+                if (a.value === null || b.value === null) {
+                    return (a.value === null) - (b.value === null) || a.index - b.index;
+                }
+                return direction * option.compare(a.value, b.value) || a.index - b.index;
+            })
+            .map(entry => entry.figure);
+    }
+
+    // The figures go in the new order; grouped, the groups are built again.
+    function applySortBy() {
+        galleryFigures = sortGalleryFigures();
+        if (isGalleryGrouped()) {
+            applyGroupBy(groupBy);
+        } else {
+            const fragment = document.createDocumentFragment();
+            galleryFigures.forEach(figure => fragment.appendChild(figure));
+            gallery.appendChild(fragment);
+            refreshIconGrid();
+            window.dispatchEvent(new CustomEvent('galleryRearranged'));
+        }
+        syncSortByControls();
+    }
+
+    function setSortBy(key, reversed = false) {
+        if (!getSortByOption(key)) return;
+        if (key === viewOptions.sortBy && reversed === viewOptions.sortReversed) return;
+
+        viewOptions.sortBy = key;
+        viewOptions.sortReversed = key !== 'none' && reversed;
+        saveViewOptions();
+        applySortBy();
+    }
+
+    function renderSortByControls() {
+        const options = SORT_BY_OPTIONS.filter(option => option.isAvailable !== false);
+
+        if (sortByMenu) {
+            const menuRows = [];
+            options.forEach(option => {
+                const row = document.createElement('li');
+                row.dataset.sortBy = option.key;
+                row.textContent = option.label;
+                menuRows.push(row);
+                if (option.key === 'none') menuRows.push(Object.assign(document.createElement('li'), { className: 'separator' }));
+            });
+            const reverse = document.createElement('li');
+            reverse.dataset.sortReverse = '';
+            reverse.textContent = 'Reverse Order';
+            menuRows.push(Object.assign(document.createElement('li'), { className: 'separator' }), reverse);
+            sortByMenu.querySelector('ul').replaceChildren(...menuRows);
+        }
+
+        if (sidebarSortByList) {
+            sidebarSortByList.replaceChildren(...options.map(option => {
+                const button = document.createElement('button');
+                button.className = 'sidebar-option';
+                button.type = 'button';
+                button.dataset.sortBy = option.key;
+                button.textContent = option.label;
+                return button;
+            }));
+        }
+
+        if (viewOptionsSortBy) {
+            const popupItems = [];
+            options.forEach(option => {
+                popupItems.push(new Option(option.label, option.key));
+                if (option.key === 'none') popupItems.push(document.createElement('hr'));
+            });
+            viewOptionsSortBy.replaceChildren(...popupItems);
+        }
+
+        syncSortByControls();
+    }
+
+    function syncSortByControls() {
+        const key = viewOptions.sortBy;
+        if (sortByMenu) {
+            sortByMenu.querySelectorAll('[data-sort-by]').forEach(row => {
+                row.classList.toggle('is-checked', row.dataset.sortBy === key);
+            });
+            const reverse = sortByMenu.querySelector('[data-sort-reverse]');
+            reverse.classList.toggle('is-checked', viewOptions.sortReversed);
+            reverse.classList.toggle('is-disabled', key === 'none');
+        }
+
+        if (sidebarSortByList) {
+            sidebarSortByList.querySelectorAll('[data-sort-by]').forEach(button => {
+                const isActive = button.dataset.sortBy === key;
+                button.classList.toggle('is-active', isActive);
+                button.setAttribute('aria-pressed', String(isActive));
+            });
+        }
+
+        if (viewOptionsSortBy) viewOptionsSortBy.value = key;
+    }
+
+    // Called once the gallery has loaded, before Group By builds its groups.
+    function loadSortBy() {
+        galleryOrder = galleryFigures.slice();
+        SORT_BY_OPTIONS.forEach(option => {
+            option.isAvailable = !option.value || galleryOrder.some(figure => option.value(figure) !== null);
+        });
+        if (!getSortByOption(viewOptions.sortBy)) {
+            viewOptions.sortBy = 'none';
+            viewOptions.sortReversed = false;
+        }
+
+        renderSortByControls();
+        if (viewOptions.sortBy !== 'none') applySortBy();
+    }
+
+    if (sortByMenu) {
+        sortByMenu.addEventListener('click', event => {
+            const row = event.target.closest('[data-sort-by], [data-sort-reverse]');
+            if (!row || row.classList.contains('is-disabled')) return;
+
+            if (galleryContextMenuElement) galleryContextMenuElement.style.display = 'none';
+            hideContextSubmenus();
+            if (row.dataset.sortBy === undefined) {
+                setSortBy(viewOptions.sortBy, !viewOptions.sortReversed);
+            } else if (row.dataset.sortBy === viewOptions.sortBy) {
+                setSortBy(viewOptions.sortBy, !viewOptions.sortReversed && viewOptions.sortBy !== 'none');
+            } else {
+                setSortBy(row.dataset.sortBy);
+            }
+        });
+    }
+
+    if (sidebarSortByList) {
+        sidebarSortByList.addEventListener('click', event => {
+            const button = event.target.closest('[data-sort-by]');
+            if (button && button.dataset.sortBy !== viewOptions.sortBy) setSortBy(button.dataset.sortBy);
+        });
+    }
+
+    if (viewOptionsSortBy) {
+        viewOptionsSortBy.addEventListener('change', () => setSortBy(viewOptionsSortBy.value));
+    }
     /*
     ==================================================================
     // END: FINDER-STYLE ARROW KEY NAVIGATION LOGIC
@@ -2991,12 +3213,12 @@ document.addEventListener('DOMContentLoaded', () => {
             selectedPill.classList.remove('selected');
         }
 
-        const isInMenu = itemMenu.contains(e.target) || galleryMenu.contains(e.target) || isInGroupByMenu(e.target);
+        const isInMenu = itemMenu.contains(e.target) || galleryMenu.contains(e.target) || isInContextSubmenu(e.target);
 
         if (e.button === 0 && !isInMenu) {
             itemMenu.style.display = 'none';
             galleryMenu.style.display = 'none';
-            hideGroupByMenu();
+            hideContextSubmenus();
         }
 
         if (!wrapper.contains(e.target) && !isInMenu && !isInViewOptions(e.target)) {
@@ -3038,7 +3260,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         itemContextMenu.style.display = 'none';
         galleryContextMenu.style.display = 'none';
-        hideGroupByMenu();
+        hideContextSubmenus();
 
         if (figure) {
             rightClickedItem = figure;
@@ -3220,8 +3442,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     galleryContextMenu.addEventListener('click', (e) => {
-        // Group By opens its submenu; only a choice in it closes the menu.
-        if (e.target.closest('#gallery-context-group')) return;
+        // Group By and Sort By open their submenus; only a choice in one
+        // closes the menu.
+        if (e.target.closest('#gallery-context-group, #gallery-context-sort')) return;
 
         galleryContextMenu.style.display = 'none';
         const targetId = e.target.id;
@@ -3231,9 +3454,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (imageUploadInput) {
                     imageUploadInput.click();
                 }
-                break;
-            case 'gallery-context-sort':
-                alert('Functionality for "Sort By" is not yet implemented.');
                 break;
             case 'gallery-context-view':
                 toggleViewOptions();

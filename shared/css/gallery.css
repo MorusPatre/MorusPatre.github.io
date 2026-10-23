@@ -2447,6 +2447,12 @@ Custom Context Menu
     left: 12px;
 }
 
+/* A choice that does nothing here, such as Reverse Order with no key. */
+.context-menu ul li.is-disabled {
+    color: rgba(var(--ink-rgb), 0.35);
+    pointer-events: none;
+}
+
 /*
 ============================================
 View Options Panel
@@ -2607,6 +2613,10 @@ View Options Panel
 
 .view-options-separator + .view-options-row {
     margin-top: calc(7 * var(--pt));
+}
+
+.view-options-row + .view-options-row {
+    margin-top: calc(6 * var(--pt));
 }
 
 .view-options-check + .view-options-check {

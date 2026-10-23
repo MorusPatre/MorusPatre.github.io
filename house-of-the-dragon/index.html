@@ -8,7 +8,7 @@
 
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
 
-        <link rel="stylesheet" href="../shared/css/gallery.css?v=20261023-14" />
+        <link rel="stylesheet" href="../shared/css/gallery.css?v=20261023-15" />
         <noscript><link rel="stylesheet" href="../shared/css/noscript.css" /></noscript>
     </head>
     <body>
@@ -77,14 +77,9 @@
                         <div id="sidebar-group-by-options" class="sidebar-option-list" role="group" aria-label="Group by"></div>
                     </section>
 
-                    <section class="sidebar-filter-section sidebar-filter-section--placeholder" aria-label="Sort by">
+                    <section class="sidebar-filter-section" aria-label="Sort by">
                         <h2 class="sidebar-filter-heading">Sort by:</h2>
-                        <div class="sidebar-option-list">
-                            <button class="sidebar-option is-active" type="button" aria-disabled="true">Popularity</button>
-                            <button class="sidebar-option" type="button" aria-disabled="true">Date</button>
-                            <button class="sidebar-option" type="button" aria-disabled="true">Set</button>
-                            <button class="sidebar-option" type="button" aria-disabled="true">Episode</button>
-                        </div>
+                        <div id="sidebar-sort-by-options" class="sidebar-option-list" role="group" aria-label="Sort by"></div>
                     </section>
                 </div>
 
@@ -141,7 +136,7 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
         <script type="application/json" id="gallery-episode-titles">{"1":{"1":"The Heirs of the Dragon","2":"The Rogue Prince","3":"Second of His Name","4":"King of the Narrow Sea","5":"We Light the Way","6":"The Princess and the Queen","7":"Driftmark","8":"The Lord of the Tides","9":"The Green Council","10":"The Black Queen"},"2":{"1":"A Son for a Son","2":"Rhaenyra the Cruel","3":"The Burning Mill","4":"The Red Dragon and the Gold","5":"Regent","6":"Smallfolk","7":"The Red Sowing","8":"The Queen Who Ever Was"}}</script>
-        <script src="../shared/js/gallery.js?v=20261023-13"></script>
+        <script src="../shared/js/gallery.js?v=20261023-14"></script>
         <script src="../shared/js/gallery-loader.js?v=20261023-3"></script>
 
         <div id="image-modal" class="modal-overlay">
@@ -177,12 +172,16 @@
                 <li id="gallery-context-add">Add Images</li>
                 <li class="separator"></li>
                 <li id="gallery-context-group" class="context-menu-parent">Group By</li>
-                <li id="gallery-context-sort">Sort By</li>
+                <li id="gallery-context-sort" class="context-menu-parent">Sort By</li>
                 <li id="gallery-context-view">Show View Options</li>
             </ul>
         </div>
 
         <div id="gallery-group-by-menu" class="context-menu context-submenu">
+            <ul></ul>
+        </div>
+
+        <div id="gallery-sort-by-menu" class="context-menu context-submenu">
             <ul></ul>
         </div>
 
@@ -194,6 +193,10 @@
             <div class="view-options-row">
                 <label for="view-options-group-by">Group By:</label>
                 <select id="view-options-group-by"></select>
+            </div>
+            <div class="view-options-row">
+                <label for="view-options-sort-by">Sort By:</label>
+                <select id="view-options-sort-by"></select>
             </div>
             <div class="view-options-separator"></div>
             <div class="view-options-slider view-options-slider--icon-size">
