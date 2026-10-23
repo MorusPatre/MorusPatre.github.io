@@ -1788,6 +1788,16 @@ body.is-sidebar-collapsed #gallery-blur-layer {
     box-shadow: var(--thumb-glow);
 }
 
+/* Until it loads, an image has no size of its own, and Safari's lazy loading
+   takes it for a point at the box's centre: in a collapsed group's row, an
+   item cut off by the row's edge didn't load until its centre scrolled in.
+   Filling the box meanwhile lets any part of it in view load it. The box is
+   hidden until then, so nothing of this shows. */
+#photo-gallery figure:not(.is-visible) img {
+    width: 100%;
+    height: 100%;
+}
+
 /* 5. The Filename Caption */
 /* Finder's title: as wide as the cell, wrapping 4px in from either side,
    starting at the name's top. The gallery's script keeps it to two lines. */
