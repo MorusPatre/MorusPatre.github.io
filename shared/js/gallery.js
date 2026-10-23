@@ -742,10 +742,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     newIndex = currentIndex + 1;
                     break;
                 case 'ArrowUp':
-                    newIndex = currentIndex - gridMetrics.cols;
-                    break;
                 case 'ArrowDown':
-                    newIndex = currentIndex + gridMetrics.cols;
+                    // Grouped, rows break at every group and a collapsed group
+                    // is one row, so up and down go by where items are.
+                    if (isGalleryGrouped()) {
+                        newIndex = visibleItems.indexOf(getGroupedVerticalNeighbor(lastSelectedItem, e.key === 'ArrowUp' ? -1 : 1));
+                    } else {
+                        newIndex = currentIndex + (e.key === 'ArrowUp' ? -gridMetrics.cols : gridMetrics.cols);
+                    }
                     break;
             }
         }
@@ -790,8 +794,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const pitch = cellWidth + ICON_GRID_MINIMUM_GAP;
         const cols = Math.max(1, Math.floor((width + ICON_GRID_MINIMUM_GAP) / pitch));
         let visibleCount = 0;
-        for (const item of items) {
-            if (item.style.display !== 'none' && ++visibleCount > cols) break;
+        // Grouped, each group lays out its own rows, packed left as Finder's
+        // grouped grid is.
+        if (!isGalleryGrouped()) {
+            for (const item of items) {
+                if (item.style.display !== 'none' && ++visibleCount > cols) break;
+            }
         }
 
         // Each track ends at its cell's right edge, and the cell sits at the end.
@@ -821,6 +829,7 @@ document.addEventListener('DOMContentLoaded', () => {
         layoutIconGrid();
         calculateGridMetrics();
         marqueeItemRects = null;
+        if (isGalleryGrouped()) refreshGroupSections();
     }
 
     // --- Initial Setup and Observers ---
@@ -841,6 +850,821 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(calculateGridMetrics, 50);
         });
     }
+
+    // --- Group By ---
+    // Binder's Group By, after Finder's grouped icon view. Each group is a
+    // section: a 32px header with its title 19px in and "Show All (n)" or
+    // "Show Less" 19px from the right, then 10px down to the first row, and
+    // 2px from the last row to the next header. Grouped rows are packed left,
+    // never justified. A collapsed group is one row holding all of its items,
+    // scrolled sideways, and its button shows only when they need more than
+    // one row; the count is the whole group's. The header of the group at the
+    // top pins under the top bar until the next one pushes it out, fading as
+    // it goes. Items keep the gallery's order within a group, and the groups
+    // follow their key's own order, the group of images without a value last.
+    // An image with several values shows in each of their groups, as Finder
+    // shows a file in each of its tags' groups; Binder shows it only once.
+    const GROUP_HEADER_HEIGHT = 32;
+    const GROUP_ITEMS_TOP = 10;
+    const GROUP_ITEMS_BOTTOM = 2;
+    // A row runs on under the next header, where a selected name's glow reaches.
+    const GROUP_ROW_OVERHANG = 20;
+    const GROUP_BY_STORAGE_PREFIX = 'galleryGroupBy:';
+    const GROUP_EXPANDED_STORAGE_PREFIX = 'galleryGroupExpanded:';
+    // A scene number among the photographers' keywords: "SC14", "sc48pt".
+    const SCENE_KEYWORD = /^(?:sc|scn|scene)[\s._#-]*0*(\d{1,3})[a-z]{0,3}$/i;
+    const galleryStorageId = gallery.dataset.galleryId || location.pathname;
+    const groupCollator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+    const galleryContextMenuElement = document.getElementById('gallery-context-menu');
+    const groupByMenuRow = document.getElementById('gallery-context-group');
+    const groupByMenu = document.getElementById('gallery-group-by-menu');
+    const sidebarGroupByList = document.getElementById('sidebar-group-by-options');
+    // Each page lists its show's episode titles, by season and episode.
+    const galleryEpisodeTitles = (() => {
+        const source = document.getElementById('gallery-episode-titles');
+        try {
+            return source ? JSON.parse(source.textContent) : {};
+        } catch (error) {
+            return {};
+        }
+    })();
+
+    // None, then the keys, as Binder's menu separates them. A key is offered
+    // only where some image has a value for it.
+    const GROUP_BY_OPTIONS = [
+        { key: 'none', label: 'None' },
+        {
+            key: 'episode',
+            label: 'Episode',
+            hasValue: img => Boolean(img.dataset.season || img.dataset.episode),
+            buckets: getEpisodeGroupBuckets
+        },
+        {
+            key: 'scene',
+            label: 'Scene',
+            hasValue: img => Boolean(img.dataset.scene) || getKeywordSceneNumbers(img).length > 0,
+            buckets: getSceneGroupBuckets
+        },
+        {
+            key: 'location',
+            label: 'Location',
+            hasValue: img => Boolean(img.dataset.location),
+            buckets: img => getValueGroupBuckets('location', splitGroupValues(img.dataset.location), 'No Location')
+        },
+        {
+            key: 'character',
+            label: 'Character',
+            hasValue: img => Boolean(img.dataset.characters),
+            buckets: img => getValueGroupBuckets('character', splitGroupValues(img.dataset.characters), 'No Characters')
+        },
+        {
+            key: 'actor',
+            label: 'Actor',
+            hasValue: img => Boolean(img.dataset.cast || img.dataset.castAndCrew),
+            buckets: img => getValueGroupBuckets('actor', [
+                ...splitGroupValues(img.dataset.cast),
+                ...splitGroupValues(img.dataset.castAndCrew)
+            ], 'No Actors')
+        }
+    ];
+
+    let groupBy = 'none';
+    let galleryFigures = [];
+    let groupSections = [];
+    let shownGroupSections = [];
+    let groupClones = [];
+    let expandedGroupIds = new Set();
+    let pinnedGroupHeader = null;
+    let stickyGroupHeaders = new Set();
+    let groupPinFrame = 0;
+
+    function isGalleryGrouped() {
+        return gallery.classList.contains('is-grouped');
+    }
+
+    function getGroupByOption(key) {
+        return GROUP_BY_OPTIONS.find(option => option.key === key && option.isAvailable !== false) || null;
+    }
+
+    function readGroupStorage(key) {
+        try {
+            return localStorage.getItem(key);
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function writeGroupStorage(key, value) {
+        try {
+            localStorage.setItem(key, value);
+        } catch (error) {
+            // Private browsing: the choice lasts for this visit only.
+        }
+    }
+
+    function splitGroupValues(value) {
+        return (value || '').split(',').map(part => part.trim()).filter(part => part.length > 0);
+    }
+
+    // An episode in short, S1 E1. When only its season or only its number is
+    // known, that one is written out.
+    function describeEpisode(season, episode) {
+        if (season && episode) return `S${season}\u2009E${episode}`;
+        if (season) return `Season ${season}`;
+        if (episode) return `Episode ${episode}`;
+        return '';
+    }
+
+    function getEpisodeOrder(img) {
+        const season = normalizeSidebarNumberValue(img.dataset.season);
+        const episode = normalizeSidebarNumberValue(img.dataset.episode);
+        return {
+            season,
+            episode,
+            order: [season ? Number(season) : Infinity, episode ? Number(episode) : Infinity]
+        };
+    }
+
+    // The gallery's own order: season, then episode. An image without a
+    // season comes after every season, as in the gallery.
+    function getEpisodeGroupBuckets(img) {
+        const { season, episode, order } = getEpisodeOrder(img);
+        if (!season && !episode) {
+            return [{ id: 'episode:', title: 'No Episode', order: [...order, 1] }];
+        }
+
+        const seasonTitles = galleryEpisodeTitles[season] || {};
+        return [{
+            id: `episode:${season}:${episode}`,
+            title: describeEpisode(season, episode),
+            subtitle: season && episode ? seasonTitles[episode] || '' : '',
+            order: [...order, 0]
+        }];
+    }
+
+    function getKeywordSceneNumbers(img) {
+        const numbers = new Set();
+        splitGroupValues(img.dataset.keywords).forEach(keyword => {
+            const match = keyword.match(SCENE_KEYWORD);
+            if (match) numbers.add(Number(match[1]));
+        });
+        return Array.from(numbers);
+    }
+
+    // A scene the image is tagged with by name, or else the scene numbers its
+    // keywords give, which count within the image's episode. By episode, then
+    // numbered scenes by number, then named ones by name.
+    function getSceneGroupBuckets(img) {
+        const { season, episode, order } = getEpisodeOrder(img);
+        const named = splitGroupValues(img.dataset.scene);
+        if (named.length > 0) {
+            return named.map(name => ({
+                id: `scene:${foldGalleryPersonName(name)}`,
+                title: name,
+                sharedSubtitle: describeEpisode(season, episode),
+                order: [...order, 1, name]
+            }));
+        }
+
+        const numbers = getKeywordSceneNumbers(img);
+        if (numbers.length === 0) {
+            return [{ id: 'scene:', title: 'No Scene', order: [Infinity, Infinity, 2] }];
+        }
+
+        return numbers.map(number => ({
+            id: `scene:${season}:${episode}:${number}`,
+            title: `Scene ${number}`,
+            subtitle: describeEpisode(season, episode),
+            order: [...order, 0, number]
+        }));
+    }
+
+    // One group per value, by name in Finder's collation, as Binder's tag
+    // groups are. Case and accents don't make another group.
+    function getValueGroupBuckets(kind, values, emptyTitle) {
+        if (values.length === 0) {
+            return [{ id: `${kind}:`, title: emptyTitle, order: [1] }];
+        }
+
+        return values.map(value => ({
+            id: `${kind}:${foldGalleryPersonName(value)}`,
+            title: value,
+            order: [0, value]
+        }));
+    }
+
+    function compareGroupOrder(a, b) {
+        const length = Math.max(a.order.length, b.order.length);
+        for (let index = 0; index < length; index++) {
+            const left = a.order[index];
+            const right = b.order[index];
+            if (left === right) continue;
+            if (left === undefined) return -1;
+            if (right === undefined) return 1;
+
+            const result = typeof left === 'number' && typeof right === 'number'
+                ? left - right
+                : groupCollator.compare(String(left), String(right));
+            if (result !== 0) return result;
+        }
+        return groupCollator.compare(a.title, b.title);
+    }
+
+    function cloneGroupFigure(figure) {
+        const clone = figure.cloneNode(true);
+        clone.classList.remove('selected');
+        if (!clone.classList.contains('is-visible')) {
+            clone.querySelector('img').addEventListener('load', () => {
+                clone.classList.add('is-visible');
+            }, { once: true });
+        }
+        groupClones.push(clone);
+        return clone;
+    }
+
+    function createGroupSection(group) {
+        const element = document.createElement('section');
+        element.className = 'gallery-group';
+
+        const header = document.createElement('div');
+        header.className = 'gallery-group-header';
+
+        // Binder's Enclosing Folder header: the name, then an em space and
+        // what places it, lighter. Tail truncation gives up the second first.
+        const title = document.createElement('span');
+        title.className = 'gallery-group-title';
+        title.textContent = group.title;
+        const subtitle = group.subtitle || group.sharedSubtitle;
+        if (subtitle) {
+            const detail = document.createElement('span');
+            detail.className = 'gallery-group-subtitle';
+            detail.textContent = subtitle;
+            title.append(' ', detail);
+        }
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'gallery-group-toggle';
+        button.hidden = true;
+
+        // The rows, in a body of their own that isn't laid out off screen;
+        // the header stays out of it, so it can be drawn above the marquee.
+        const body = document.createElement('div');
+        body.className = 'gallery-group-body';
+        const list = document.createElement('div');
+        list.className = 'gallery-group-items';
+        list.append(...group.figures);
+        body.appendChild(list);
+
+        header.append(title, button);
+        element.append(header, body);
+
+        const section = { id: group.id, element, header, body, list, button, figures: group.figures, count: 0 };
+        button.addEventListener('click', () => toggleGroupCollapse(section));
+        return section;
+    }
+
+    function buildGroupSections(option) {
+        const groups = new Map();
+
+        galleryFigures.forEach(figure => {
+            const img = figure.querySelector('img');
+            const placed = new Set();
+
+            option.buckets(img).forEach(bucket => {
+                if (placed.has(bucket.id)) return;
+
+                let group = groups.get(bucket.id);
+                if (!group) {
+                    group = { ...bucket, figures: [] };
+                    groups.set(bucket.id, group);
+                } else {
+                    // A named scene goes where its first known episode is, and
+                    // names its episode unless its images name two.
+                    if (compareGroupOrder(bucket, group) < 0) group.order = bucket.order;
+                    if (bucket.sharedSubtitle && !group.isMixed && bucket.sharedSubtitle !== group.sharedSubtitle) {
+                        if (group.sharedSubtitle) {
+                            group.sharedSubtitle = '';
+                            group.isMixed = true;
+                        } else {
+                            group.sharedSubtitle = bucket.sharedSubtitle;
+                        }
+                    }
+                }
+
+                group.figures.push(placed.size === 0 ? figure : cloneGroupFigure(figure));
+                placed.add(bucket.id);
+            });
+        });
+
+        return Array.from(groups.values()).sort(compareGroupOrder).map(createGroupSection);
+    }
+
+    function ungroupGallery() {
+        if (!isGalleryGrouped()) return;
+
+        groupClones.forEach(clone => selectedItems.delete(clone));
+        if (groupClones.includes(lastSelectedItem)) lastSelectedItem = null;
+        if (groupClones.includes(selectionAnchor)) selectionAnchor = null;
+
+        const fragment = document.createDocumentFragment();
+        galleryFigures.forEach(figure => fragment.appendChild(figure));
+        groupSections.forEach(section => section.element.remove());
+        gallery.appendChild(fragment);
+
+        groupSections = [];
+        shownGroupSections = [];
+        groupClones = [];
+        pinnedGroupHeader = null;
+        stickyGroupHeaders = new Set();
+        gallery.classList.remove('is-grouped');
+        document.body.classList.remove('is-gallery-grouped');
+    }
+
+    // A cell's height and the gap between rows, from a probe that is always
+    // laid out, since a group off screen isn't.
+    const galleryCellProbe = document.createElement('div');
+    galleryCellProbe.id = 'gallery-cell-probe';
+    galleryCellProbe.setAttribute('aria-hidden', 'true');
+    gallery.appendChild(galleryCellProbe);
+
+    function getGroupCellMetrics() {
+        return {
+            cellHeight: galleryCellProbe.offsetHeight,
+            rowGap: parseFloat(getComputedStyle(gallery).rowGap) || 0
+        };
+    }
+
+    function getGroupRowsHeight(rows, metrics) {
+        return rows * metrics.cellHeight + (rows - 1) * metrics.rowGap;
+    }
+
+    function getGroupColumnCount() {
+        const cellWidth = parseFloat(getComputedStyle(gallery).getPropertyValue('--cell-width'));
+        const width = galleryWidthProbe.getBoundingClientRect().width;
+        if (!(cellWidth > 0)) return 1;
+        return Math.max(1, Math.floor((width + ICON_GRID_MINIMUM_GAP) / (cellWidth + ICON_GRID_MINIMUM_GAP)));
+    }
+
+    // Counts what the search and the sidebar leave in each group. A group with
+    // nothing left is not shown, and only the first group shown has no rule.
+    function refreshGroupSections() {
+        if (!isGalleryGrouped()) return;
+
+        // Read before any group is told its height, so the gallery is laid
+        // out once, not once a group.
+        const columns = getGroupColumnCount();
+        const metrics = getGroupCellMetrics();
+        shownGroupSections = [];
+
+        groupSections.forEach(section => {
+            let count = 0;
+            for (const figure of section.figures) {
+                if (figure.style.display !== 'none') count++;
+            }
+            section.count = count;
+
+            const isShown = count > 0;
+            const isCollapsed = !expandedGroupIds.has(section.id);
+            const label = isCollapsed ? `Show All (${count})` : 'Show Less';
+            section.element.hidden = !isShown;
+            section.element.classList.toggle('is-collapsed', isCollapsed);
+            section.element.classList.toggle('is-first', isShown && shownGroupSections.length === 0);
+            section.button.hidden = count <= columns;
+            if (section.button.textContent !== label) section.button.textContent = label;
+
+            // A group off screen isn't laid out, so its body is told the
+            // height its rows will have.
+            if (isShown) {
+                const rows = isCollapsed ? 1 : Math.ceil(count / columns);
+                const height = `${GROUP_ITEMS_TOP + getGroupRowsHeight(rows, metrics) + GROUP_ITEMS_BOTTOM + GROUP_ROW_OVERHANG}px`;
+                if (section.body.style.containIntrinsicHeight !== height) section.body.style.containIntrinsicHeight = height;
+                shownGroupSections.push(section);
+            }
+        });
+
+        marqueeItemRects = null;
+        updatePinnedGroupHeader();
+    }
+
+    function getExpandedGroupStorageKey() {
+        return `${GROUP_EXPANDED_STORAGE_PREFIX}${galleryStorageId}|${groupBy}`;
+    }
+
+    // Only the open groups are kept, so a group that turns up later arrives
+    // collapsed, as in Binder.
+    function loadExpandedGroupIds() {
+        const stored = readGroupStorage(getExpandedGroupStorageKey());
+        if (stored === null) return null;
+
+        try {
+            const ids = JSON.parse(stored);
+            return Array.isArray(ids) ? new Set(ids) : null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function saveExpandedGroupIds() {
+        writeGroupStorage(getExpandedGroupStorageKey(), JSON.stringify(Array.from(expandedGroupIds)));
+    }
+
+    // Finder's first pass for a key that isn't a date: every group opens whole
+    // when each of them starts within the window, laid out whole, and
+    // otherwise every group is collapsed. Binder runs it once per key.
+    function seedExpandedGroupIds() {
+        if (shownGroupSections.length === 0) return new Set();
+
+        const columns = getGroupColumnCount();
+        const metrics = getGroupCellMetrics();
+        const galleryTop = gallery.getBoundingClientRect().top;
+        const windowTop = -galleryTop;
+        const windowBottom = window.innerHeight - galleryTop;
+        let top = 0;
+
+        for (const section of shownGroupSections) {
+            const bottom = top + GROUP_HEADER_HEIGHT + GROUP_ITEMS_TOP +
+                getGroupRowsHeight(Math.ceil(section.count / columns), metrics) + GROUP_ITEMS_BOTTOM;
+            if (!(top < windowBottom && bottom > windowTop)) return new Set();
+            top = bottom;
+        }
+
+        return new Set(shownGroupSections.map(section => section.id));
+    }
+
+    function applyGroupBy(key) {
+        const option = getGroupByOption(key) || GROUP_BY_OPTIONS[0];
+
+        ungroupGallery();
+        groupBy = option.key;
+
+        if (option.buckets) {
+            groupSections = buildGroupSections(option);
+            const fragment = document.createDocumentFragment();
+            groupSections.forEach(section => fragment.appendChild(section.element));
+            gallery.appendChild(fragment);
+            gallery.classList.add('is-grouped');
+            document.body.classList.add('is-gallery-grouped');
+
+            const storedIds = loadExpandedGroupIds();
+            expandedGroupIds = storedIds || new Set();
+            refreshGroupSections();
+            if (!storedIds) {
+                expandedGroupIds = seedExpandedGroupIds();
+                saveExpandedGroupIds();
+            }
+        }
+
+        refreshIconGrid();
+        syncGroupByControls();
+        window.dispatchEvent(new CustomEvent('galleryRearranged'));
+    }
+
+    function setGroupBy(key) {
+        if (key === groupBy) return;
+
+        writeGroupStorage(GROUP_BY_STORAGE_PREFIX + galleryStorageId, key);
+        applyGroupBy(key);
+        window.scrollTo(0, 0);
+    }
+
+    function toggleGroupCollapse(section) {
+        const pinLine = getGroupPinLine();
+        const top = section.element.getBoundingClientRect().top;
+
+        if (expandedGroupIds.has(section.id)) {
+            expandedGroupIds.delete(section.id);
+        } else {
+            expandedGroupIds.add(section.id);
+        }
+        saveExpandedGroupIds();
+        section.list.scrollLeft = 0;
+        refreshGroupSections();
+
+        // Collapsed from its pinned header, the group stays where its header was.
+        if (top < pinLine) {
+            window.scrollBy(0, section.element.getBoundingClientRect().top - pinLine);
+        }
+        window.dispatchEvent(new CustomEvent('galleryRearranged'));
+    }
+
+    // --- Pinned Group Header ---
+    // The pin line is the top bar's bottom edge. The group there floats on the
+    // top bar's material with a divider along its bottom, its own rule hidden,
+    // even when it is at the top on its own, as Finder's first header is. Its
+    // end pushes it up under the top bar as the next header arrives, and it
+    // fades by the fraction pushed out, as AppKit fades it. Only the headers
+    // of the groups around the pin line are sticky: Safari gives every sticky
+    // header a layer of its own, and with a few hundred groups each scroll
+    // step cost milliseconds more. Two either side cover a group passing in
+    // one frame.
+    function getGroupPinLine() {
+        return header.getBoundingClientRect().bottom;
+    }
+
+    function updatePinnedGroupHeader() {
+        groupPinFrame = 0;
+
+        let pinned = null;
+        let push = 0;
+        let stickyIndex = -1;
+        if (shownGroupSections.length > 0) {
+            const pinLine = getGroupPinLine();
+            let low = 0;
+            let high = shownGroupSections.length - 1;
+            let index = -1;
+            while (low <= high) {
+                const middle = (low + high) >> 1;
+                if (shownGroupSections[middle].element.getBoundingClientRect().bottom > pinLine) {
+                    index = middle;
+                    high = middle - 1;
+                } else {
+                    low = middle + 1;
+                }
+            }
+
+            stickyIndex = index === -1 ? shownGroupSections.length - 1 : index;
+            if (index !== -1) {
+                const rect = shownGroupSections[index].element.getBoundingClientRect();
+                if (rect.top <= pinLine + 0.5) {
+                    pinned = shownGroupSections[index].header;
+                    push = Math.min(GROUP_HEADER_HEIGHT, Math.max(0, pinLine + GROUP_HEADER_HEIGHT - rect.bottom));
+                }
+            }
+        }
+
+        const sticky = new Set(stickyIndex === -1 ? [] : shownGroupSections
+            .slice(Math.max(0, stickyIndex - 2), stickyIndex + 3)
+            .map(section => section.header));
+        stickyGroupHeaders.forEach(groupHeader => {
+            if (!sticky.has(groupHeader)) groupHeader.classList.remove('is-sticky');
+        });
+        sticky.forEach(groupHeader => {
+            if (!stickyGroupHeaders.has(groupHeader)) groupHeader.classList.add('is-sticky');
+        });
+        stickyGroupHeaders = sticky;
+
+        if (pinned !== pinnedGroupHeader) {
+            if (pinnedGroupHeader) {
+                pinnedGroupHeader.classList.remove('is-floating');
+                pinnedGroupHeader.style.opacity = '';
+            }
+            if (pinned) pinned.classList.add('is-floating');
+            pinnedGroupHeader = pinned;
+        }
+        if (pinned) {
+            const opacity = push > 0 ? String(1 - push / GROUP_HEADER_HEIGHT) : '';
+            if (pinned.style.opacity !== opacity) pinned.style.opacity = opacity;
+        }
+    }
+
+    window.addEventListener('scroll', () => {
+        if (shownGroupSections.length === 0 || groupPinFrame) return;
+        groupPinFrame = requestAnimationFrame(updatePinnedGroupHeader);
+    }, { passive: true });
+
+    // A collapsed row that scrolls moves its items under the marquee.
+    gallery.addEventListener('scroll', event => {
+        if (event.target !== gallery) marqueeItemRects = null;
+    }, true);
+
+    // --- Grouped Hit Testing and Navigation ---
+    function toGalleryRect(rect, galleryRect) {
+        return {
+            left: rect.left - galleryRect.left,
+            top: rect.top - galleryRect.top,
+            right: rect.right - galleryRect.left,
+            bottom: rect.bottom - galleryRect.top
+        };
+    }
+
+    // Grouped, only the groups a click, the band or an arrow key reaches are
+    // measured, each once until the gallery changes. A group off screen isn't
+    // laid out, and measuring its items would lay it out: every group, some
+    // 300 ms in Safari, on each click. A collapsed row shows its items only
+    // within its own width.
+    function getGroupedItemRects(galleryRect, range) {
+        if (!marqueeItemRects) {
+            marqueeItemRects = [];
+            marqueeItemRects.measuredItems = new Set();
+            marqueeItemRects.groups = shownGroupSections.map(section => ({
+                section,
+                bounds: toGalleryRect(section.element.getBoundingClientRect(), galleryRect),
+                isMeasured: false
+            }));
+        }
+
+        for (const group of marqueeItemRects.groups) {
+            if (group.isMeasured) continue;
+            if (range && (group.bounds.bottom <= range.top || group.bounds.top >= range.bottom)) continue;
+
+            group.isMeasured = true;
+            const section = group.section;
+            const clip = section.element.classList.contains('is-collapsed')
+                ? toGalleryRect(section.list.getBoundingClientRect(), galleryRect)
+                : null;
+            for (const item of section.figures) {
+                if (item.style.display === 'none') continue;
+
+                marqueeItemRects.push({ ...toGalleryRect(item.getBoundingClientRect(), galleryRect), item, clip, hitBox: null });
+                marqueeItemRects.measuredItems.add(item);
+            }
+        }
+
+        return marqueeItemRects;
+    }
+
+    function settleUnmeasuredSelection(isModifier) {
+        const measuredItems = marqueeItemRects.measuredItems;
+        for (const item of Array.from(selectedItems)) {
+            if (!measuredItems.has(item) && !(isModifier && preMarqueeSelectedItems.has(item))) {
+                setSelection(item, false);
+            }
+        }
+    }
+
+    function intersectRects(a, b) {
+        return {
+            left: Math.max(a.left, b.left),
+            top: Math.max(a.top, b.top),
+            right: Math.min(a.right, b.right),
+            bottom: Math.min(a.bottom, b.bottom)
+        };
+    }
+
+    // AppKit's up and down arrows in an icon view: the nearest row above or
+    // below, and in it the item whose centre is nearest across.
+    function getGroupedVerticalNeighbor(item, direction) {
+        if (!isMarquee) marqueeItemRects = null;
+        if (!item) return null;
+
+        // The next row either way starts within two cells' height.
+        const galleryRect = gallery.getBoundingClientRect();
+        const itemRect = toGalleryRect(item.getBoundingClientRect(), galleryRect);
+        const reach = 2 * (itemRect.bottom - itemRect.top);
+        const entries = getMarqueeItemRects(galleryRect, { top: itemRect.top - reach, bottom: itemRect.bottom + reach });
+        const current = entries.find(entry => entry.item === item);
+        if (!current) return null;
+
+        let rowTop = null;
+        for (const entry of entries) {
+            const isPast = direction < 0 ? entry.top < current.top - 1 : entry.top > current.top + 1;
+            if (isPast && (rowTop === null || (direction < 0 ? entry.top > rowTop : entry.top < rowTop))) {
+                rowTop = entry.top;
+            }
+        }
+        if (rowTop === null) return null;
+
+        const center = (current.left + current.right) / 2;
+        let nearest = null;
+        let nearestDistance = Infinity;
+        for (const entry of entries) {
+            if (Math.abs(entry.top - rowTop) > 1) continue;
+
+            const distance = Math.abs((entry.left + entry.right) / 2 - center);
+            if (distance < nearestDistance) {
+                nearest = entry;
+                nearestDistance = distance;
+            }
+        }
+        return nearest ? nearest.item : null;
+    }
+
+    // An image shown in several groups is one image to save.
+    function getDistinctImageItems(figures) {
+        const bySource = new Map();
+        figures.forEach(figure => {
+            const source = figure.querySelector('img').dataset.fullsrc;
+            if (!bySource.has(source)) bySource.set(source, figure);
+        });
+        return Array.from(bySource.values());
+    }
+
+    // --- Group By Menus ---
+    // The gallery's context menu has Group By above Sort By, as Binder's
+    // background menu does, and the sidebar lists the same choices.
+    function isInGroupByMenu(target) {
+        return Boolean(groupByMenu && groupByMenu.contains(target));
+    }
+
+    function showGroupByMenu() {
+        if (!groupByMenu || !groupByMenuRow) return;
+
+        groupByMenu.style.display = 'block';
+        groupByMenuRow.classList.add('is-open');
+
+        const rowRect = groupByMenuRow.getBoundingClientRect();
+        const menuRect = groupByMenu.getBoundingClientRect();
+        const menuPadding = parseFloat(getComputedStyle(groupByMenu).paddingTop) || 0;
+        let left = rowRect.right;
+        if (left + menuRect.width > window.innerWidth) left = rowRect.left - menuRect.width;
+        const top = clamp(rowRect.top - menuPadding, 0, Math.max(0, window.innerHeight - menuRect.height));
+
+        groupByMenu.style.left = `${Math.max(0, left)}px`;
+        groupByMenu.style.top = `${top}px`;
+    }
+
+    function hideGroupByMenu() {
+        if (!groupByMenu) return;
+
+        groupByMenu.style.display = 'none';
+        if (groupByMenuRow) groupByMenuRow.classList.remove('is-open');
+    }
+
+    function renderGroupByControls() {
+        const options = GROUP_BY_OPTIONS.filter(option => option.isAvailable !== false);
+
+        if (groupByMenu) {
+            const menuRows = [];
+            options.forEach(option => {
+                const row = document.createElement('li');
+                row.dataset.groupBy = option.key;
+                row.textContent = option.label;
+                menuRows.push(row);
+
+                if (option.key === 'none') {
+                    const separator = document.createElement('li');
+                    separator.className = 'separator';
+                    menuRows.push(separator);
+                }
+            });
+            groupByMenu.querySelector('ul').replaceChildren(...menuRows);
+        }
+
+        if (sidebarGroupByList) {
+            sidebarGroupByList.replaceChildren(...options.map(option => {
+                const button = document.createElement('button');
+                button.className = 'sidebar-option';
+                button.type = 'button';
+                button.dataset.groupBy = option.key;
+                button.textContent = option.label;
+                return button;
+            }));
+        }
+
+        syncGroupByControls();
+    }
+
+    function syncGroupByControls() {
+        if (groupByMenu) {
+            groupByMenu.querySelectorAll('[data-group-by]').forEach(row => {
+                row.classList.toggle('is-checked', row.dataset.groupBy === groupBy);
+            });
+        }
+
+        if (sidebarGroupByList) {
+            sidebarGroupByList.querySelectorAll('[data-group-by]').forEach(button => {
+                const isActive = button.dataset.groupBy === groupBy;
+                button.classList.toggle('is-active', isActive);
+                button.setAttribute('aria-pressed', String(isActive));
+            });
+        }
+    }
+
+    if (galleryContextMenuElement && groupByMenuRow) {
+        galleryContextMenuElement.addEventListener('mouseover', event => {
+            const row = event.target.closest('li');
+            if (!row || row.classList.contains('separator')) return;
+
+            if (row === groupByMenuRow) {
+                showGroupByMenu();
+            } else {
+                hideGroupByMenu();
+            }
+        });
+    }
+
+    if (groupByMenu) {
+        groupByMenu.addEventListener('click', event => {
+            const row = event.target.closest('[data-group-by]');
+            if (!row) return;
+
+            if (galleryContextMenuElement) galleryContextMenuElement.style.display = 'none';
+            hideGroupByMenu();
+            setGroupBy(row.dataset.groupBy);
+        });
+    }
+
+    if (sidebarGroupByList) {
+        sidebarGroupByList.addEventListener('click', event => {
+            const button = event.target.closest('[data-group-by]');
+            if (button) setGroupBy(button.dataset.groupBy);
+        });
+    }
+
+    // The key is kept per gallery, and comes back with the page.
+    document.addEventListener('galleryLoaded', () => {
+        galleryFigures = Array.from(items);
+        GROUP_BY_OPTIONS.forEach(option => {
+            option.isAvailable = !option.hasValue ||
+                galleryFigures.some(figure => option.hasValue(figure.querySelector('img')));
+        });
+
+        renderGroupByControls();
+
+        const storedKey = readGroupStorage(GROUP_BY_STORAGE_PREFIX + galleryStorageId);
+        if (storedKey && getGroupByOption(storedKey)) applyGroupBy(storedKey);
+    });
     /*
     ==================================================================
     // END: FINDER-STYLE ARROW KEY NAVIGATION LOGIC
@@ -1044,8 +1868,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Items keep their place in the gallery while it scrolls, so a drag measures
     // them once. Reading every rect on every move forced a layout of the whole
-    // grid each time the previous move had changed the selection.
-    function getMarqueeItemRects(galleryRect) {
+    // grid each time the previous move had changed the selection. The range,
+    // a top and bottom in the gallery, is what the caller needs; only the
+    // grouped gallery measures by it.
+    function getMarqueeItemRects(galleryRect, range) {
+        if (isGalleryGrouped()) return getGroupedItemRects(galleryRect, range);
         if (marqueeItemRects) return marqueeItemRects;
 
         marqueeItemRects = [];
@@ -1422,6 +2249,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Finder's -[TIconView isIconOrTextInRect:]. The selection glow never counts,
     // so what the band takes in doesn't change as it selects.
     function doesBandHitItem(band, entry, galleryRect) {
+        // An item of a collapsed row is hit only where the row shows it.
+        if (entry.clip) {
+            band = intersectRects(band, entry.clip);
+            if (isEmptyRect(band)) return false;
+        }
+
         const shadows = getThumbnailShadows();
         if (band.left >= entry.right + shadows.reach || band.right <= entry.left - shadows.reach ||
             band.top >= entry.bottom + shadows.reach || band.bottom <= entry.top - shadows.reach) {
@@ -1445,13 +2278,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const x = clientX - galleryRect.left;
         const y = clientY - galleryRect.top;
         const reach = getThumbnailShadows().reach;
-        const entries = getMarqueeItemRects(galleryRect);
+        const entries = getMarqueeItemRects(galleryRect, { top: y - reach, bottom: y + reach });
         for (let i = entries.length - 1; i >= 0; i--) {
             const entry = entries[i];
             if (x < entry.left - reach || x >= entry.right + reach ||
                 y < entry.top - reach || y >= entry.bottom + reach) {
                 continue;
             }
+            if (entry.clip && !rectContainsPoint(entry.clip, x, y)) continue;
             if (isPointInItemHitBox(entry, x, y, galleryRect)) return entry.item;
         }
         return null;
@@ -1516,7 +2350,7 @@ document.addEventListener('DOMContentLoaded', () => {
             bottom: selectionRect.y + selectionRect.h
         };
 
-        for (const itemRect of getMarqueeItemRects(galleryRect)) {
+        for (const itemRect of getMarqueeItemRects(galleryRect, band)) {
             const item = itemRect.item;
             const intersects = doesBandHitItem(band, itemRect, galleryRect);
 
@@ -1526,6 +2360,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 setSelection(item, intersects);
             }
         }
+
+        // Grouped, a group the band hasn't reached isn't measured, and what is
+        // selected in it is left as the band leaves any item it misses.
+        if (isGalleryGrouped()) settleUnmeasuredSelection(isModifier);
     }
 
     function autoScrollLoop() {
@@ -1549,7 +2387,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (e.button !== 0 || header.contains(e.target) || footer.contains(e.target) ||
-            e.target.closest('.all-people-match-row, .all-people-empty-state')) {
+            e.target.closest('.all-people-match-row, .all-people-empty-state, .gallery-group-toggle')) {
             isMarquee = false;
             return;
         }
@@ -1693,12 +2531,15 @@ document.addEventListener('DOMContentLoaded', () => {
             selectedPill.classList.remove('selected');
         }
 
-        if (e.button === 0 && !itemMenu.contains(e.target) && !galleryMenu.contains(e.target)) {
+        const isInMenu = itemMenu.contains(e.target) || galleryMenu.contains(e.target) || isInGroupByMenu(e.target);
+
+        if (e.button === 0 && !isInMenu) {
             itemMenu.style.display = 'none';
             galleryMenu.style.display = 'none';
+            hideGroupByMenu();
         }
 
-        if (!wrapper.contains(e.target) && !itemMenu.contains(e.target) && !galleryMenu.contains(e.target)) {
+        if (!wrapper.contains(e.target) && !isInMenu) {
             if (!e.metaKey && !e.ctrlKey && !e.shiftKey) {
                 clearSelection();
             }
@@ -1737,6 +2578,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         itemContextMenu.style.display = 'none';
         galleryContextMenu.style.display = 'none';
+        hideGroupByMenu();
 
         if (figure) {
             rightClickedItem = figure;
@@ -1749,8 +2591,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const saveMenuItem = document.getElementById('context-menu-save');
-            if (selectedItems.size > 1) {
-                saveMenuItem.textContent = `Save ${selectedItems.size} Images to "Downloads"`;
+            // An image shown in more than one group is saved once.
+            const imageCount = getDistinctImageItems(selectedItems).length;
+            if (imageCount > 1) {
+                saveMenuItem.textContent = `Save ${imageCount} Images to "Downloads"`;
             } else {
                 saveMenuItem.textContent = 'Save Image to "Downloads"';
             }
@@ -1839,7 +2683,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     let totalDownloadSize = 0;
 
                     try {
-                        const itemsToDownload = Array.from(selectedItems);
+                        const itemsToDownload = getDistinctImageItems(selectedItems);
                         if (itemsToDownload.length === 0) {
                              indicator.classList.remove('is-active', 'is-downloading');
                              return;
@@ -1916,6 +2760,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     galleryContextMenu.addEventListener('click', (e) => {
+        // Group By opens its submenu; only a choice in it closes the menu.
+        if (e.target.closest('#gallery-context-group')) return;
+
         galleryContextMenu.style.display = 'none';
         const targetId = e.target.id;
 
@@ -2322,6 +3169,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('load', setupScrollbar);
     window.addEventListener('orientationchange', setupScrollbar);
     window.addEventListener('galleryFiltered', setupScrollbar);
+    window.addEventListener('galleryRearranged', setupScrollbar);
 
     setupScrollbar();
     setTimeout(setupScrollbar, 500);

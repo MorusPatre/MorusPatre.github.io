@@ -1699,6 +1699,18 @@ Styling for the Finder-Style Photo Gallery
     pointer-events: none;
 }
 
+/* A cell's height, for the script to read while the groups that hold the
+   cells aren't laid out. */
+#gallery-cell-probe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: var(--cell-height);
+    visibility: hidden;
+    pointer-events: none;
+}
+
 #gallery-blur-layer {
     position: fixed;
     inset: 0;
@@ -1808,6 +1820,184 @@ body.is-sidebar-collapsed #gallery-blur-layer {
 .modal-info-panel .dimensions-x {
     display: inline-block;
     transform: translateY(1px);
+}
+
+/* Group By: Binder's grouped icon view, after Finder's. The gallery stacks its
+   groups, each a 32px header over its own grid, with Finder's grouped section
+   insets: 10px above the first row, 4px either side, 2px below the last. */
+/* The ungrouped grid's justify-items would align and shrink the groups too,
+   in browsers that align blocks. */
+#photo-gallery.is-grouped {
+    display: block;
+    justify-items: normal;
+    padding: 0;
+    overflow-anchor: none;
+}
+
+/* Its own formatting context, so a collapsed row running on under the next
+   header doesn't move where the group ends. */
+.gallery-group {
+    display: flow-root;
+}
+
+/* A group the search or the sidebar leaves empty. */
+.gallery-group[hidden] {
+    display: none;
+}
+
+/* Kept clear of the top bar and the pinned header when the arrows reveal it. */
+#photo-gallery.is-grouped figure {
+    scroll-margin-top: calc(var(--top-bar-height) + 32px);
+}
+
+/* The header pins under the top bar while its group passes, then the next
+   group's pushes it out. It draws nothing of its own at rest but its title,
+   its button and a rule along its top, the line between it and the group
+   above. */
+.gallery-group-header {
+    position: relative;
+    top: 0;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    height: 32px;
+    padding: 0 19px;
+}
+
+/* Sticky only near the pin line, where the script puts it: Safari gives each
+   sticky header a layer, and a few hundred slowed every scroll step. */
+.gallery-group-header.is-sticky {
+    position: sticky;
+    top: var(--top-bar-height);
+}
+
+.gallery-group-header::before,
+.gallery-group-header::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    pointer-events: none;
+}
+
+/* quaternaryLabelColor, a full point. */
+.gallery-group-header::before {
+    top: 0;
+    background-color: rgba(var(--ink-rgb), 0.1);
+}
+
+/* The banner's divider: its two device rows inked 34 and 15 of 255, the
+   heavier one on the band's edge. */
+.gallery-group-header::after {
+    bottom: 0;
+    background-image: linear-gradient(to bottom, rgba(var(--ink-rgb), 0.06) 50%, rgba(var(--ink-rgb), 0.13) 50%);
+    visibility: hidden;
+}
+
+/* Pinned, the header floats on the top bar's material, under the top bar,
+   over the marquee, with the divider in place of its rule. */
+.gallery-group-header.is-floating {
+    z-index: 9;
+    background-color: var(--top-bar-material-bg);
+    backdrop-filter: var(--chrome-material-blur);
+    -webkit-backdrop-filter: var(--chrome-material-blur);
+}
+
+.gallery-group-header.is-floating::before,
+.gallery-group.is-first .gallery-group-header::before {
+    visibility: hidden;
+}
+
+.gallery-group-header.is-floating::after {
+    visibility: visible;
+}
+
+/* Finder's 15pt semibold title and 11pt button to its 12pt names, in the
+   caption's type. */
+.gallery-group-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: calc(0.65rem * 15 / 12);
+    font-weight: 600;
+    line-height: 1.25;
+    color: rgba(var(--ink-rgb), 0.55);
+}
+
+.gallery-group-subtitle {
+    font-weight: 300;
+    color: rgba(var(--ink-rgb), 0.3);
+}
+
+#photo-gallery .gallery-group-toggle {
+    flex: none;
+    height: auto;
+    margin: 0 0 0 5px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    color: rgba(var(--ink-rgb), 0.55) !important;
+    font-family: inherit;
+    font-size: calc(0.65rem * 11 / 12);
+    font-weight: 300;
+    letter-spacing: 0;
+    line-height: 1.25;
+    text-transform: none;
+    transition: none;
+    cursor: default;
+}
+
+#photo-gallery .gallery-group-toggle:hover {
+    background: none;
+}
+
+#photo-gallery .gallery-group-toggle:active {
+    background: none;
+    color: rgba(var(--ink-rgb), 0.85) !important;
+}
+
+#photo-gallery .gallery-group-toggle[hidden] {
+    display: none;
+}
+
+/* A group's rows aren't laid out or painted while they're off screen: grouped
+   by character, the gallery has thousands more items and a scrolling row per
+   group, and Safari's scrolling missed frames drawing them all. The script
+   tells each body its height. Its paint is clipped to it, so it runs on 20px
+   under the next header, where a selected name's glow can reach, and the
+   header stays out of it, above the marquee. */
+.gallery-group-body {
+    margin-bottom: -20px;
+    content-visibility: auto;
+}
+
+/* Left-packed, never justified, as Finder lays out a grouped grid. */
+.gallery-group-items {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, var(--cell-width));
+    column-gap: 2px;
+    row-gap: round(up, var(--icon-padding), 1px);
+    padding: 10px 4px 22px;
+}
+
+/* Collapsed, a group is one row of all its items, scrolled sideways. */
+.gallery-group.is-collapsed .gallery-group-items {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: var(--cell-width);
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+}
+
+.gallery-group.is-collapsed .gallery-group-items::-webkit-scrollbar {
+    display: none;
 }
 
 
@@ -2161,6 +2351,46 @@ Custom Context Menu
     margin: 6px 15px;
     background-color: rgba(var(--ink-rgb), 0.15);
     cursor: default; /* Use the default cursor, not the pointer */
+}
+
+/* A row that opens a submenu: a chevron at its end, and lit while it's open. */
+.context-menu ul li.context-menu-parent {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    cursor: default;
+}
+
+.context-menu ul li.context-menu-parent::after {
+    content: '\203A';
+    margin-left: auto;
+    font-size: 1.3em;
+    line-height: 0;
+    opacity: 0.7;
+}
+
+.context-menu ul li.context-menu-parent.is-open {
+    background-color: rgba(var(--ink-rgb), 0.1);
+}
+
+/* The submenu keeps a column for the check mark of the current choice. */
+.context-submenu {
+    z-index: 2001;
+}
+
+.context-submenu ul li {
+    position: relative;
+    padding-left: 30px;
+}
+
+.context-submenu ul li.separator {
+    padding: 0;
+}
+
+.context-submenu ul li.is-checked::before {
+    content: '\2713';
+    position: absolute;
+    left: 12px;
 }
 
 /*
@@ -2918,6 +3148,16 @@ body.is-sidebar-collapsed #app-shell::before {
 
 #app-shell #header > * {
     z-index: 1;
+}
+
+/* Grouped, the top bar is solid glass down to the pinned group header, which
+   carries the same material on to its divider, as Finder's toolbar runs into
+   its group band. Its fade would lie over the header and blur it twice. */
+body.is-gallery-grouped #app-shell #header::before {
+    height: var(--top-bar-height);
+    background: var(--top-bar-material-bg);
+    -webkit-mask-image: none;
+    mask-image: none;
 }
 
 @media screen and (max-width: 736px) {

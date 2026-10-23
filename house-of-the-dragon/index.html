@@ -8,7 +8,7 @@
 
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
 
-        <link rel="stylesheet" href="../shared/css/gallery.css?v=20261023-2" />
+        <link rel="stylesheet" href="../shared/css/gallery.css?v=20261023-6" />
         <noscript><link rel="stylesheet" href="../shared/css/noscript.css" /></noscript>
     </head>
     <body>
@@ -70,6 +70,11 @@
                             <button class="sidebar-option" type="button" data-sidebar-filter="person" data-sidebar-value="Rhys Ifans" aria-pressed="false">Rhys Ifans</button>
                             <button class="sidebar-option sidebar-option--emphasis" type="button" data-sidebar-node="all-people" aria-pressed="false">All People…</button>
                         </div>
+                    </section>
+
+                    <section class="sidebar-filter-section" aria-label="Group by">
+                        <h2 class="sidebar-filter-heading">Group by:</h2>
+                        <div id="sidebar-group-by-options" class="sidebar-option-list" role="group" aria-label="Group by"></div>
                     </section>
 
                     <section class="sidebar-filter-section sidebar-filter-section--placeholder" aria-label="Sort by">
@@ -135,7 +140,8 @@
 
         <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
-        <script src="../shared/js/gallery.js?v=20261023-1"></script>
+        <script type="application/json" id="gallery-episode-titles">{"1":{"1":"The Heirs of the Dragon","2":"The Rogue Prince","3":"Second of His Name","4":"King of the Narrow Sea","5":"We Light the Way","6":"The Princess and the Queen","7":"Driftmark","8":"The Lord of the Tides","9":"The Green Council","10":"The Black Queen"},"2":{"1":"A Son for a Son","2":"Rhaenyra the Cruel","3":"The Burning Mill","4":"The Red Dragon and the Gold","5":"Regent","6":"Smallfolk","7":"The Red Sowing","8":"The Queen Who Ever Was"}}</script>
+        <script src="../shared/js/gallery.js?v=20261023-6"></script>
         <script src="../shared/js/gallery-loader.js?v=20261023-1"></script>
 
         <div id="image-modal" class="modal-overlay">
@@ -170,9 +176,14 @@
             <ul>
                 <li id="gallery-context-add">Add Images</li>
                 <li class="separator"></li>
+                <li id="gallery-context-group" class="context-menu-parent">Group By</li>
                 <li id="gallery-context-sort">Sort By</li>
                 <li id="gallery-context-view">Show View Options</li>
             </ul>
+        </div>
+
+        <div id="gallery-group-by-menu" class="context-menu context-submenu">
+            <ul></ul>
         </div>
 
         <div id="custom-scrollbar-track">
