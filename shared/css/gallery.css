@@ -31,7 +31,9 @@
     --pill-text: #e0e0e0;
     --pill-selected-bg: #5c5753;
 
-    --thumb-border: #474442;
+    /* The hairline QuickLook strokes inside a thumbnail's edge, and Binder after
+       it: white at 25%, the same in either appearance. */
+    --thumb-hairline: rgba(255, 255, 255, 0.25);
     --thumb-glow: 0 0 18px rgba(71, 68, 66, 0.3);
 
     /* Gold selection accent. */
@@ -74,7 +76,6 @@
         --pill-text: #3a3531;
         --pill-selected-bg: #d0cac3;
 
-        --thumb-border: #d8d3cd;
         --thumb-glow: 0 4px 14px rgba(0, 0, 0, 0.28);
 
         --accent: #9c6247;
@@ -1651,6 +1652,10 @@ Styling for the Finder-Style Photo Gallery
     /* QuickLook insets a thumbnail 7/128 of the icon a side (128 to 256). */
     --thumb-inset: round(var(--icon-size) * 7 / 128, 1px);
     --thumb-box: calc(var(--icon-size) - 2 * var(--thumb-inset));
+    /* Binder rounds a thumbnail by its View Options corner radius, a share of
+       the box, set to 6% there. Its corners are Apple's continuous ones, which
+       Safari can't draw; circular ones of the same radius stay within 0.2px. */
+    --thumb-radius: calc(var(--thumb-box) * 0.06);
     /* The name starts 2px below the selection box, floored. */
     --name-top: round(down, var(--icon-top) + var(--icon-size) + var(--icon-padding) + 2px, 1px);
     /* The name wraps at 4 to 20 widths of "0" across the grid spacing range,
@@ -1783,7 +1788,12 @@ body.is-sidebar-collapsed #gallery-blur-layer {
     width: auto;
     height: auto;
     object-fit: contain;
-    border: solid 1px var(--thumb-border);
+    /* Binder's thumbnail card: the picture fills it to the edge, and the
+       hairline runs 1px inside that edge, over the picture. An outline rather
+       than a border, which would sit beside the picture, not over it. */
+    border-radius: var(--thumb-radius);
+    outline: solid 1px var(--thumb-hairline);
+    outline-offset: -1px;
     pointer-events: none; /* Makes sure clicks go to the parent figure */
     box-shadow: var(--thumb-glow);
 }
@@ -2517,12 +2527,12 @@ html, body {
 /* Adds a smooth transition to the elements that change during selection */
 #photo-gallery figure img,
 #photo-gallery figure figcaption .filename {
-    transition: background-color 0.2s ease-out, border-color 0.2s ease-out, box-shadow 0.2s ease-out, color 0.2s ease-out, text-shadow 0.2s ease-out;
+    transition: background-color 0.2s ease-out, outline-color 0.2s ease-out, box-shadow 0.2s ease-out, color 0.2s ease-out, text-shadow 0.2s ease-out;
 }
 
-/* Changes the image border to gold and adds a soft glow effect */
+/* Changes the image's hairline to gold and adds a soft glow effect */
 #photo-gallery figure.selected img {
-    border-color: var(--accent);
+    outline-color: var(--accent);
     box-shadow: var(--accent-glow);
 }
 
