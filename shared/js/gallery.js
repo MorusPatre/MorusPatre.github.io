@@ -618,6 +618,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Auto-scroll state variables ---
     let isAutoScrolling = false;
     let scrollSpeedY = 0;
+    let scrollSpeedX = 0;
     let hasAutoScrolledUpDuringMarquee = false;
     let marqueeStartScrollY = 0;
     let lastClientX = 0;
@@ -642,7 +643,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- State Variables for Navigation ---
     let selectionAnchor = null; // For range selections (Shift key)
     let lastSelectedItem = null; // The currently "focused" item for keyboard navigation
-    let gridMetrics = { cols: 0 }; // To store the calculated number of columns
+    let gridMetrics = { cols: 0, rows: 0 }; // Columns, and items down a column when the gallery runs sideways
 
     /**
      * Calculates the number of columns in the responsive grid.
@@ -665,6 +666,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         gridMetrics.cols = cols > 0 ? cols : 1;
+
+        const firstItemLeft = visibleItems[0].offsetLeft;
+        let rows = 0;
+        for (const item of visibleItems) {
+            if (item.offsetLeft === firstItemLeft) {
+                rows++;
+            } else {
+                break;
+            }
+        }
+        gridMetrics.rows = rows > 0 ? rows : 1;
     }
 
     /**
@@ -736,16 +748,28 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             switch (e.key) {
                 case 'ArrowLeft':
-                    newIndex = currentIndex - 1;
-                    break;
                 case 'ArrowRight':
-                    newIndex = currentIndex + 1;
+                    // Sideways, the items run down columns: left and right go
+                    // a column over, and right into a short last column lands
+                    // on its last item, as in Binder.
+                    if (isGallerySideways()) {
+                        const step = e.key === 'ArrowLeft' ? -gridMetrics.rows : gridMetrics.rows;
+                        const last = visibleItems.length - 1;
+                        newIndex = currentIndex + step;
+                        if (newIndex > last && Math.floor(currentIndex / gridMetrics.rows) < Math.floor(last / gridMetrics.rows)) {
+                            newIndex = last;
+                        }
+                    } else {
+                        newIndex = currentIndex + (e.key === 'ArrowLeft' ? -1 : 1);
+                    }
                     break;
                 case 'ArrowUp':
                 case 'ArrowDown':
                     // Grouped, rows break at every group and a collapsed group
                     // is one row, so up and down go by where items are.
-                    if (isGalleryGrouped()) {
+                    if (isGallerySideways()) {
+                        newIndex = currentIndex + (e.key === 'ArrowUp' ? -1 : 1);
+                    } else if (isGalleryGrouped()) {
                         newIndex = visibleItems.indexOf(getGroupedVerticalNeighbor(lastSelectedItem, e.key === 'ArrowUp' ? -1 : 1));
                     } else {
                         newIndex = currentIndex + (e.key === 'ArrowUp' ? -gridMetrics.cols : gridMetrics.cols);
@@ -795,8 +819,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const cols = Math.max(1, Math.floor((width + ICON_GRID_MINIMUM_GAP) / pitch));
         let visibleCount = 0;
         // Grouped, each group lays out its own rows, packed left as Finder's
-        // grouped grid is.
-        if (!isGalleryGrouped()) {
+        // grouped grid is. Sideways, the columns fill down and are never
+        // spread.
+        if (!isGalleryGrouped() && !isGallerySideways()) {
             for (const item of items) {
                 if (item.style.display !== 'none' && ++visibleCount > cols) break;
             }
@@ -943,6 +968,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function isGalleryGrouped() {
         return gallery.classList.contains('is-grouped');
+    }
+
+    // The label on the right and no groups: the gallery runs sideways.
+    function isGallerySideways() {
+        return gallery.classList.contains('is-label-right') && !isGalleryGrouped();
     }
 
     function getGroupByOption(key) {
@@ -1205,8 +1235,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function getGroupColumnCount() {
         const cellWidth = parseFloat(getComputedStyle(gallery).getPropertyValue('--cell-width'));
         const width = galleryWidthProbe.getBoundingClientRect().width;
+        const gap = parseFloat(getComputedStyle(gallery).getPropertyValue('--column-gap')) || ICON_GRID_MINIMUM_GAP;
         if (!(cellWidth > 0)) return 1;
-        return Math.max(1, Math.floor((width + ICON_GRID_MINIMUM_GAP) / (cellWidth + ICON_GRID_MINIMUM_GAP)));
+        return Math.max(1, Math.floor((width + gap) / (cellWidth + gap)));
     }
 
     // Counts what the search and the sidebar leave in each group. A group with
@@ -1318,6 +1349,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        syncGalleryAxis();
         refreshIconGrid();
         syncGroupByControls();
         window.dispatchEvent(new CustomEvent('galleryRearranged'));
@@ -1502,7 +1534,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!item) return null;
 
         // The next row either way starts within two cells' height.
-        const galleryRect = gallery.getBoundingClientRect();
+        const galleryRect = getGalleryOrigin();
         const itemRect = toGalleryRect(item.getBoundingClientRect(), galleryRect);
         const reach = 2 * (itemRect.bottom - itemRect.top);
         const entries = getMarqueeItemRects(galleryRect, { top: itemRect.top - reach, bottom: itemRect.bottom + reach });
@@ -1711,9 +1743,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // room for it only while it shows. Show icon preview off shows every
     // image's kind icon in place of its thumbnail. Text size runs 10 to 16
     // points, Finder's 12 by default, and the cells follow the caption's type.
+    // Label position Right puts the name beside the icon; ungrouped, the
+    // gallery then runs sideways, as Finder's does.
     const VIEW_OPTIONS_STORAGE_PREFIX = 'galleryViewOptions:';
     const VIEW_OPTIONS_PANEL_STORAGE_KEY = 'galleryViewOptionsPanel';
-    const DEFAULT_VIEW_OPTIONS = { sortBy: 'none', sortReversed: false, iconSize: 253, gridSpacing: 54, cornerRadius: 0.06, textSize: 12, showItemInfo: true, showIconPreview: true };
+    const DEFAULT_VIEW_OPTIONS = { sortBy: 'none', sortReversed: false, iconSize: 253, gridSpacing: 54, cornerRadius: 0.06, textSize: 12, labelPosition: 'bottom', showItemInfo: true, showIconPreview: true };
     const viewOptionsPanel = document.getElementById('view-options-panel');
     const viewOptionsTitleBar = viewOptionsPanel && viewOptionsPanel.querySelector('.view-options-title-bar');
     const viewOptionsCloseButton = viewOptionsPanel && viewOptionsPanel.querySelector('.view-options-close');
@@ -1724,6 +1758,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const cornerRadiusSlider = document.getElementById('view-options-corner-radius');
     const cornerRadiusValue = document.getElementById('view-options-corner-radius-value');
     const textSizePopup = document.getElementById('view-options-text-size');
+    const labelPositionRadios = viewOptionsPanel ? Array.from(viewOptionsPanel.querySelectorAll('input[name="view-options-label-position"]')) : [];
     const showItemInfoCheckbox = document.getElementById('view-options-show-item-info');
     const showIconPreviewCheckbox = document.getElementById('view-options-show-icon-preview');
     let viewOptions = readViewOptions();
@@ -1755,6 +1790,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (stored && Number.isInteger(stored.textSize) && stored.textSize >= 10 && stored.textSize <= 16) {
             options.textSize = stored.textSize;
         }
+        if (stored && (stored.labelPosition === 'bottom' || stored.labelPosition === 'right')) {
+            options.labelPosition = stored.labelPosition;
+        }
         if (stored && typeof stored.showItemInfo === 'boolean') options.showItemInfo = stored.showItemInfo;
         if (stored && typeof stored.showIconPreview === 'boolean') options.showIconPreview = stored.showIconPreview;
         return options;
@@ -1776,7 +1814,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function getViewportAnchor() {
-        if (window.scrollY < 1) return null;
+        if (window.scrollY < 1 || isGallerySideways()) return null;
 
         // Grouped, the rows are those of the group at the top of the window.
         let candidates = null;
@@ -1866,6 +1904,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const size = viewOptions.iconSize;
         gallery.style.setProperty('--icon-size', `${size}px`);
         gallery.classList.toggle('has-large-icons', size > DEFAULT_VIEW_OPTIONS.iconSize);
+        gallery.classList.toggle('has-tiny-icons', size <= 16);
 
         const scale = window.devicePixelRatio || 1;
         const shadow = getThumbnailShadowSpec(size * scale);
@@ -1908,6 +1947,41 @@ document.addEventListener('DOMContentLoaded', () => {
     function applyTextSize() {
         gallery.style.setProperty('--text-size', String(viewOptions.textSize));
         if (textSizePopup) textSizePopup.value = String(viewOptions.textSize);
+    }
+
+    function applyLabelPosition() {
+        gallery.classList.toggle('is-label-right', viewOptions.labelPosition === 'right');
+        labelPositionRadios.forEach(radio => {
+            radio.checked = radio.value === viewOptions.labelPosition;
+        });
+        syncGalleryAxis();
+    }
+
+    // Finder flips the scroll axis with the layout and starts the new one at
+    // its beginning. Sideways, a vertical wheel scrolls the gallery along, as
+    // AppKit's horizontal-only scroll views take it.
+    let galleryScrollsSideways = false;
+
+    function scrollGallerySideways(event) {
+        if (event.ctrlKey || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+
+        const scale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? gallery.clientWidth : 1;
+        gallery.scrollLeft += event.deltaY * scale;
+        event.preventDefault();
+    }
+
+    function syncGalleryAxis() {
+        const sideways = isGallerySideways();
+        if (sideways === galleryScrollsSideways) return;
+
+        galleryScrollsSideways = sideways;
+        gallery.scrollLeft = 0;
+        window.scrollTo(0, 0);
+        if (sideways) {
+            gallery.addEventListener('wheel', scrollGallerySideways, { passive: false });
+        } else {
+            gallery.removeEventListener('wheel', scrollGallerySideways);
+        }
     }
 
     function applyShowItemInfo() {
@@ -2023,6 +2097,28 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Changing axis starts the gallery at its beginning; otherwise the row at
+    // the top stays put.
+    labelPositionRadios.forEach(radio => {
+        radio.addEventListener('change', () => {
+            if (!radio.checked) return;
+
+            const fit = getCaptionFit();
+            const wasSideways = isGallerySideways();
+            viewOptions.labelPosition = radio.value;
+            saveViewOptions();
+            if (wasSideways || (radio.value === 'right' && !isGalleryGrouped())) {
+                applyLabelPosition();
+                refreshIconGrid();
+            } else {
+                relayoutGallery(applyLabelPosition);
+            }
+            marqueeItemRects = null;
+            window.dispatchEvent(new CustomEvent('galleryRearranged'));
+            if (getCaptionFit() !== fit) document.dispatchEvent(new CustomEvent('galleryCaptionsChanged'));
+        });
+    });
+
     if (showItemInfoCheckbox) {
         showItemInfoCheckbox.addEventListener('change', () => {
             viewOptions.showItemInfo = showItemInfoCheckbox.checked;
@@ -2093,6 +2189,7 @@ document.addEventListener('DOMContentLoaded', () => {
     applyGridSpacing();
     applyCornerRadius();
     applyTextSize();
+    applyLabelPosition();
     applyShowItemInfo();
     applyShowIconPreview();
 
@@ -2482,6 +2579,14 @@ document.addEventListener('DOMContentLoaded', () => {
         marqueeGutterHighlight.style.setProperty('--marquee-gutter-clip-right', `${marqueeRect.right - intersection.right}px`);
         marqueeGutterHighlight.style.setProperty('--marquee-gutter-clip-bottom', `${marqueeRect.bottom - intersection.bottom}px`);
         marqueeGutterHighlight.style.setProperty('--marquee-gutter-clip-left', `${intersection.left - marqueeRect.left}px`);
+    }
+
+    // Where the gallery's own point (0, 0) is in the window. Sideways the
+    // gallery scrolls inside itself, so its content moves under its box, and
+    // gallery coordinates go with the content.
+    function getGalleryOrigin() {
+        const rect = gallery.getBoundingClientRect();
+        return { left: rect.left - gallery.scrollLeft, top: rect.top - gallery.scrollTop };
     }
 
     function getClampedMarqueePoint(clientX, clientY, galleryRect) {
@@ -2956,7 +3061,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function getItemAtPoint(clientX, clientY) {
         if (!isMarquee) marqueeItemRects = null;
 
-        const galleryRect = gallery.getBoundingClientRect();
+        const galleryRect = getGalleryOrigin();
         const x = clientX - galleryRect.left;
         const y = clientY - galleryRect.top;
         const reach = getThumbnailShadows().reach;
@@ -2976,7 +3081,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateMarqueeAndSelection(clientX, clientY, isModifier) {
         marquee.style.visibility = 'visible';
 
-        const galleryRect = gallery.getBoundingClientRect();
+        const galleryRect = getGalleryOrigin();
         const viewportBounds = getViewportBounds();
         const viewportRect = {
             left: viewportBounds.left - galleryRect.left,
@@ -3055,6 +3160,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         window.scrollBy(0, Math.round(scrollSpeedY));
+        if (scrollSpeedX !== 0) gallery.scrollBy(Math.round(scrollSpeedX), 0);
         updateMarqueeUpScrollState();
         updateMarqueeAndSelection(lastClientX, lastClientY, lastClientModifierKey);
 
@@ -3086,7 +3192,7 @@ document.addEventListener('DOMContentLoaded', () => {
         marqueeItemRects = null;
         mouseDownItem = getItemAtPoint(e.clientX, e.clientY);
 
-        const galleryRect = gallery.getBoundingClientRect();
+        const galleryRect = getGalleryOrigin();
         startPos = getClampedMarqueePoint(e.clientX, e.clientY, galleryRect);
 
         preMarqueeSelectedItems = new Set(selectedItems);
@@ -3120,13 +3226,26 @@ document.addEventListener('DOMContentLoaded', () => {
             scrollSpeedY = 0;
         }
 
+        // Sideways, the gallery scrolls along when the pointer nears its ends.
+        scrollSpeedX = 0;
+        if (isGallerySideways()) {
+            const bounds = gallery.getBoundingClientRect();
+            if (e.clientX > bounds.right - scrollThreshold) {
+                const speedRatio = Math.min(1, (e.clientX - (bounds.right - scrollThreshold)) / scrollThreshold);
+                scrollSpeedX = minScrollSpeed + (speedRatio * (maxScrollSpeed - minScrollSpeed));
+            } else if (e.clientX < bounds.left + scrollThreshold) {
+                const speedRatio = Math.min(1, (bounds.left + scrollThreshold - e.clientX) / scrollThreshold);
+                scrollSpeedX = -(minScrollSpeed + (speedRatio * (maxScrollSpeed - minScrollSpeed)));
+            }
+        }
+
         updateMarqueeUpScrollState();
         updateMarqueeAndSelection(e.clientX, e.clientY, lastClientModifierKey);
 
-        if (scrollSpeedY !== 0 && !isAutoScrolling) {
+        if ((scrollSpeedY !== 0 || scrollSpeedX !== 0) && !isAutoScrolling) {
             isAutoScrolling = true;
             autoScrollLoop();
-        } else if (scrollSpeedY === 0) {
+        } else if (scrollSpeedY === 0 && scrollSpeedX === 0) {
             isAutoScrolling = false;
         }
     });
@@ -3134,6 +3253,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const endDragAction = (e) => {
         isAutoScrolling = false;
         scrollSpeedY = 0;
+        scrollSpeedX = 0;
         hasAutoScrolledUpDuringMarquee = false;
         marqueeStartScrollY = 0;
 

@@ -1645,6 +1645,12 @@ Styling for the Finder-Style Photo Gallery
     initial-value: 2;
 }
 
+@property --column-gap {
+    syntax: '<length>';
+    inherits: true;
+    initial-value: 2px;
+}
+
 #photo-gallery {
     /* View Options ▸ Icon size, 16 to 512; the gallery starts at the icon
        whose thumbnail box is 225px, as QuickLook insets it. */
@@ -1665,7 +1671,8 @@ Styling for the Finder-Style Photo Gallery
     --icon-box: calc(var(--icon-size) + 2 * var(--icon-padding));
     /* The icon sits the padding, truncated, below the cell's top, centred
        across and floored. */
-    --icon-top: round(to-zero, var(--icon-padding), 1px);
+    --icon-inset: round(to-zero, var(--icon-padding), 1px);
+    --icon-top: var(--icon-inset);
     --icon-left: round(down, (var(--cell-width) - var(--icon-size)) / 2, 1px);
     /* QuickLook insets a thumbnail by its table, linear between 1 at 16, 2 at
        32, 7 at 128, 14 at 256 and 29 at 512, rounded half up. */
@@ -1693,15 +1700,17 @@ Styling for the Finder-Style Photo Gallery
        rounded up to even. */
     --cell-width: round(up, var(--wrap-width) + 8px, 2px);
     --cell-height: round(up, var(--icon-box) + 2px + round(up, var(--name-lines) * 1lh, 1px) + var(--info-lines) * round(up, var(--info-font-size) * 1.4, 1px) + 6px, 2px);
+    /* 2px between cells at least, s/16 rounded up between rows. */
+    --column-gap: 2px;
+    --row-gap: round(up, var(--icon-padding), 1px);
 
     display: grid;
     /* As many cells as fit with 2px between them. Packed left like this while
        they fill one row or less; past that the gallery's script spreads the
        spare width into equal gaps, as Finder does. */
     grid-template-columns: repeat(auto-fill, var(--cell-width));
-    column-gap: 2px;
-    /* s/16, rounded up. */
-    row-gap: round(up, var(--icon-padding), 1px);
+    column-gap: var(--column-gap);
+    row-gap: var(--row-gap);
     justify-items: end;
     width: 100%;
     position: relative; /* Needed for the marquee positioning */
@@ -1871,6 +1880,78 @@ body.is-sidebar-collapsed #gallery-blur-layer {
     line-height: 0;
 }
 
+/* View Options ▸ Label position ▸ Right: Finder's title beside the icon
+   (Binder's IconViewGeometry, label on the right). The name wraps at 4 to 20
+   widths of "0", the selection box playing no part. The cell is the box, then
+   2px, then the name's wrap width and its 4px padding a side, wide; the
+   taller of the box and the text, and 6px, tall, each rounded up to even.
+   The icon sits the padding, truncated, in from the left and is centred down
+   the cell, floored. Items are s/16 apart, rounded up and at least 2px, both
+   ways. */
+#photo-gallery.is-label-right {
+    --wrap-width: calc(round(up, round(up, 1ch, 1px) * (4 + 16 * var(--grid-spacing) / 100), 1px) + 1px);
+    --text-height: calc(round(up, var(--name-lines) * 1lh, 1px) + var(--info-lines) * round(up, var(--info-font-size) * 1.4, 1px));
+    --cell-width: round(up, var(--icon-box) + 2px + var(--wrap-width) + 8px, 2px);
+    --cell-height: round(up, max(var(--icon-box), var(--text-height)) + 6px, 2px);
+    --icon-top: round(down, (var(--cell-height) - var(--icon-size)) / 2, 1px);
+    --icon-left: var(--icon-inset);
+    --column-gap: max(round(up, var(--icon-padding), 1px), 2px);
+    --row-gap: var(--column-gap);
+}
+
+/* At 16px and under, the name keeps one line, and the cell a smaller margin. */
+#photo-gallery.is-label-right.has-tiny-icons {
+    --name-lines: 1;
+    --cell-height: round(up, max(var(--icon-box), var(--text-height)) + 4px, 2px);
+}
+
+/* The name and the dimensions line start 6px past the selection box (the
+   caption 2px past it, floored, and its 4px padding), left-aligned, and are
+   centred down the cell together, or the name alone. The caption follows the
+   thumbnail's box in a row, as tall as the cell. Not positioned: in Safari an
+   absolutely placed caption in each figure laid the gallery out again on
+   every step it scrolled sideways, 7ms a step with thousands of figures. */
+#photo-gallery.is-label-right figure {
+    flex-direction: row;
+}
+
+#photo-gallery.is-label-right figure figcaption {
+    flex: none;
+    align-self: stretch;
+    width: calc(var(--wrap-width) + 8px);
+    margin: 0 0 0 calc(round(down, var(--icon-left) + var(--icon-size) + var(--icon-padding) + 2px, 1px) - var(--icon-left) - var(--icon-size) + var(--thumb-inset));
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: left;
+}
+
+#photo-gallery.is-label-right figure figcaption .dimensions {
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+/* Ungrouped, the cells run down columns that fill the window's height, and
+   the gallery scrolls sideways, as Finder's does. It fills the window under
+   the top bar, down to the footer. */
+#wrapper:has(> #photo-gallery.is-label-right:not(.is-grouped)) {
+    height: 100vh;
+}
+
+#photo-gallery.is-label-right:not(.is-grouped) {
+    flex: 1 1 0;
+    min-height: 0;
+    grid-template-columns: none;
+    grid-template-rows: repeat(auto-fill, var(--cell-height));
+    grid-auto-flow: column;
+    grid-auto-columns: var(--cell-width);
+    justify-items: start;
+    align-content: start;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+}
+
 .modal-info-panel .dimensions-x {
     display: inline-block;
     transform: translateY(1px);
@@ -2034,8 +2115,8 @@ body.is-sidebar-collapsed #gallery-blur-layer {
 .gallery-group-items {
     display: grid;
     grid-template-columns: repeat(auto-fill, var(--cell-width));
-    column-gap: 2px;
-    row-gap: round(up, var(--icon-padding), 1px);
+    column-gap: var(--column-gap);
+    row-gap: var(--row-gap);
     padding: 10px 4px 22px;
 }
 
@@ -2602,8 +2683,17 @@ View Options Panel
     margin-top: calc(15 * var(--pt));
 }
 
-.view-options-check + .view-options-separator {
+.view-options-check + .view-options-separator,
+.view-options-radios + .view-options-separator {
     margin-top: calc(6 * var(--pt));
+}
+
+.view-options-row + .view-options-line {
+    margin-top: calc(6 * var(--pt));
+}
+
+.view-options-line + .view-options-radios {
+    margin-top: calc(2 * var(--pt));
 }
 
 .view-options-separator + .view-options-slider,
@@ -2636,7 +2726,27 @@ View Options Panel
     padding: 0 calc(18 * var(--pt)) 0 calc(20 * var(--pt));
 }
 
-.view-options-panel input[type="checkbox"] {
+/* A title on a line of its own, such as Label position's. */
+.view-options-line {
+    height: calc(18 * var(--pt));
+    padding: 0 calc(18 * var(--pt));
+}
+
+/* Small radio buttons in a row, each 64.5pt wide, from 2pt in. */
+.view-options-radios {
+    display: flex;
+    height: calc(18 * var(--pt));
+    padding-left: calc(20 * var(--pt));
+}
+
+.view-options-panel .view-options-radios label {
+    display: flex;
+    flex: 0 0 calc(64.5 * var(--pt));
+    align-items: center;
+}
+
+.view-options-panel input[type="checkbox"],
+.view-options-panel input[type="radio"] {
     all: revert;
     flex: none;
     width: calc(14 * var(--pt));
