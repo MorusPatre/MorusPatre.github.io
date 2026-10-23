@@ -1721,7 +1721,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Sorted before it is grouped, as Binder groups a sorted list.
         loadSortBy();
 
-        const storedKey = readGroupStorage(GROUP_BY_STORAGE_PREFIX + galleryStorageId);
+        // A gallery never grouped here takes the defaults' Group By.
+        const defaults = readStoredJSON(VIEW_OPTIONS_DEFAULTS_STORAGE_KEY);
+        const storedKey = readGroupStorage(GROUP_BY_STORAGE_PREFIX + galleryStorageId) ?? (defaults && defaults.groupBy);
         if (storedKey && getGroupByOption(storedKey)) applyGroupBy(storedKey);
     });
 
@@ -1732,7 +1734,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Command-J again or its close button closes it. It opens where it was last
     // left, at first centred in the window. Its options are kept per gallery,
     // as Binder keeps them per folder; Group By keeps its own key. Sort By is
-    // its own section below.
+    // its own section below. Use as Defaults keeps them, Group By with them,
+    // as the defaults a gallery opens with until it has options of its own,
+    // as Binder's do for a folder.
     // Icon size runs 16 to 512 through Finder's slider curve, in steps of 4;
     // the gallery starts at 253, where its thumbnail box is 225px. Grid
     // spacing runs 1 to 100, Finder's 54 by default, the slider's value
@@ -1748,6 +1752,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // a Color, picked as Binder picks it; Binder's Picture is left out.
     const VIEW_OPTIONS_STORAGE_PREFIX = 'galleryViewOptions:';
     const VIEW_OPTIONS_PANEL_STORAGE_KEY = 'galleryViewOptionsPanel';
+    const VIEW_OPTIONS_DEFAULTS_STORAGE_KEY = 'galleryViewOptionsDefaults';
     const DEFAULT_VIEW_OPTIONS = { sortBy: 'none', sortReversed: false, iconSize: 253, gridSpacing: 54, cornerRadius: 0.06, textSize: 12, labelPosition: 'bottom', showItemInfo: true, showIconPreview: true, background: 'default', backgroundColor: null };
     const viewOptionsPanel = document.getElementById('view-options-panel');
     const viewOptionsTitleBar = viewOptionsPanel && viewOptionsPanel.querySelector('.view-options-title-bar');
@@ -1764,6 +1769,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const showIconPreviewCheckbox = document.getElementById('view-options-show-icon-preview');
     const backgroundRadios = viewOptionsPanel ? Array.from(viewOptionsPanel.querySelectorAll('input[name="view-options-background"]')) : [];
     const backgroundColorInput = document.getElementById('view-options-background-color');
+    const useAsDefaultsButton = document.getElementById('view-options-use-as-defaults');
     let viewOptions = readViewOptions();
     let viewOptionsPanelPosition = null;
     let viewOptionsDrag = null;
@@ -1777,7 +1783,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function readViewOptions() {
-        const stored = readStoredJSON(VIEW_OPTIONS_STORAGE_PREFIX + galleryStorageId);
+        const stored = readStoredJSON(VIEW_OPTIONS_STORAGE_PREFIX + galleryStorageId) ||
+            readStoredJSON(VIEW_OPTIONS_DEFAULTS_STORAGE_KEY);
         const options = { ...DEFAULT_VIEW_OPTIONS };
         if (stored && typeof stored.sortBy === 'string') options.sortBy = stored.sortBy;
         if (stored && typeof stored.sortReversed === 'boolean') options.sortReversed = stored.sortReversed;
@@ -2173,6 +2180,14 @@ document.addEventListener('DOMContentLoaded', () => {
         backgroundColorInput.addEventListener('input', () => {
             viewOptions.backgroundColor = backgroundColorInput.value;
             setBackground('color');
+        });
+    }
+
+    // Binder's Use as Defaults: every option, saved for the galleries that
+    // have none of their own. This one keeps its own.
+    if (useAsDefaultsButton) {
+        useAsDefaultsButton.addEventListener('click', () => {
+            writeGroupStorage(VIEW_OPTIONS_DEFAULTS_STORAGE_KEY, JSON.stringify({ ...viewOptions, groupBy }));
         });
     }
 

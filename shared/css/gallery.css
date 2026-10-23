@@ -2562,7 +2562,7 @@ View Options Panel
     position: fixed;
     z-index: 1400;
     width: calc(236 * var(--pt));
-    padding-bottom: calc(14 * var(--pt));
+    padding-bottom: calc(19 * var(--pt));
     background-color: rgba(var(--panel-rgb), 0.7);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -2687,10 +2687,11 @@ View Options Panel
 
 /* Binder places each row by its frame. Here each row keeps its distance from
    the one above it, which depends on what that is. */
+/* Its frame is 1pt tall, as Binder's is, with a 1px line at its top. */
 .view-options-separator {
-    height: 1px;
+    height: calc(1 * var(--pt));
     margin-top: calc(7 * var(--pt));
-    background-color: rgba(var(--ink-rgb), 0.15);
+    border-top: 1px solid rgba(var(--ink-rgb), 0.15);
 }
 
 .view-options-slider + .view-options-separator {
@@ -2775,6 +2776,22 @@ View Options Panel
 
 .view-options-panel .view-options-radios--stacked label {
     flex: 0 0 calc(18 * var(--pt));
+}
+
+/* Use as Defaults: a small push button on a 22pt line, centred, 106pt under
+   the last separator as Binder places it. A native one, as Binder's is. */
+.view-options-defaults {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: calc(22 * var(--pt));
+    margin-top: calc(106 * var(--pt));
+}
+
+.view-options-panel .view-options-defaults button {
+    all: revert;
+    width: calc(121 * var(--pt));
+    font: inherit;
 }
 
 /* The colour picker the Color button opens, out of sight beside it. */
