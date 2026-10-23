@@ -8,7 +8,7 @@
 
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
 
-        <link rel="stylesheet" href="../shared/css/gallery.css?v=20261023-13" />
+        <link rel="stylesheet" href="../shared/css/gallery.css?v=20261023-14" />
         <noscript><link rel="stylesheet" href="../shared/css/noscript.css" /></noscript>
     </head>
     <body>
@@ -141,7 +141,7 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
         <script type="application/json" id="gallery-episode-titles">{"1":{"1":"The Heirs of the Dragon","2":"The Rogue Prince","3":"Second of His Name","4":"King of the Narrow Sea","5":"We Light the Way","6":"The Princess and the Queen","7":"Driftmark","8":"The Lord of the Tides","9":"The Green Council","10":"The Black Queen"},"2":{"1":"A Son for a Son","2":"Rhaenyra the Cruel","3":"The Burning Mill","4":"The Red Dragon and the Gold","5":"Regent","6":"Smallfolk","7":"The Red Sowing","8":"The Queen Who Ever Was"}}</script>
-        <script src="../shared/js/gallery.js?v=20261023-12"></script>
+        <script src="../shared/js/gallery.js?v=20261023-13"></script>
         <script src="../shared/js/gallery-loader.js?v=20261023-3"></script>
 
         <div id="image-modal" class="modal-overlay">
@@ -196,6 +196,14 @@
                 <select id="view-options-group-by"></select>
             </div>
             <div class="view-options-separator"></div>
+            <div class="view-options-slider view-options-slider--icon-size">
+                <label for="view-options-icon-size">Icon size:</label>
+                <output id="view-options-icon-size-value" for="view-options-icon-size">253×253</output>
+                <input type="range" id="view-options-icon-size" min="0" max="112" step="any" value="81.1951" list="view-options-icon-size-ticks">
+                <datalist id="view-options-icon-size-ticks"><option value="0"></option><option value="14"></option><option value="28"></option><option value="42"></option><option value="56"></option><option value="70"></option><option value="84"></option><option value="98"></option><option value="112"></option></datalist>
+                <span class="view-options-slider-icon view-options-icon-small" aria-hidden="true"></span>
+                <span class="view-options-slider-icon view-options-icon-large" aria-hidden="true"></span>
+            </div>
             <div class="view-options-slider">
                 <label for="view-options-grid-spacing">Grid spacing:</label>
                 <input type="range" id="view-options-grid-spacing" min="1" max="100" step="any" value="54" list="view-options-grid-spacing-ticks">

@@ -1689,7 +1689,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Command-J again or its close button closes it. It opens where it was last
     // left, at first centred in the window. Its options are kept per gallery,
     // as Binder keeps them per folder; Group By keeps its own key.
-    // Grid spacing runs 1 to 100, Finder's 54 by default, the slider's value
+    // Icon size runs 16 to 512 through Finder's slider curve, in steps of 4;
+    // the gallery starts at 253, where its thumbnail box is 225px. Grid
+    // spacing runs 1 to 100, Finder's 54 by default, the slider's value
     // floored. Corner radius runs 0 to 50% of the thumbnail box in whole
     // percent, as Binder's slider does. The gallery starts at 6%, where Binder
     // starts at 10%.
@@ -1699,11 +1701,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // points, Finder's 12 by default, and the cells follow the caption's type.
     const VIEW_OPTIONS_STORAGE_PREFIX = 'galleryViewOptions:';
     const VIEW_OPTIONS_PANEL_STORAGE_KEY = 'galleryViewOptionsPanel';
-    const DEFAULT_VIEW_OPTIONS = { gridSpacing: 54, cornerRadius: 0.06, textSize: 12, showItemInfo: true, showIconPreview: true };
+    const DEFAULT_VIEW_OPTIONS = { iconSize: 253, gridSpacing: 54, cornerRadius: 0.06, textSize: 12, showItemInfo: true, showIconPreview: true };
     const viewOptionsPanel = document.getElementById('view-options-panel');
     const viewOptionsTitleBar = viewOptionsPanel && viewOptionsPanel.querySelector('.view-options-title-bar');
     const viewOptionsCloseButton = viewOptionsPanel && viewOptionsPanel.querySelector('.view-options-close');
     const viewOptionsMenuRow = document.getElementById('gallery-context-view');
+    const iconSizeSlider = document.getElementById('view-options-icon-size');
+    const iconSizeValue = document.getElementById('view-options-icon-size-value');
     const gridSpacingSlider = document.getElementById('view-options-grid-spacing');
     const cornerRadiusSlider = document.getElementById('view-options-corner-radius');
     const cornerRadiusValue = document.getElementById('view-options-corner-radius-value');
@@ -1725,6 +1729,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function readViewOptions() {
         const stored = readStoredJSON(VIEW_OPTIONS_STORAGE_PREFIX + galleryStorageId);
         const options = { ...DEFAULT_VIEW_OPTIONS };
+        if (stored && Number.isInteger(stored.iconSize) && stored.iconSize >= 16 && stored.iconSize <= 512) {
+            options.iconSize = stored.iconSize;
+        }
         if (stored && Number.isInteger(stored.gridSpacing) && stored.gridSpacing >= 1 && stored.gridSpacing <= 100) {
             options.gridSpacing = stored.gridSpacing;
         }
@@ -1792,6 +1799,72 @@ document.addEventListener('DOMContentLoaded', () => {
         change();
         refreshIconGrid();
         restoreViewportAnchor(anchor);
+    }
+
+    // Finder's TIconSizeSliderValueTransformer (Binder's
+    // IconSizeSliderTransform): the slider runs 0 to 112, 2px a step up to
+    // 128, then on a log curve to 512; sizes are rounded to a multiple of 4,
+    // the slider's position truncated first.
+    const ICON_SIZE_SLIDER_RANGE = 112;
+    const ICON_SIZE_SLIDER_PER_LOG = ICON_SIZE_SLIDER_RANGE / (Math.log(512 - 16 + Math.exp(4)) - 4);
+
+    function getIconSizeSliderValue(size) {
+        if (size - 16 <= ICON_SIZE_SLIDER_RANGE) return (size - 16) * 0.5;
+        return ICON_SIZE_SLIDER_PER_LOG * (Math.log(Math.exp(4) + size - 16) - 4);
+    }
+
+    function getIconSizeForSliderValue(value) {
+        const step = Math.trunc(Math.max(value, 0));
+        const relative = step <= ICON_SIZE_SLIDER_RANGE * 0.5
+            ? 2 * step
+            : Math.exp(4 + step / ICON_SIZE_SLIDER_PER_LOG) - Math.exp(4);
+        const size = 16 + relative + 2;
+        return Math.trunc(size - size % 4);
+    }
+
+    // Binder's thumbnail shadow by the icon's size in device pixels: the
+    // Gaussian's sigma and its drop, fitted to Finder's (ThumbnailShadowSpec),
+    // linear between rows and in proportion past the last.
+    const THUMBNAIL_SHADOW_TABLE = [
+        [32, 1.18, 0.98], [48, 1.20, 1.01], [64, 2.18, 1.01], [96, 2.21, 1.01],
+        [128, 3.25, 1.97], [192, 5.23, 2.25], [256, 6.19, 3.12], [320, 7.21, 4.11],
+        [424, 9.28, 4.25], [512, 10.19, 4.51], [768, 15.16, 6.81], [1024, 20.13, 9.12]
+    ];
+
+    function getThumbnailShadowSpec(canvas) {
+        const first = THUMBNAIL_SHADOW_TABLE[0];
+        const last = THUMBNAIL_SHADOW_TABLE[THUMBNAIL_SHADOW_TABLE.length - 1];
+        if (canvas <= first[0]) return { sigma: first[1], offset: first[2] };
+        if (canvas >= last[0]) return { sigma: last[1] * canvas / last[0], offset: last[2] * canvas / last[0] };
+
+        const index = THUMBNAIL_SHADOW_TABLE.findIndex(row => canvas <= row[0]);
+        const [lowCanvas, lowSigma, lowOffset] = THUMBNAIL_SHADOW_TABLE[index - 1];
+        const [highCanvas, highSigma, highOffset] = THUMBNAIL_SHADOW_TABLE[index];
+        const t = (canvas - lowCanvas) / (highCanvas - lowCanvas);
+        return { sigma: lowSigma + t * (highSigma - lowSigma), offset: lowOffset + t * (highOffset - lowOffset) };
+    }
+
+    // The cells, the thumbnail box and the kind icons follow the icon size.
+    // The thumbnail's shadow grows as Binder's does, against the 253px icon
+    // its tokens are drawn for, and the selection glow as the selection box,
+    // in proportion. The knob stays where it was let go.
+    function applyIconSize() {
+        const size = viewOptions.iconSize;
+        gallery.style.setProperty('--icon-size', `${size}px`);
+        gallery.classList.toggle('has-large-icons', size > DEFAULT_VIEW_OPTIONS.iconSize);
+
+        const scale = window.devicePixelRatio || 1;
+        const shadow = getThumbnailShadowSpec(size * scale);
+        const baseShadow = getThumbnailShadowSpec(DEFAULT_VIEW_OPTIONS.iconSize * scale);
+        const root = document.documentElement.style;
+        root.setProperty('--thumb-shadow-blur-scale', String(shadow.sigma / baseShadow.sigma));
+        root.setProperty('--thumb-shadow-offset-scale', String(shadow.offset / baseShadow.offset));
+        root.setProperty('--selection-glow-scale', String(size / DEFAULT_VIEW_OPTIONS.iconSize));
+
+        if (iconSizeSlider && getIconSizeForSliderValue(Number(iconSizeSlider.value)) !== size) {
+            iconSizeSlider.value = String(getIconSizeSliderValue(size));
+        }
+        if (iconSizeValue) iconSizeValue.textContent = `${size}×${size}`;
     }
 
     // The cells take their width and their name's lines from it. The knob
@@ -1884,6 +1957,24 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             showViewOptions();
         }
+    }
+
+    // As in Binder, each size the slider passes is applied and kept. What a
+    // thumbnail draws changes, so the hit test reads its shadows again, and
+    // large kind icons get their masks.
+    if (iconSizeSlider) {
+        iconSizeSlider.addEventListener('input', () => {
+            const size = getIconSizeForSliderValue(Number(iconSizeSlider.value));
+            if (size === viewOptions.iconSize) return;
+
+            const fit = getCaptionFit();
+            viewOptions.iconSize = size;
+            saveViewOptions();
+            relayoutGallery(applyIconSize);
+            thumbnailShadows = null;
+            preloadKindIconMasks();
+            if (getCaptionFit() !== fit) document.dispatchEvent(new CustomEvent('galleryCaptionsChanged'));
+        });
     }
 
     // As in Binder, each whole value the slider passes is applied and kept.
@@ -1984,6 +2075,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    applyIconSize();
     applyGridSpacing();
     applyCornerRadius();
     applyTextSize();
@@ -2505,16 +2597,23 @@ document.addEventListener('DOMContentLoaded', () => {
         return null;
     }
 
-    // The masks are ready by the first click: every kind in the gallery.
-    document.addEventListener('galleryLoaded', () => {
-        const kinds = new Set();
-        for (const item of items) {
-            if (kinds.has(item.dataset.kind)) continue;
-            kinds.add(item.dataset.kind);
-            const url = getKindIconURL(getComputedStyle(item));
+    // The masks are ready by the first click: every kind in the gallery, at
+    // the size drawn. A hidden figure of each kind tells which image that is,
+    // since a figure showing its thumbnail draws none.
+    function preloadKindIconMasks() {
+        const kinds = new Set(Array.from(items, item => item.dataset.kind));
+        const probe = document.createElement('figure');
+        probe.style.display = 'none';
+        gallery.appendChild(probe);
+        kinds.forEach(kind => {
+            probe.dataset.kind = kind;
+            const url = getKindIconURL(getComputedStyle(probe));
             if (url) getKindIconMask(url);
-        }
-    });
+        });
+        probe.remove();
+    }
+
+    document.addEventListener('galleryLoaded', preloadKindIconMasks);
 
     // Whether a kind icon draws a pixel with any alpha in `probe`.
     function kindIconDrawsIn(probe, icon) {

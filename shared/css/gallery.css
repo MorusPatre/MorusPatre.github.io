@@ -34,11 +34,15 @@
     /* The hairline QuickLook strokes inside a thumbnail's edge, and Binder after
        it: white at 25%, the same in either appearance. */
     --thumb-hairline: rgba(255, 255, 255, 0.25);
-    --thumb-glow: 0 0 18px rgba(71, 68, 66, 0.3);
+    /* The thumbnail's shadow and the selection glow are drawn for the
+       gallery's 253px icons. The View Options icon size scales them, the
+       shadow as Binder's does with the icon and the glow as Finder's
+       selection box does, by factors the script sets here. */
+    --thumb-glow: 0 0 calc(18px * var(--thumb-shadow-blur-scale, 1)) rgba(71, 68, 66, 0.3);
 
     /* Gold selection accent. */
     --accent: #dbb7a7;
-    --accent-glow: 0 0 18px rgba(255, 184, 130, 0.5);
+    --accent-glow: 0 0 calc(18px * var(--selection-glow-scale, 1)) rgba(255, 184, 130, 0.5);
     --accent-text-glow: 0 0 22px rgba(255, 184, 130, 0.6);
     --all-people-focus-pill: rgba(219, 183, 167, 0.34);
     --text-selection: rgba(255, 222, 150, 0.3);
@@ -76,10 +80,10 @@
         --pill-text: #3a3531;
         --pill-selected-bg: #d0cac3;
 
-        --thumb-glow: 0 4px 14px rgba(0, 0, 0, 0.28);
+        --thumb-glow: 0 calc(4px * var(--thumb-shadow-offset-scale, 1)) calc(14px * var(--thumb-shadow-blur-scale, 1)) rgba(0, 0, 0, 0.28);
 
         --accent: #9c6247;
-        --accent-glow: 0 0 16px rgba(176, 108, 70, 0.4);
+        --accent-glow: 0 0 calc(16px * var(--selection-glow-scale, 1)) rgba(176, 108, 70, 0.4);
         --accent-text-glow: 0 0 22px rgba(176, 108, 70, 0.25);
         --all-people-focus-pill: rgba(156, 98, 71, 0.2);
         --text-selection: rgba(222, 168, 96, 0.35);
@@ -1642,7 +1646,8 @@ Styling for the Finder-Style Photo Gallery
 }
 
 #photo-gallery {
-    /* The icon whose thumbnail box is 225px, as QuickLook insets it. */
+    /* View Options ▸ Icon size, 16 to 512; the gallery starts at the icon
+       whose thumbnail box is 225px, as QuickLook insets it. */
     --icon-size: 253px;
     /* View Options ▸ Grid spacing runs 1 to 100; 54 is Finder's default. */
     --grid-spacing: 54;
@@ -1662,8 +1667,12 @@ Styling for the Finder-Style Photo Gallery
        across and floored. */
     --icon-top: round(to-zero, var(--icon-padding), 1px);
     --icon-left: round(down, (var(--cell-width) - var(--icon-size)) / 2, 1px);
-    /* QuickLook insets a thumbnail 7/128 of the icon a side (128 to 256). */
-    --thumb-inset: round(var(--icon-size) * 7 / 128, 1px);
+    /* QuickLook insets a thumbnail by its table, linear between 1 at 16, 2 at
+       32, 7 at 128, 14 at 256 and 29 at 512, rounded half up. */
+    --thumb-inset: round(1px + clamp(0px, var(--icon-size) - 16px, 16px) / 16
+        + clamp(0px, var(--icon-size) - 32px, 96px) * 5 / 96
+        + clamp(0px, var(--icon-size) - 128px, 128px) * 7 / 128
+        + clamp(0px, var(--icon-size) - 256px, 256px) * 15 / 256, 1px);
     --thumb-box: calc(var(--icon-size) - 2 * var(--thumb-inset));
     /* View Options ▸ Corner radius: a share of the thumbnail box, 0 to 0.5.
        The panel sets it; the gallery starts at 6%. Binder draws Apple's
@@ -2637,11 +2646,37 @@ View Options Panel
     padding: 0 calc(18 * var(--pt));
 }
 
+/* Icon size: its value 56pt in. */
+.view-options-slider--icon-size {
+    grid-template-columns: calc(56 * var(--pt)) 1fr;
+}
+
 /* The small and large pictures either side of a slider, placed from the top
-   of its title line. Grid spacing's are Binder's square.grid.2x2 and 3x3
-   symbols, redrawn: rounded squares in the secondary label colour. */
+   of its title line. Icon size's are the generic document icon, 16pt and
+   32pt. Grid spacing's are Binder's square.grid.2x2 and 3x3 symbols,
+   redrawn: rounded squares in the secondary label colour. */
 .view-options-slider-icon {
     position: absolute;
+}
+
+.view-options-icon-small {
+    left: calc(20 * var(--pt));
+    top: calc(18 * var(--pt));
+    width: calc(16 * var(--pt));
+    height: calc(16 * var(--pt));
+    background: url("../images/kind-icons/data-64.webp") center / contain no-repeat;
+}
+
+.view-options-icon-large {
+    left: calc(184 * var(--pt));
+    top: calc(10 * var(--pt));
+    width: calc(32 * var(--pt));
+    height: calc(32 * var(--pt));
+    background: url("../images/kind-icons/data-128.webp") center / contain no-repeat;
+}
+
+.view-options-grid-small,
+.view-options-grid-large {
     background-color: rgba(var(--ink-rgb), 0.5);
     -webkit-mask: var(--icon) no-repeat center / 100% 100%;
     mask: var(--icon) no-repeat center / 100% 100%;
@@ -2841,6 +2876,23 @@ html, body {
 
 #photo-gallery figure[data-kind="avif"] {
     background-image: url("../images/kind-icons/avif.webp");
+}
+
+/* Above 253px the icons are drawn from renders twice the size. */
+#photo-gallery.has-large-icons figure {
+    background-image: url("../images/kind-icons/jpeg-1024.webp");
+}
+
+#photo-gallery.has-large-icons figure[data-kind="png"] {
+    background-image: url("../images/kind-icons/png-1024.webp");
+}
+
+#photo-gallery.has-large-icons figure[data-kind="webp"] {
+    background-image: url("../images/kind-icons/webp-1024.webp");
+}
+
+#photo-gallery.has-large-icons figure[data-kind="avif"] {
+    background-image: url("../images/kind-icons/avif-1024.webp");
 }
 
 #photo-gallery:not(.hides-icon-preview) figure.is-visible {
