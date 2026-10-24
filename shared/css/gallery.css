@@ -2221,6 +2221,31 @@ body.is-sidebar-collapsed #gallery-blur-layer {
     z-index: 9; /* Changed from 10 to 9 */
 }
 
+/* Once collapsed rows have scrolled under it, Binder's band is a staircase:
+   a slice per row's window, each edged at its sides like the marquee, and
+   the hairline's steps between them. The script places them. */
+#marquee-steps {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 9;
+}
+
+.marquee-slice,
+.marquee-step {
+    position: absolute;
+}
+
+.marquee-slice {
+    border: 1px solid rgba(var(--ink-rgb), 0.246);
+    background-color: rgba(var(--ink-rgb), 0.098);
+}
+
+.marquee-step {
+    background-color: rgba(var(--ink-rgb), 0.246);
+}
+
 #marquee-gutter-highlight {
     position: fixed;
     border: 1px solid transparent;

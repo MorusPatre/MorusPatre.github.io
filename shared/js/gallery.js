@@ -620,13 +620,27 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Auto-scroll state variables ---
     let isAutoScrolling = false;
     let scrollSpeedY = 0;
-    let scrollSpeedX = 0;
     let hasAutoScrolledUpDuringMarquee = false;
     let marqueeStartScrollY = 0;
     let lastClientX = 0;
     let lastClientY = 0;
     let lastClientModifierKey = false;
     let marqueeItemRects = null;
+    // Binder's sideways drive: the speed a tick (positive towards the end),
+    // the bonus a vigorous drag in a band earns, whether the drag has gone
+    // far enough to wake the bands, where it was pressed, and where the
+    // window's left edge is on the screen.
+    let autoScrollHorizontalSpeed = 0;
+    let horizontalAutoScrollRemainder = 0;
+    let dynamicScrollBonus = 0;
+    let isAutoScrollArmed = false;
+    let marqueeStartClient = { x: 0, y: 0 };
+    let marqueeViewportScreenLeft = 0;
+    let lastAutoScrollTime = null;
+    // Each collapsed row's offset when the drag first moved it, and what the
+    // band has swept, which an item its row scrolls out of sight keeps.
+    let marqueeRowBaselines = new Map();
+    let marqueeSweptItems = new Set();
 
 
     // Attach a single, permanent listener to the cancel button
@@ -1463,10 +1477,29 @@ document.addEventListener('DOMContentLoaded', () => {
         groupPinFrame = requestAnimationFrame(updatePinnedGroupHeader);
     }, { passive: true });
 
-    // A collapsed row that scrolls moves its items under the marquee.
+    // A collapsed row that scrolls moves its items under the marquee, so
+    // they're measured again. The band follows any scroll during the drag,
+    // as Binder's does after every wheel event; auto-scroll redraws it
+    // itself.
     gallery.addEventListener('scroll', event => {
-        if (event.target !== gallery) marqueeItemRects = null;
+        if (event.target !== gallery && marqueeItemRects) {
+            const section = shownGroupSections.find(section => section.list === event.target);
+            if (section) {
+                forgetRowItemRects(section);
+            } else {
+                marqueeItemRects = null;
+            }
+        }
+        if (isMarquee && hasDragged && !isAutoScrolling) {
+            updateMarqueeAndSelection(lastClientX, lastClientY, lastClientModifierKey);
+        }
     }, true);
+
+    window.addEventListener('scroll', () => {
+        if (isMarquee && hasDragged && !isAutoScrolling) {
+            updateMarqueeAndSelection(lastClientX, lastClientY, lastClientModifierKey);
+        }
+    }, { passive: true });
 
     // --- Grouped Hit Testing and Navigation ---
     function toGalleryRect(rect, galleryRect) {
@@ -1484,17 +1517,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 300 ms in Safari, on each click. A collapsed row shows its items only
     // within its own width.
     function getGroupedItemRects(galleryRect, range) {
-        if (!marqueeItemRects) {
-            marqueeItemRects = [];
-            marqueeItemRects.measuredItems = new Set();
-            marqueeItemRects.groups = shownGroupSections.map(section => ({
-                section,
-                bounds: toGalleryRect(section.element.getBoundingClientRect(), galleryRect),
-                isMeasured: false
-            }));
-        }
-
-        for (const group of marqueeItemRects.groups) {
+        for (const group of getGroupBounds(galleryRect)) {
             if (group.isMeasured) continue;
             if (range && (group.bounds.bottom <= range.top || group.bounds.top >= range.bottom)) continue;
 
@@ -1506,12 +1529,46 @@ document.addEventListener('DOMContentLoaded', () => {
             for (const item of section.figures) {
                 if (item.style.display === 'none') continue;
 
-                marqueeItemRects.push({ ...toGalleryRect(item.getBoundingClientRect(), galleryRect), item, clip, hitBox: null });
+                marqueeItemRects.push({ ...toGalleryRect(item.getBoundingClientRect(), galleryRect), item, clip, section, hitBox: null });
                 marqueeItemRects.measuredItems.add(item);
             }
         }
 
         return marqueeItemRects;
+    }
+
+    // Each shown group's box in the gallery, from its header's top to the
+    // next header's, measured once until the gallery changes.
+    function getGroupBounds(galleryRect) {
+        if (!marqueeItemRects || !marqueeItemRects.groups) {
+            marqueeItemRects = [];
+            marqueeItemRects.measuredItems = new Set();
+            marqueeItemRects.groups = shownGroupSections.map(section => ({
+                section,
+                bounds: toGalleryRect(section.element.getBoundingClientRect(), galleryRect),
+                isMeasured: false
+            }));
+        }
+        return marqueeItemRects.groups;
+    }
+
+    // A collapsed row that scrolled has its items measured again when next
+    // needed; the other groups keep theirs.
+    function forgetRowItemRects(section) {
+        const groups = marqueeItemRects && marqueeItemRects.groups;
+        const group = groups && groups.find(group => group.section === section);
+        if (!group || !group.isMeasured) return;
+
+        group.isMeasured = false;
+        let kept = 0;
+        for (const entry of marqueeItemRects) {
+            if (entry.section === section) {
+                marqueeItemRects.measuredItems.delete(entry.item);
+            } else {
+                marqueeItemRects[kept++] = entry;
+            }
+        }
+        marqueeItemRects.length = kept;
     }
 
     function settleUnmeasuredSelection(isModifier) {
@@ -2847,6 +2904,354 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
+    // Binder's sideways auto-scroll (MarqueeCollectionView): each side band
+    // is a 49pt run of travel anchored on the content's edge, and only the
+    // part of it the screen can't offer beyond that edge folds inside. It
+    // goes at the bottom band's pace, 20 a tick, plus the bonus a vigorous
+    // drag in any band earns. The bands wake once the drag has gone 3px from
+    // the press, so a press that lands in one doesn't scroll.
+    const MARQUEE_AUTOSCROLL_EDGE_REACH = 49;
+    const MARQUEE_AUTOSCROLL_HORIZONTAL_MAX_SPEED = 20;
+    const MARQUEE_AUTOSCROLL_ARM_DISTANCE = 3;
+    const MARQUEE_AUTOSCROLL_MAX_BONUS = 120;
+    const MARQUEE_AUTOSCROLL_TICK = 1000 / 60;
+
+    // The side bands' signed strength at a window x: -1 to 0 in the left,
+    // 0 to 1 in the right, 0 elsewhere, and always 0 where nothing scrolls
+    // sideways. The left edge is the sidebar's, the window's while it's
+    // hidden; the right is the window's, short of a scroll bar. Where the
+    // screen has the whole reach beyond an edge the band starts on it and
+    // the ramp runs outside; where it hasn't, the band starts as far in as
+    // the screen falls short, an edge pushed past the screen's rim included.
+    // A screen the window doesn't overlap at all is reported in other
+    // coordinates, as an embedded view may; the window's own edges stand in
+    // for it then.
+    function getHorizontalAutoScrollFraction(clientX) {
+        if (!isGalleryGrouped() && !isGallerySideways()) return 0;
+
+        const bounds = gallery.getBoundingClientRect();
+        const leftEdge = bounds.left;
+        const rightEdge = Math.min(bounds.right, document.documentElement.clientWidth);
+        let screenLeft = Number.isFinite(screen.availLeft) ? screen.availLeft : 0;
+        let screenRight = screenLeft + screen.availWidth;
+        if (marqueeViewportScreenLeft >= screenRight || marqueeViewportScreenLeft + window.innerWidth <= screenLeft) {
+            screenLeft = marqueeViewportScreenLeft;
+            screenRight = marqueeViewportScreenLeft + window.innerWidth;
+        }
+        const gapLeft = marqueeViewportScreenLeft + leftEdge - screenLeft;
+        const gapRight = screenRight - (marqueeViewportScreenLeft + rightEdge);
+        const reach = MARQUEE_AUTOSCROLL_EDGE_REACH;
+        const leftTrigger = leftEdge + Math.max(0, reach - gapLeft);
+        const rightTrigger = rightEdge - Math.max(0, reach - gapRight);
+
+        if (clientX < leftTrigger) return -Math.min(1, (leftTrigger - clientX) / reach);
+        if (clientX > rightTrigger) return Math.min(1, (clientX - rightTrigger) / reach);
+        return 0;
+    }
+
+    function setHorizontalAutoScrollSpeed(fraction) {
+        if (fraction === 0) {
+            autoScrollHorizontalSpeed = 0;
+            horizontalAutoScrollRemainder = 0;
+            return;
+        }
+        autoScrollHorizontalSpeed = fraction * MARQUEE_AUTOSCROLL_HORIZONTAL_MAX_SPEED +
+            Math.sign(fraction) * dynamicScrollBonus;
+    }
+
+    // Each tick the bonus decays, so the run slows once the drag stops, and
+    // it's spent once the pointer has left every band.
+    function updateHorizontalAutoScrollSpeed(ticks) {
+        dynamicScrollBonus *= Math.pow(0.85, ticks);
+        if (dynamicScrollBonus < 0.5) dynamicScrollBonus = 0;
+
+        const fraction = isAutoScrollArmed ? getHorizontalAutoScrollFraction(lastClientX) : 0;
+        if (scrollSpeedY === 0 && fraction === 0) dynamicScrollBonus = 0;
+        setHorizontalAutoScrollSpeed(fraction);
+    }
+
+    // The collapsed row a sideways scroll drives during the drag: the group
+    // at the pointer's height, its header included, when its row holds more
+    // than it shows. Only the height decides, as in Binder.
+    function getMarqueeScrollRow(clientY) {
+        if (!isGalleryGrouped()) return null;
+
+        let low = 0;
+        let high = shownGroupSections.length - 1;
+        while (low <= high) {
+            const middle = (low + high) >> 1;
+            const section = shownGroupSections[middle];
+            const rect = section.element.getBoundingClientRect();
+            if (clientY < rect.top) {
+                high = middle - 1;
+            } else if (clientY >= rect.bottom) {
+                low = middle + 1;
+            } else {
+                const list = section.list;
+                return section.element.classList.contains('is-collapsed') &&
+                    list.scrollWidth > list.clientWidth ? section : null;
+            }
+        }
+        return null;
+    }
+
+    // How far a collapsed row has scrolled since the drag first moved it.
+    // Its items move through the gallery as it scrolls, so the band's anchor
+    // edge rides along with them in that row, and keeps what it swept.
+    function getMarqueeRowShift(section) {
+        const baseline = marqueeRowBaselines.get(section);
+        return baseline === undefined ? 0 : section.list.scrollLeft - baseline;
+    }
+
+    function scrollMarqueeRow(section, distance) {
+        if (!marqueeRowBaselines.has(section)) marqueeRowBaselines.set(section, section.list.scrollLeft);
+        section.list.scrollLeft += distance;
+        forgetRowItemRects(section);
+    }
+
+    // Sideways the gallery runs as a whole; grouped, the collapsed row at the
+    // pointer's height does, found after the page has moved, so the run
+    // passes to the next row as the page brings it under the pointer.
+    function autoScrollSideways(distance) {
+        horizontalAutoScrollRemainder += distance;
+        const step = Math.trunc(horizontalAutoScrollRemainder);
+        if (step === 0) return;
+
+        horizontalAutoScrollRemainder -= step;
+        if (isGallerySideways()) {
+            gallery.scrollLeft += step;
+            return;
+        }
+        const row = getMarqueeScrollRow(lastClientY);
+        if (row) scrollMarqueeRow(row, step);
+    }
+
+    // Binder hands a wheel turned during the drag to the file area, which
+    // scrolls wherever the pointer is. Sideways the gallery takes either
+    // axis. Grouped, a gesture that goes sideways drives the collapsed row at
+    // the pointer's height, header included, and one that goes down scrolls
+    // the page as ever: its first events are held until it shows its axis,
+    // and the rest of it, momentum included, goes the same way, past the end
+    // of the drag if need be. A pause ends a gesture.
+    const MARQUEE_WHEEL_GESTURE_GAP = 120;
+    let marqueeWheel = null;
+
+    function startRoutingMarqueeWheel() {
+        if (isGalleryGrouped() || isGallerySideways()) {
+            window.addEventListener('wheel', routeMarqueeWheel, { capture: true, passive: false });
+        }
+    }
+
+    function stopRoutingMarqueeWheel() {
+        window.removeEventListener('wheel', routeMarqueeWheel, { capture: true });
+        marqueeWheel = null;
+    }
+
+    function isRoutedWheelGestureLive() {
+        return marqueeWheel !== null && Boolean(marqueeWheel.target) &&
+            performance.now() - marqueeWheel.time <= MARQUEE_WHEEL_GESTURE_GAP;
+    }
+
+    function getWheelScale(event, element) {
+        return event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? element.clientWidth : 1;
+    }
+
+    function routeMarqueeWheel(event) {
+        if (event.ctrlKey) return;
+
+        if (!marqueeWheel || event.timeStamp - marqueeWheel.time > MARQUEE_WHEEL_GESTURE_GAP) {
+            if (!isMarquee) {
+                stopRoutingMarqueeWheel();
+                return;
+            }
+            marqueeWheel = { target: undefined, deltaX: 0, deltaY: 0, count: 0, time: 0 };
+        }
+        const wheel = marqueeWheel;
+        wheel.time = event.timeStamp;
+
+        if (wheel.target === undefined && isGallerySideways()) {
+            wheel.target = gallery;
+        } else if (wheel.target === undefined) {
+            const scale = getWheelScale(event, gallery);
+            wheel.deltaX += event.deltaX * scale;
+            wheel.deltaY += event.deltaY * scale;
+            wheel.count++;
+            if (Math.abs(wheel.deltaX) + Math.abs(wheel.deltaY) < 2 && wheel.count < 4) {
+                event.preventDefault();
+                return;
+            }
+
+            const row = Math.abs(wheel.deltaX) > Math.abs(wheel.deltaY) ? getMarqueeScrollRow(event.clientY) : null;
+            if (!row) {
+                // The page scrolls by what was held; this event scrolls it itself.
+                wheel.target = null;
+                const heldY = wheel.deltaY - event.deltaY * scale;
+                if (heldY !== 0) window.scrollBy(0, heldY);
+                return;
+            }
+            wheel.target = row;
+            event.preventDefault();
+            event.stopPropagation();
+            scrollMarqueeRow(row, wheel.deltaX);
+            return;
+        }
+
+        if (!wheel.target) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        if (wheel.target === gallery) {
+            const delta = Math.abs(event.deltaY) > Math.abs(event.deltaX) ? event.deltaY : event.deltaX;
+            gallery.scrollLeft += delta * getWheelScale(event, gallery);
+        } else {
+            scrollMarqueeRow(wheel.target, event.deltaX * getWheelScale(event, wheel.target.list));
+        }
+    }
+
+    // The band's region, top to bottom: a slice per stretch of the gallery,
+    // each taking its group's row shift. Space outside the groups isn't
+    // shifted, and neighbours with the same shift merge, so a band no row has
+    // moved under is one slice.
+    function getMarqueeSlices(top, bottom, galleryRect) {
+        const slices = [];
+        const addSlice = (sliceTop, sliceBottom, shift) => {
+            if (sliceBottom <= sliceTop) return;
+            const last = slices[slices.length - 1];
+            if (last && last.bottom === sliceTop && Math.abs(last.shift - shift) < 0.01) {
+                last.bottom = sliceBottom;
+            } else {
+                slices.push({ top: sliceTop, bottom: sliceBottom, shift });
+            }
+        };
+
+        let y = top;
+        if (isGalleryGrouped() && marqueeRowBaselines.size > 0) {
+            for (const group of getGroupBounds(galleryRect)) {
+                const bounds = group.bounds;
+                if (bounds.bottom <= y) continue;
+                if (bounds.top >= bottom) break;
+                addSlice(y, bounds.top, 0);
+                y = Math.max(y, bounds.top);
+                const sliceBottom = Math.min(bounds.bottom, bottom);
+                addSlice(y, sliceBottom, getMarqueeRowShift(group.section));
+                y = sliceBottom;
+            }
+        }
+        addSlice(y, bottom, 0);
+        return slices.length > 0 ? slices : [{ top, bottom, shift: 0 }];
+    }
+
+    // One slice is the classic marquee. Slices that rows scrolling under the
+    // band have pulled apart are drawn as Binder draws them, a staircase like
+    // a text selection across lines: each slice filled and edged at its
+    // sides, the hairline closing the top and bottom and stepping across
+    // wherever two slices' windows differ, always inside the region.
+    const marqueeSteps = document.createElement('div');
+    marqueeSteps.id = 'marquee-steps';
+    marqueeSteps.hidden = true;
+    marquee.after(marqueeSteps);
+
+    function placeMarqueePiece(index, className, left, top, right, bottom) {
+        let piece = marqueeSteps.children[index];
+        if (!piece) {
+            piece = document.createElement('div');
+            marqueeSteps.appendChild(piece);
+        }
+        if (piece.className !== className) piece.className = className;
+        piece.hidden = false;
+        piece.style.left = `${left}px`;
+        piece.style.top = `${top}px`;
+        piece.style.width = `${Math.max(0, right - left)}px`;
+        piece.style.height = `${Math.max(0, bottom - top)}px`;
+        return piece;
+    }
+
+    function drawMarquee(slices, galleryRect) {
+        const merged = [];
+        for (const slice of slices) {
+            const last = merged[merged.length - 1];
+            if (last && last.bottom === slice.top && last.left === slice.left && last.right === slice.right) {
+                last.bottom = slice.bottom;
+            } else {
+                merged.push({ ...slice });
+            }
+        }
+
+        if (merged.length === 1) {
+            const slice = merged[0];
+            const visibleMarqueeRect = {
+                x: slice.left,
+                y: slice.top,
+                w: Math.max(0, slice.right - slice.left),
+                h: Math.max(0, slice.bottom - slice.top)
+            };
+            marqueeSteps.hidden = true;
+            marquee.style.visibility = 'visible';
+            marquee.style.left = `${visibleMarqueeRect.x}px`;
+            marquee.style.top = `${visibleMarqueeRect.y}px`;
+            marquee.style.width = `${visibleMarqueeRect.w}px`;
+            marquee.style.height = `${visibleMarqueeRect.h}px`;
+            updateMarqueeGutterHighlight(visibleMarqueeRect, galleryRect);
+            return;
+        }
+
+        let count = 0;
+        merged.forEach((slice, index) => {
+            const piece = placeMarqueePiece(count++, 'marquee-slice', slice.left, slice.top, slice.right, slice.bottom);
+            piece.style.borderTopWidth = index === 0 ? '' : '0px';
+            piece.style.borderBottomWidth = index === merged.length - 1 ? '' : '0px';
+
+            const next = merged[index + 1];
+            if (!next) return;
+            const y = slice.bottom;
+            if (slice.right <= next.left || next.right <= slice.left) {
+                placeMarqueePiece(count++, 'marquee-step', slice.left + 1, y - 1, slice.right - 1, y);
+                placeMarqueePiece(count++, 'marquee-step', next.left + 1, y, next.right - 1, y + 1);
+                return;
+            }
+            if (next.left < slice.left) placeMarqueePiece(count++, 'marquee-step', next.left + 1, y, slice.left + 1, y + 1);
+            if (slice.left < next.left) placeMarqueePiece(count++, 'marquee-step', slice.left + 1, y - 1, next.left + 1, y);
+            if (next.right > slice.right) placeMarqueePiece(count++, 'marquee-step', slice.right - 1, y, next.right - 1, y + 1);
+            if (slice.right > next.right) placeMarqueePiece(count++, 'marquee-step', next.right - 1, y - 1, slice.right - 1, y);
+        });
+        for (let index = count; index < marqueeSteps.children.length; index++) {
+            marqueeSteps.children[index].hidden = true;
+        }
+        marquee.style.visibility = 'hidden';
+        marqueeSteps.hidden = false;
+
+        // The sidebar's gutter shows the edges of the slices that reach it.
+        const gutterRect = getSidebarGutterHighlightRect();
+        let reach = null;
+        for (const slice of merged) {
+            if (!gutterRect || galleryRect.left + slice.left >= gutterRect.right) continue;
+            reach = reach ? {
+                left: Math.min(reach.left, slice.left),
+                top: Math.min(reach.top, slice.top),
+                right: Math.max(reach.right, slice.right),
+                bottom: Math.max(reach.bottom, slice.bottom)
+            } : { ...slice };
+        }
+        if (!reach) {
+            hideMarqueeGutterHighlight();
+            return;
+        }
+        updateMarqueeGutterHighlight({
+            x: reach.left,
+            y: reach.top,
+            w: Math.max(0, reach.right - reach.left),
+            h: Math.max(0, reach.bottom - reach.top)
+        }, galleryRect);
+    }
+
+    function hideMarquee() {
+        marquee.style.visibility = 'hidden';
+        marquee.style.width = '0px';
+        marquee.style.height = '0px';
+        marqueeSteps.hidden = true;
+        hideMarqueeGutterHighlight();
+    }
+
     function updateMarqueeUpScrollState() {
         if (scrollSpeedY < 0) {
             hasAutoScrolledUpDuringMarquee = window.scrollY < marqueeStartScrollY;
@@ -3370,8 +3775,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateMarqueeAndSelection(clientX, clientY, isModifier) {
-        marquee.style.visibility = 'visible';
-
         const galleryRect = getGalleryOrigin();
         const viewportBounds = getViewportBounds();
         const viewportRect = {
@@ -3381,19 +3784,14 @@ document.addEventListener('DOMContentLoaded', () => {
             bottom: viewportBounds.bottom - galleryRect.top
         };
         const currentPoint = getClampedMarqueePoint(clientX, clientY, galleryRect);
-        const isDraggingRight = currentPoint.x >= startPos.x;
         const isDraggingDown = currentPoint.y >= startPos.y;
-        const selectionLeft = isDraggingRight ? startPos.x : currentPoint.x;
         const selectionTop = isDraggingDown ? startPos.y : currentPoint.y;
-        const selectionRight = isDraggingRight ? currentPoint.x + 1 : startPos.x + 1;
         const selectionBottom = isDraggingDown ? currentPoint.y + 1 : startPos.y + 1;
         const isAutoScrollingUp = scrollSpeedY < 0;
         const isSelectionPastViewportTop = selectionTop < viewportRect.top;
         const isSelectionAtOrPastViewportBottom = selectionBottom >= viewportRect.bottom;
         const shouldOverscanBottom =
             hasAutoScrolledUpDuringMarquee && isSelectionAtOrPastViewportBottom;
-        const visibleLeft = clamp(selectionLeft, viewportRect.left, viewportRect.right);
-        const visibleRight = clamp(selectionRight, viewportRect.left, viewportRect.right);
         const visibleTop = isAutoScrollingUp
             ? selectionTop - MARQUEE_SCROLL_EDGE_OVERSCAN
             : (isSelectionPastViewportTop ? selectionTop : clamp(selectionTop, viewportRect.top, viewportRect.bottom));
@@ -3401,42 +3799,50 @@ document.addEventListener('DOMContentLoaded', () => {
             ? selectionBottom + MARQUEE_SCROLL_EDGE_OVERSCAN
             : clamp(selectionBottom, viewportRect.top, viewportRect.bottom);
 
-        const selectionRect = {
-            x: selectionLeft,
-            y: selectionTop,
-            w: Math.max(0, selectionRight - selectionLeft),
-            h: Math.max(0, selectionBottom - selectionTop)
+        // The band's span across, its anchor edge carried along in a
+        // collapsed row by however far that row has scrolled.
+        const getSelectionSpan = shift => {
+            const anchorX = startPos.x - shift;
+            return { left: Math.min(anchorX, currentPoint.x), right: Math.max(anchorX, currentPoint.x) + 1 };
         };
 
-        const visibleMarqueeRect = {
-            x: visibleLeft,
-            y: visibleTop,
-            w: Math.max(0, visibleRight - visibleLeft),
-            h: Math.max(0, visibleBottom - visibleTop)
-        };
+        drawMarquee(getMarqueeSlices(visibleTop, visibleBottom, galleryRect).map(slice => {
+            const span = getSelectionSpan(slice.shift);
+            return {
+                left: clamp(span.left, viewportRect.left, viewportRect.right),
+                top: slice.top,
+                right: clamp(span.right, viewportRect.left, viewportRect.right),
+                bottom: slice.bottom
+            };
+        }), galleryRect);
 
-        marquee.style.left = `${visibleMarqueeRect.x}px`;
-        marquee.style.top = `${visibleMarqueeRect.y}px`;
-        marquee.style.width = `${visibleMarqueeRect.w}px`;
-        marquee.style.height = `${visibleMarqueeRect.h}px`;
-        updateMarqueeGutterHighlight(visibleMarqueeRect, galleryRect);
-
-        const band = {
-            left: selectionRect.x,
-            top: selectionRect.y,
-            right: selectionRect.x + selectionRect.w,
-            bottom: selectionRect.y + selectionRect.h
-        };
+        const band = { ...getSelectionSpan(0), top: selectionTop, bottom: selectionBottom };
+        const rowBands = new Map();
 
         for (const itemRect of getMarqueeItemRects(galleryRect, band)) {
             const item = itemRect.item;
-            const intersects = doesBandHitItem(band, itemRect, galleryRect);
 
-            if (isModifier) {
-                setSelection(item, intersects ? !preMarqueeSelectedItems.has(item) : preMarqueeSelectedItems.has(item));
-            } else {
-                setSelection(item, intersects);
+            // An item its collapsed row has scrolled out of sight keeps what
+            // the band made of it while it showed, as in Binder, which tests
+            // only the items on screen.
+            if (!itemRect.clip || rectsIntersect(itemRect, itemRect.clip)) {
+                let itemBand = band;
+                if (itemRect.section && marqueeRowBaselines.has(itemRect.section)) {
+                    itemBand = rowBands.get(itemRect.section);
+                    if (!itemBand) {
+                        itemBand = { ...getSelectionSpan(getMarqueeRowShift(itemRect.section)), top: selectionTop, bottom: selectionBottom };
+                        rowBands.set(itemRect.section, itemBand);
+                    }
+                }
+                if (doesBandHitItem(itemBand, itemRect, galleryRect)) {
+                    marqueeSweptItems.add(item);
+                } else {
+                    marqueeSweptItems.delete(item);
+                }
             }
+
+            const isSwept = marqueeSweptItems.has(item);
+            setSelection(item, isModifier ? isSwept !== preMarqueeSelectedItems.has(item) : isSwept);
         }
 
         // Grouped, a group the band hasn't reached isn't measured, and what is
@@ -3444,14 +3850,22 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isGalleryGrouped()) settleUnmeasuredSelection(isModifier);
     }
 
-    function autoScrollLoop() {
+    function autoScrollLoop(time = performance.now()) {
         if (!isMarquee || !isAutoScrolling) {
             isAutoScrolling = false;
             return;
         }
 
+        // Binder's timer ticks 60 times a second. A frame moves the rows by
+        // the ticks it spans, so they keep that pace at any refresh rate.
+        const ticks = lastAutoScrollTime === null
+            ? 1
+            : clamp((time - lastAutoScrollTime) / MARQUEE_AUTOSCROLL_TICK, 0, 4);
+        lastAutoScrollTime = time;
+
         window.scrollBy(0, Math.round(scrollSpeedY));
-        if (scrollSpeedX !== 0) gallery.scrollBy(Math.round(scrollSpeedX), 0);
+        updateHorizontalAutoScrollSpeed(ticks);
+        if (autoScrollHorizontalSpeed !== 0) autoScrollSideways(autoScrollHorizontalSpeed * ticks);
         updateMarqueeUpScrollState();
         updateMarqueeAndSelection(lastClientX, lastClientY, lastClientModifierKey);
 
@@ -3487,6 +3901,16 @@ document.addEventListener('DOMContentLoaded', () => {
         startPos = getClampedMarqueePoint(e.clientX, e.clientY, galleryRect);
 
         preMarqueeSelectedItems = new Set(selectedItems);
+
+        isAutoScrollArmed = false;
+        dynamicScrollBonus = 0;
+        marqueeStartClient = { x: e.clientX, y: e.clientY };
+        marqueeViewportScreenLeft = e.screenX - e.clientX;
+        lastClientX = e.clientX;
+        lastClientY = e.clientY;
+        marqueeRowBaselines = new Map();
+        marqueeSweptItems = new Set();
+        startRoutingMarqueeWheel();
     });
 
     // --- MouseMove Listener ---
@@ -3499,13 +3923,23 @@ document.addEventListener('DOMContentLoaded', () => {
         lastClientX = e.clientX;
         lastClientY = e.clientY;
         lastClientModifierKey = e.metaKey || e.ctrlKey || e.shiftKey;
+        marqueeViewportScreenLeft = e.screenX - e.clientX;
+
+        // Measured in the window, so a wheel scrolling the page under a still
+        // pointer isn't a drag.
+        if (!isAutoScrollArmed && Math.hypot(e.clientX - marqueeStartClient.x, e.clientY - marqueeStartClient.y) >=
+                MARQUEE_AUTOSCROLL_ARM_DISTANCE) {
+            isAutoScrollArmed = true;
+        }
 
         const viewportHeight = window.innerHeight;
         const scrollThreshold = 60;
         const minScrollSpeed = 2;
         const maxScrollSpeed = 30;
     
-        if (e.clientY > viewportHeight - scrollThreshold) {
+        if (!isAutoScrollArmed) {
+            scrollSpeedY = 0;
+        } else if (e.clientY > viewportHeight - scrollThreshold) {
             const overshoot = e.clientY - (viewportHeight - scrollThreshold);
             const speedRatio = overshoot / scrollThreshold;
             scrollSpeedY = minScrollSpeed + (speedRatio * (maxScrollSpeed - minScrollSpeed));
@@ -3517,26 +3951,27 @@ document.addEventListener('DOMContentLoaded', () => {
             scrollSpeedY = 0;
         }
 
-        // Sideways, the gallery scrolls along when the pointer nears its ends.
-        scrollSpeedX = 0;
-        if (isGallerySideways()) {
-            const bounds = gallery.getBoundingClientRect();
-            if (e.clientX > bounds.right - scrollThreshold) {
-                const speedRatio = Math.min(1, (e.clientX - (bounds.right - scrollThreshold)) / scrollThreshold);
-                scrollSpeedX = minScrollSpeed + (speedRatio * (maxScrollSpeed - minScrollSpeed));
-            } else if (e.clientX < bounds.left + scrollThreshold) {
-                const speedRatio = Math.min(1, (bounds.left + scrollThreshold - e.clientX) / scrollThreshold);
-                scrollSpeedX = -(minScrollSpeed + (speedRatio * (maxScrollSpeed - minScrollSpeed)));
+        // Sideways, the gallery or the collapsed row under the pointer runs
+        // along in Binder's side bands. Moving in any band adds to the speed.
+        const horizontalFraction = isAutoScrollArmed ? getHorizontalAutoScrollFraction(e.clientX) : 0;
+        if (isAutoScrollArmed) {
+            if (scrollSpeedY !== 0 || horizontalFraction !== 0) {
+                const movement = Math.abs(e.movementX || 0) + Math.abs(e.movementY || 0);
+                dynamicScrollBonus = Math.min(dynamicScrollBonus + movement * 0.6, MARQUEE_AUTOSCROLL_MAX_BONUS);
+            } else {
+                dynamicScrollBonus = 0;
             }
         }
+        setHorizontalAutoScrollSpeed(horizontalFraction);
 
         updateMarqueeUpScrollState();
         updateMarqueeAndSelection(e.clientX, e.clientY, lastClientModifierKey);
 
-        if ((scrollSpeedY !== 0 || scrollSpeedX !== 0) && !isAutoScrolling) {
+        if ((scrollSpeedY !== 0 || autoScrollHorizontalSpeed !== 0) && !isAutoScrolling) {
             isAutoScrolling = true;
+            lastAutoScrollTime = null;
             autoScrollLoop();
-        } else if (scrollSpeedY === 0 && scrollSpeedX === 0) {
+        } else if (scrollSpeedY === 0 && autoScrollHorizontalSpeed === 0) {
             isAutoScrolling = false;
         }
     });
@@ -3544,12 +3979,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const endDragAction = (e) => {
         isAutoScrolling = false;
         scrollSpeedY = 0;
-        scrollSpeedX = 0;
+        setHorizontalAutoScrollSpeed(0);
+        dynamicScrollBonus = 0;
+        isAutoScrollArmed = false;
         hasAutoScrolledUpDuringMarquee = false;
         marqueeStartScrollY = 0;
 
         document.body.classList.remove('is-marquee-dragging');
         if (!isMarquee) return;
+
+        // A row flung during the drag keeps its momentum.
+        if (!isRoutedWheelGestureLive()) stopRoutingMarqueeWheel();
 
         if (!hasDragged) {
             const isShift = e.shiftKey;
@@ -3604,11 +4044,9 @@ document.addEventListener('DOMContentLoaded', () => {
         isMarquee = false;
         hasDragged = false;
         mouseDownItem = null;
-        marquee.style.visibility = 'hidden';
-        marquee.style.width = '0px';
-        marquee.style.height = '0px';
-        hideMarqueeGutterHighlight();
+        hideMarquee();
         preMarqueeSelectedItems.clear();
+        marqueeSweptItems.clear();
         marqueeItemRects = null;
     };
 
