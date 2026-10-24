@@ -2719,9 +2719,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // filename and the dimensions line. Until the thumbnail loads, the kind icon
     // drawn in its place is hit wherever it has any alpha. The rest of the
     // figure is background, like the space around a Finder icon. A selected
-    // thumbnail trades its shadow for the gold glow, which plays Finder's
-    // selection box: a click tests whichever of the two is drawn, the marquee
-    // always the shadow.
+    // thumbnail trades its shadow for Photos' selection ring and the gold glow
+    // cast from it, which play Finder's selection box: a click tests whichever
+    // is drawn, the marquee always the shadow.
 
     // Safari, and every iOS browser, is WebKit, which leaves the shadows it
     // paints on screen to Core Graphics.
@@ -2767,7 +2767,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return alpha > 0 ? { x, y, blur, spread, alpha } : null;
     }
 
-    // The thumbnail shadow and the selection glow for the current appearance.
+    // The thumbnail shadow and the selection glow for the current appearance,
+    // and how far the selection ring stands past the picture.
     // A probe in the gallery resolves the tokens as the gallery has them (its
     // background can give it the light ones), in px and rgba().
     function getThumbnailShadows() {
@@ -2783,13 +2784,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const artwork = resolve('--thumb-glow');
         const selection = resolve('--accent-glow');
         probe.remove();
+        const style = getComputedStyle(gallery);
+        const ring = parseFloat(style.getPropertyValue('--selection-ring-gap')) +
+            parseFloat(style.getPropertyValue('--selection-ring-width'));
 
         // How far past its figure an item's hit box can reach: a blurred shadow
         // is gone 3σ (1.5 blur radii) past its rect, and a click is a pixel wide.
         const reachOf = shadow => shadow
             ? Math.max(Math.abs(shadow.x), Math.abs(shadow.y)) + shadow.spread + 1.5 * shadow.blur
             : 0;
-        thumbnailShadows = { artwork, selection, reach: Math.max(reachOf(artwork), reachOf(selection)) + 1 };
+        thumbnailShadows = { artwork, selection, ring, reach: Math.max(reachOf(artwork), ring + reachOf(selection)) + 1 };
         return thumbnailShadows;
     }
 
@@ -2811,11 +2815,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // The thumbnail's radius, in px. CSS would take a percentage of each side,
     // an ellipse; this takes it of the shorter one, keeping the corner a circle.
-    function getCardRadius(img, card) {
+    // A selected thumbnail's box takes in its ring, `inset` past the picture,
+    // its radius grown by as much.
+    function getCardRadius(img, card, inset = 0) {
         const value = getComputedStyle(img).borderTopLeftRadius;
         const shorter = Math.min(card.right - card.left, card.bottom - card.top);
         const radius = value.endsWith('%') ? parseFloat(value) / 100 * shorter : parseFloat(value);
-        return clampCardRadius(card, radius || 0);
+        return clampCardRadius(card, (radius || 0) - inset);
+    }
+
+    // A selected thumbnail's box takes in its selection ring, as border and
+    // padding around the picture, which stays its content box.
+    function getSelectionRingInset(img) {
+        const style = getComputedStyle(img);
+        return parseFloat(style.borderTopWidth) + parseFloat(style.paddingTop);
+    }
+
+    function insetRect(rect, inset) {
+        return { left: rect.left + inset, top: rect.top + inset, right: rect.right - inset, bottom: rect.bottom - inset };
+    }
+
+    // A selected thumbnail draws out to its ring, whose edges are concentric
+    // with the picture. The clear gap between counts with it: a click there is
+    // on the item.
+    function getSelectionRingHitBox(hitBox, ring) {
+        if (!hitBox.isLoaded) return hitBox;
+        return { ...hitBox, card: insetRect(hitBox.card, -ring), radius: hitBox.radius + ring };
     }
 
     // Whether `probe` touches the rounded card: between the corners the card is
@@ -3087,9 +3112,11 @@ document.addEventListener('DOMContentLoaded', () => {
             info: textRect(item.querySelector('.dimensions'))
         };
         if (hitBox.isLoaded) {
+            // The card is the picture, without the ring a selected box takes in.
             const img = item.querySelector('img');
-            hitBox.card = toGallery(snapped(img.getBoundingClientRect()));
-            hitBox.radius = getCardRadius(img, hitBox.card);
+            const ring = getSelectionRingInset(img);
+            hitBox.card = insetRect(toGallery(snapped(img.getBoundingClientRect())), ring);
+            hitBox.radius = getCardRadius(img, hitBox.card, ring);
         } else {
             hitBox.icon = getKindIconRect(item, hitBox.canvas);
         }
@@ -3109,14 +3136,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Finder's -[TIconView _hitTestWithLocalPoint:]: the thumbnail and its
-    // shadow, or the selection glow that replaces the shadow while it shows,
-    // or the kind icon, the filename, the dimensions.
+    // shadow, or the selection ring and the glow cast from it, which replace
+    // the shadow while they show, or the kind icon, the filename, the
+    // dimensions.
     function isPointInItemHitBox(entry, x, y, galleryRect) {
         const hitBox = getItemHitBox(entry, galleryRect);
         const probe = { left: x, top: y, right: x + 1, bottom: y + 1 };
         const shadows = getThumbnailShadows();
-        const shadow = isSelected(entry.item) ? shadows.selection : shadows.artwork;
-        return hitsArtwork(probe, hitBox, shadow) ||
+        const isItemSelected = isSelected(entry.item);
+        const artwork = isItemSelected ? getSelectionRingHitBox(hitBox, shadows.ring) : hitBox;
+        const shadow = isItemSelected ? shadows.selection : shadows.artwork;
+        return hitsArtwork(probe, artwork, shadow) ||
             rectContainsPoint(hitBox.name, x, y) ||
             rectContainsPoint(hitBox.info, x, y);
     }
@@ -3681,10 +3711,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const downloadButtonObserver = new ResizeObserver(placeDownloadButton);
 
     // The picture the button sits on, in viewport coordinates: the thumbnail
-    // card or, until it loads, the kind icon's ink, the bounds of its pixels
-    // at least half opaque, as a heart sits on an icon's ink in Binder.
+    // card, inside a selected one's ring, or, until it loads, the kind icon's
+    // ink, the bounds of its pixels at least half opaque, as a heart sits on
+    // an icon's ink in Binder.
     function getDownloadButtonArt(item) {
-        if (showsThumbnail(item)) return item.querySelector('img').getBoundingClientRect();
+        if (showsThumbnail(item)) {
+            const img = item.querySelector('img');
+            return insetRect(img.getBoundingClientRect(), getSelectionRingInset(img));
+        }
 
         const icon = getKindIconRect(item, item.querySelector('.image-container').getBoundingClientRect());
         const mask = icon && getKindIconMask(icon.url);

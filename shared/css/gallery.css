@@ -1690,6 +1690,10 @@ Styling for the Finder-Style Photo Gallery
        radius stay within 0.2px of them at 6%. */
     --corner-radius: 0.06;
     --thumb-radius: calc(var(--thumb-box) * var(--corner-radius));
+    /* Photos' selection ring: a 3pt stroke 1pt clear of the picture, the same
+       at every icon size. */
+    --selection-ring-gap: 1px;
+    --selection-ring-width: 3px;
     /* The name starts 2px below the selection box, floored. */
     --name-top: round(down, var(--icon-top) + var(--icon-size) + var(--icon-padding) + 2px, 1px);
     /* The name wraps at 4 to 20 widths of "0" across the grid spacing range,
@@ -3016,13 +3020,32 @@ html, body {
 /* Adds a smooth transition to the elements that change during selection */
 #photo-gallery figure img,
 #photo-gallery figure figcaption .filename {
-    transition: background-color 0.2s ease-out, outline-color 0.2s ease-out, box-shadow 0.2s ease-out, color 0.2s ease-out, text-shadow 0.2s ease-out;
+    transition: background-color 0.2s ease-out, box-shadow 0.2s ease-out, color 0.2s ease-out, text-shadow 0.2s ease-out;
 }
 
-/* Changes the image's hairline to gold and adds a soft glow effect */
+/* Photos' exterior selection ring (-[PXGDecorationDefaultBadgeDrawingHelper
+   drawWithDecorationInfo:...], type 18): a rounded rect stroked 3pt wide in
+   the picture's rect grown 4pt a side, its corners the picture's grown by 1pt
+   plus half the stroke, so both edges of the ring are concentric with the
+   picture and the 1pt between stays clear. Here the stroke is the selected
+   thumbnail's border and the gap its padding. The box grows by both on every
+   side, so the picture stays put, and the browser clips the picture to the
+   content box's curve, its own radius. The glow is cast from the ring's outer
+   edge, and the hairline stays on the picture. */
 #photo-gallery figure.selected img {
-    outline-color: var(--accent);
+    --selection-ring: calc(var(--selection-ring-gap) + var(--selection-ring-width));
+    inset: calc(-1 * var(--selection-ring));
+    width: calc(var(--thumb-box) + 2 * var(--selection-ring));
+    padding: var(--selection-ring-gap);
+    border: var(--selection-ring-width) solid var(--accent);
+    border-radius: calc(var(--thumb-radius) + var(--selection-ring));
+    outline-offset: calc(-1px - var(--selection-ring));
     box-shadow: var(--accent-glow);
+}
+
+#photo-gallery figure.selected img.is-portrait {
+    width: auto;
+    height: calc(var(--thumb-box) + 2 * var(--selection-ring));
 }
 
 /* At rest the filename carries a transparent glow the size of --accent-text-glow,
