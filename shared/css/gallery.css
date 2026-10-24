@@ -3017,12 +3017,6 @@ html, body {
 
 /* ===== Enhanced Selection Style ===== */
 
-/* Adds a smooth transition to the elements that change during selection */
-#photo-gallery figure img,
-#photo-gallery figure figcaption .filename {
-    transition: background-color 0.2s ease-out, box-shadow 0.2s ease-out, color 0.2s ease-out, text-shadow 0.2s ease-out;
-}
-
 /* Photos' exterior selection ring (-[PXGDecorationDefaultBadgeDrawingHelper
    drawWithDecorationInfo:...], type 18): a rounded rect stroked 3pt wide in
    the picture's rect grown 4pt a side, its corners the picture's grown by 1pt
