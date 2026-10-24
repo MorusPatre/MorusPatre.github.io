@@ -626,16 +626,18 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastClientY = 0;
     let lastClientModifierKey = false;
     let marqueeItemRects = null;
-    // Binder's sideways drive: the speed a tick (positive towards the end),
-    // the bonus a vigorous drag in a band earns, whether the drag has gone
-    // far enough to wake the bands, where it was pressed, and where the
-    // window's left edge is on the screen.
+    // Binder's auto-scroll drive: the sideways speed a tick (positive
+    // towards the end), what's left of each axis's steps under a pixel, the
+    // bonus a vigorous drag in a band earns, whether the drag has gone far
+    // enough to wake the bands, where it was pressed, and where the window's
+    // top-left corner is on the screen.
     let autoScrollHorizontalSpeed = 0;
+    let verticalAutoScrollRemainder = 0;
     let horizontalAutoScrollRemainder = 0;
     let dynamicScrollBonus = 0;
     let isAutoScrollArmed = false;
     let marqueeStartClient = { x: 0, y: 0 };
-    let marqueeViewportScreenLeft = 0;
+    let marqueeViewportScreen = { x: 0, y: 0 };
     let lastAutoScrollTime = null;
     // Each collapsed row's offset when the drag first moved it, and what the
     // band has swept, which an item its row scrolls out of sight keeps.
@@ -2904,17 +2906,78 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // Binder's sideways auto-scroll (MarqueeCollectionView): each side band
-    // is a 49pt run of travel anchored on the content's edge, and only the
-    // part of it the screen can't offer beyond that edge folds inside. It
-    // goes at the bottom band's pace, 20 a tick, plus the bonus a vigorous
-    // drag in any band earns. The bands wake once the drag has gone 3px from
-    // the press, so a press that lands in one doesn't scroll.
+    // Binder's marquee auto-scroll (MarqueeCollectionView). The top band
+    // reaches down over the window's chrome, at up to 50 a tick at the
+    // window's top. The bottom and side bands are each a 49pt run of travel
+    // anchored on an edge, and only the part of it the screen can't offer
+    // beyond that edge folds inside the window; they go at up to 20 a tick.
+    // A vigorous drag in any band adds a bonus to every speed. The bands
+    // wake once the drag has gone 3px from the press, so a press that lands
+    // in one doesn't scroll.
     const MARQUEE_AUTOSCROLL_EDGE_REACH = 49;
+    const MARQUEE_AUTOSCROLL_TOP_MAX_SPEED = 50;
+    const MARQUEE_AUTOSCROLL_BOTTOM_MAX_SPEED = 20;
     const MARQUEE_AUTOSCROLL_HORIZONTAL_MAX_SPEED = 20;
+    const MARQUEE_AUTOSCROLL_TOP_EDGE_TRIM = 1;
+    const MARQUEE_AUTOSCROLL_BARE_TITLEBAR = 32;
     const MARQUEE_AUTOSCROLL_ARM_DISTANCE = 3;
     const MARQUEE_AUTOSCROLL_MAX_BONUS = 120;
     const MARQUEE_AUTOSCROLL_TICK = 1000 / 60;
+    const NO_AUTOSCROLL_BANDS = { top: 0, bottom: 0, horizontal: 0 };
+
+    // The window's box on the screen and the screen's usable area, short of
+    // the menu bar and the Dock, both in screen coordinates. A screen the
+    // window doesn't overlap at all is reported in other coordinates, as an
+    // embedded view may; the window's own edges stand in for it then.
+    function getAutoScrollScreenGeometry() {
+        const viewport = {
+            left: marqueeViewportScreen.x,
+            top: marqueeViewportScreen.y,
+            right: marqueeViewportScreen.x + window.innerWidth,
+            bottom: marqueeViewportScreen.y + window.innerHeight
+        };
+        const left = Number.isFinite(screen.availLeft) ? screen.availLeft : 0;
+        const top = Number.isFinite(screen.availTop) ? screen.availTop : 0;
+        const available = { left, top, right: left + screen.availWidth, bottom: top + screen.availHeight };
+        return { viewport, screen: rectsIntersect(viewport, available) ? available : viewport };
+    }
+
+    // The top band covers the window's chrome, here the top bar, to a pixel
+    // short of its foot, as Finder's does. A pinned group header isn't
+    // chrome, so it stays out. A window with no chrome keeps a bare
+    // titlebar's depth.
+    function getAutoScrollTopEdgeInset() {
+        const chromeBottom = header ? header.getBoundingClientRect().bottom : 0;
+        return Math.max(chromeBottom, MARQUEE_AUTOSCROLL_BARE_TITLEBAR) - MARQUEE_AUTOSCROLL_TOP_EDGE_TRIM;
+    }
+
+    // How deep the pointer is in each band: the top's strength falls from 1
+    // at the window's top to 0 at the band's foot, the bottom's grows from 0
+    // where its run starts to 1 a reach on, and the sides' is signed. The
+    // pointer's distance from the bottom isn't clamped: past the window's
+    // edge it goes negative, where the run carries on once the window is
+    // clear of the screen's.
+    function getAutoScrollBands(clientX, clientY) {
+        const geometry = getAutoScrollScreenGeometry();
+        const viewportHeight = document.documentElement.clientHeight;
+        const distanceFromTop = clamp(clientY, 0, viewportHeight);
+        const distanceFromBottom = viewportHeight - clientY;
+        const topEdgeInset = getAutoScrollTopEdgeInset();
+        const gapBelowWindow = geometry.screen.bottom - geometry.viewport.bottom;
+        const bottomTrigger = Math.max(0, MARQUEE_AUTOSCROLL_EDGE_REACH - gapBelowWindow);
+
+        return {
+            top: distanceFromTop < topEdgeInset ? 1 - distanceFromTop / topEdgeInset : 0,
+            bottom: distanceFromBottom < bottomTrigger
+                ? Math.min(1, (bottomTrigger - distanceFromBottom) / MARQUEE_AUTOSCROLL_EDGE_REACH)
+                : 0,
+            horizontal: getHorizontalAutoScrollFraction(clientX, geometry)
+        };
+    }
+
+    function isInAutoScrollBand(bands) {
+        return bands.top > 0 || bands.bottom > 0 || bands.horizontal !== 0;
+    }
 
     // The side bands' signed strength at a window x: -1 to 0 in the left,
     // 0 to 1 in the right, 0 elsewhere, and always 0 where nothing scrolls
@@ -2923,23 +2986,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // screen has the whole reach beyond an edge the band starts on it and
     // the ramp runs outside; where it hasn't, the band starts as far in as
     // the screen falls short, an edge pushed past the screen's rim included.
-    // A screen the window doesn't overlap at all is reported in other
-    // coordinates, as an embedded view may; the window's own edges stand in
-    // for it then.
-    function getHorizontalAutoScrollFraction(clientX) {
+    function getHorizontalAutoScrollFraction(clientX, geometry) {
         if (!isGalleryGrouped() && !isGallerySideways()) return 0;
 
         const bounds = gallery.getBoundingClientRect();
         const leftEdge = bounds.left;
         const rightEdge = Math.min(bounds.right, document.documentElement.clientWidth);
-        let screenLeft = Number.isFinite(screen.availLeft) ? screen.availLeft : 0;
-        let screenRight = screenLeft + screen.availWidth;
-        if (marqueeViewportScreenLeft >= screenRight || marqueeViewportScreenLeft + window.innerWidth <= screenLeft) {
-            screenLeft = marqueeViewportScreenLeft;
-            screenRight = marqueeViewportScreenLeft + window.innerWidth;
-        }
-        const gapLeft = marqueeViewportScreenLeft + leftEdge - screenLeft;
-        const gapRight = screenRight - (marqueeViewportScreenLeft + rightEdge);
+        const gapLeft = geometry.viewport.left + leftEdge - geometry.screen.left;
+        const gapRight = geometry.screen.right - (geometry.viewport.left + rightEdge);
         const reach = MARQUEE_AUTOSCROLL_EDGE_REACH;
         const leftTrigger = leftEdge + Math.max(0, reach - gapLeft);
         const rightTrigger = rightEdge - Math.max(0, reach - gapRight);
@@ -2959,15 +3013,36 @@ document.addEventListener('DOMContentLoaded', () => {
             Math.sign(fraction) * dynamicScrollBonus;
     }
 
+    function setAutoScrollSpeeds(bands) {
+        if (bands.top > 0) {
+            scrollSpeedY = -(MARQUEE_AUTOSCROLL_TOP_MAX_SPEED * bands.top + dynamicScrollBonus);
+        } else if (bands.bottom > 0) {
+            scrollSpeedY = MARQUEE_AUTOSCROLL_BOTTOM_MAX_SPEED * bands.bottom + dynamicScrollBonus;
+        } else {
+            scrollSpeedY = 0;
+            verticalAutoScrollRemainder = 0;
+        }
+        setHorizontalAutoScrollSpeed(bands.horizontal);
+    }
+
     // Each tick the bonus decays, so the run slows once the drag stops, and
     // it's spent once the pointer has left every band.
-    function updateHorizontalAutoScrollSpeed(ticks) {
+    function updateAutoScrollSpeeds(ticks) {
         dynamicScrollBonus *= Math.pow(0.85, ticks);
         if (dynamicScrollBonus < 0.5) dynamicScrollBonus = 0;
 
-        const fraction = isAutoScrollArmed ? getHorizontalAutoScrollFraction(lastClientX) : 0;
-        if (scrollSpeedY === 0 && fraction === 0) dynamicScrollBonus = 0;
-        setHorizontalAutoScrollSpeed(fraction);
+        const bands = isAutoScrollArmed ? getAutoScrollBands(lastClientX, lastClientY) : NO_AUTOSCROLL_BANDS;
+        if (!isInAutoScrollBand(bands)) dynamicScrollBonus = 0;
+        setAutoScrollSpeeds(bands);
+    }
+
+    function autoScrollVertically(distance) {
+        verticalAutoScrollRemainder += distance;
+        const step = Math.trunc(verticalAutoScrollRemainder);
+        if (step === 0) return;
+
+        verticalAutoScrollRemainder -= step;
+        window.scrollBy(0, step);
     }
 
     // The collapsed row a sideways scroll drives during the drag: the group
@@ -3856,15 +3931,16 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Binder's timer ticks 60 times a second. A frame moves the rows by
-        // the ticks it spans, so they keep that pace at any refresh rate.
+        // Binder's timer ticks 60 times a second. A frame scrolls by the
+        // ticks it spans, so the scrolling keeps that pace at any refresh
+        // rate.
         const ticks = lastAutoScrollTime === null
             ? 1
             : clamp((time - lastAutoScrollTime) / MARQUEE_AUTOSCROLL_TICK, 0, 4);
         lastAutoScrollTime = time;
 
-        window.scrollBy(0, Math.round(scrollSpeedY));
-        updateHorizontalAutoScrollSpeed(ticks);
+        updateAutoScrollSpeeds(ticks);
+        if (scrollSpeedY !== 0) autoScrollVertically(scrollSpeedY * ticks);
         if (autoScrollHorizontalSpeed !== 0) autoScrollSideways(autoScrollHorizontalSpeed * ticks);
         updateMarqueeUpScrollState();
         updateMarqueeAndSelection(lastClientX, lastClientY, lastClientModifierKey);
@@ -3905,7 +3981,7 @@ document.addEventListener('DOMContentLoaded', () => {
         isAutoScrollArmed = false;
         dynamicScrollBonus = 0;
         marqueeStartClient = { x: e.clientX, y: e.clientY };
-        marqueeViewportScreenLeft = e.screenX - e.clientX;
+        marqueeViewportScreen = { x: e.screenX - e.clientX, y: e.screenY - e.clientY };
         lastClientX = e.clientX;
         lastClientY = e.clientY;
         marqueeRowBaselines = new Map();
@@ -3923,7 +3999,7 @@ document.addEventListener('DOMContentLoaded', () => {
         lastClientX = e.clientX;
         lastClientY = e.clientY;
         lastClientModifierKey = e.metaKey || e.ctrlKey || e.shiftKey;
-        marqueeViewportScreenLeft = e.screenX - e.clientX;
+        marqueeViewportScreen = { x: e.screenX - e.clientX, y: e.screenY - e.clientY };
 
         // Measured in the window, so a wheel scrolling the page under a still
         // pointer isn't a drag.
@@ -3932,37 +4008,19 @@ document.addEventListener('DOMContentLoaded', () => {
             isAutoScrollArmed = true;
         }
 
-        const viewportHeight = window.innerHeight;
-        const scrollThreshold = 60;
-        const minScrollSpeed = 2;
-        const maxScrollSpeed = 30;
-    
-        if (!isAutoScrollArmed) {
-            scrollSpeedY = 0;
-        } else if (e.clientY > viewportHeight - scrollThreshold) {
-            const overshoot = e.clientY - (viewportHeight - scrollThreshold);
-            const speedRatio = overshoot / scrollThreshold;
-            scrollSpeedY = minScrollSpeed + (speedRatio * (maxScrollSpeed - minScrollSpeed));
-        } else if (e.clientY < scrollThreshold) {
-            const overshoot = scrollThreshold - e.clientY;
-            const speedRatio = overshoot / scrollThreshold;
-            scrollSpeedY = -(minScrollSpeed + (speedRatio * (maxScrollSpeed - minScrollSpeed)));
-        } else {
-            scrollSpeedY = 0;
-        }
-
-        // Sideways, the gallery or the collapsed row under the pointer runs
-        // along in Binder's side bands. Moving in any band adds to the speed.
-        const horizontalFraction = isAutoScrollArmed ? getHorizontalAutoScrollFraction(e.clientX) : 0;
+        // The page scrolls in Binder's top and bottom bands, and the gallery
+        // or the collapsed row under the pointer in its side bands. Moving in
+        // any band adds to the speed.
+        const bands = isAutoScrollArmed ? getAutoScrollBands(e.clientX, e.clientY) : NO_AUTOSCROLL_BANDS;
         if (isAutoScrollArmed) {
-            if (scrollSpeedY !== 0 || horizontalFraction !== 0) {
+            if (isInAutoScrollBand(bands)) {
                 const movement = Math.abs(e.movementX || 0) + Math.abs(e.movementY || 0);
                 dynamicScrollBonus = Math.min(dynamicScrollBonus + movement * 0.6, MARQUEE_AUTOSCROLL_MAX_BONUS);
             } else {
                 dynamicScrollBonus = 0;
             }
         }
-        setHorizontalAutoScrollSpeed(horizontalFraction);
+        setAutoScrollSpeeds(bands);
 
         updateMarqueeUpScrollState();
         updateMarqueeAndSelection(e.clientX, e.clientY, lastClientModifierKey);
@@ -3978,8 +4036,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const endDragAction = (e) => {
         isAutoScrolling = false;
-        scrollSpeedY = 0;
-        setHorizontalAutoScrollSpeed(0);
+        setAutoScrollSpeeds(NO_AUTOSCROLL_BANDS);
         dynamicScrollBonus = 0;
         isAutoScrollArmed = false;
         hasAutoScrolledUpDuringMarquee = false;
