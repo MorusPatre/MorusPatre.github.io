@@ -4521,7 +4521,7 @@ function renderSidebarSeasonOptions(sidebar, seasons) {
 
     seasonList.replaceChildren(
         createSidebarFilterButton('season', 'all', 'All', selectedSeason === 'all', true),
-        ...seasons.map(season => createSidebarFilterButton('season', season, season.padStart(2, '0'), selectedSeason === season))
+        ...seasons.map(season => createSidebarFilterButton('season', season, season, selectedSeason === season))
     );
 }
 
@@ -4574,7 +4574,7 @@ function renderSidebarEpisodeOptions(sidebar, episodesBySeason) {
     const episodeButtons = [
         createSidebarFilterButton('episode', 'all', 'All', selectedEpisode === 'all', true),
         ...availableEpisodes.map(episode => {
-            const label = episode.padStart(2, '0');
+            const label = episode;
             return createSidebarFilterButton('episode', episode, label, selectedEpisode === episode);
         })
     ];
