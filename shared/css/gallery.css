@@ -9,6 +9,8 @@
     --theme-bg: #0f0e0c;
     --theme-bg-rgb: 15, 14, 12;
     --theme-bg-overlay: none;
+    /* View Options ▸ Grain: what is laid over the grain to soften it. */
+    --grain-veil: transparent;
 
     /* Ink: text, rules, and the tints laid over the background for hovers and fills. */
     --ink-rgb: 255, 255, 255;
@@ -62,6 +64,9 @@
         color-scheme: light;
         --theme-bg: #f6f4f1;
         --theme-bg-rgb: 246, 244, 241;
+        /* The background's own colour at 30%, which softens the grain as The
+           Witcher's white wash does without changing the background. */
+        --grain-veil: rgba(var(--theme-bg-rgb), 0.3);
 
         --ink-rgb: 31, 27, 24;
         --ink-soft: #4a4541;
@@ -1203,10 +1208,15 @@ input, select, textarea {
             -ms-transition-delay: 0.75s;
             transition-delay: 0.75s;
             background-image: var(--theme-bg-overlay);
-            background-size: auto, 256px 256px;
-            background-position: center, center;
-            background-repeat: no-repeat, repeat;
             z-index: 2;
+        }
+
+        /* View Options ▸ Grain: a film grain under the page's own wash. */
+        #bg.has-grain:before {
+            background-image: var(--theme-bg-overlay), linear-gradient(var(--grain-veil), var(--grain-veil)), url("../images/overlay.png");
+            background-size: auto, auto, 256px 256px;
+            background-position: center;
+            background-repeat: no-repeat, no-repeat, repeat;
         }
 
         #bg:after {
@@ -2747,7 +2757,8 @@ View Options Panel
     margin-top: calc(6 * var(--pt));
 }
 
-.view-options-check + .view-options-check {
+.view-options-check + .view-options-check,
+.view-options-radios + .view-options-check {
     margin-top: calc(2 * var(--pt));
 }
 

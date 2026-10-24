@@ -1753,10 +1753,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Label position Right puts the name beside the icon; ungrouped, the
     // gallery then runs sideways, as Finder's does. Background is Default or
     // a Color, picked as Binder picks it; Binder's Picture is left out.
+    // Grain, which Binder hasn't, draws a film grain on the page's background;
+    // a page starts with it when its #bg has it in the markup, as The
+    // Witcher's does.
     const VIEW_OPTIONS_STORAGE_PREFIX = 'galleryViewOptions:';
     const VIEW_OPTIONS_PANEL_STORAGE_KEY = 'galleryViewOptionsPanel';
     const VIEW_OPTIONS_DEFAULTS_STORAGE_KEY = 'galleryViewOptionsDefaults';
-    const DEFAULT_VIEW_OPTIONS = { sortBy: 'none', sortReversed: false, iconSize: 253, gridSpacing: 54, cornerRadius: 0.06, textSize: 12, labelPosition: 'bottom', showItemInfo: true, showIconPreview: true, background: 'default', backgroundColor: null };
+    const pageBackground = document.getElementById('bg');
+    const DEFAULT_VIEW_OPTIONS = { sortBy: 'none', sortReversed: false, iconSize: 253, gridSpacing: 54, cornerRadius: 0.06, textSize: 12, labelPosition: 'bottom', showItemInfo: true, showIconPreview: true, background: 'default', backgroundColor: null, grain: Boolean(pageBackground && pageBackground.classList.contains('has-grain')) };
     const viewOptionsPanel = document.getElementById('view-options-panel');
     const viewOptionsTitleBar = viewOptionsPanel && viewOptionsPanel.querySelector('.view-options-title-bar');
     const viewOptionsCloseButton = viewOptionsPanel && viewOptionsPanel.querySelector('.view-options-close');
@@ -1772,6 +1776,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const showIconPreviewCheckbox = document.getElementById('view-options-show-icon-preview');
     const backgroundRadios = viewOptionsPanel ? Array.from(viewOptionsPanel.querySelectorAll('input[name="view-options-background"]')) : [];
     const backgroundColorInput = document.getElementById('view-options-background-color');
+    const grainCheckbox = document.getElementById('view-options-grain');
     const useAsDefaultsButton = document.getElementById('view-options-use-as-defaults');
     let viewOptions = readViewOptions();
     let viewOptionsPanelPosition = null;
@@ -1810,6 +1815,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (stored && typeof stored.showIconPreview === 'boolean') options.showIconPreview = stored.showIconPreview;
         if (stored && (stored.background === 'default' || stored.background === 'color')) options.background = stored.background;
         if (stored && /^#[0-9a-f]{6}$/i.test(stored.backgroundColor)) options.backgroundColor = stored.backgroundColor;
+        if (stored && typeof stored.grain === 'boolean') options.grain = stored.grain;
         return options;
     }
 
@@ -2022,6 +2028,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (backgroundColorInput && viewOptions.backgroundColor) backgroundColorInput.value = viewOptions.backgroundColor;
     }
 
+    function applyGrain() {
+        if (pageBackground) pageBackground.classList.toggle('has-grain', viewOptions.grain);
+        if (grainCheckbox) grainCheckbox.checked = viewOptions.grain;
+    }
+
     // Whether an item draws its thumbnail rather than its kind icon.
     function showsThumbnail(item) {
         return viewOptions.showIconPreview && item.classList.contains('is-visible');
@@ -2186,6 +2197,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    if (grainCheckbox) {
+        grainCheckbox.addEventListener('change', () => {
+            viewOptions.grain = grainCheckbox.checked;
+            saveViewOptions();
+            applyGrain();
+        });
+    }
+
     // Binder's Use as Defaults: every option, saved for the galleries that
     // have none of their own. This one keeps its own.
     if (useAsDefaultsButton) {
@@ -2268,6 +2287,7 @@ document.addEventListener('DOMContentLoaded', () => {
     applyShowItemInfo();
     applyShowIconPreview();
     applyBackground();
+    applyGrain();
 
     // --- Sort By ---
     // Binder's Sort By, after Finder's, with the keys these galleries have.
