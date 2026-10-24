@@ -82,7 +82,7 @@
 
         --thumb-glow: 0 calc(4px * var(--thumb-shadow-offset-scale, 1)) calc(14px * var(--thumb-shadow-blur-scale, 1)) rgba(0, 0, 0, 0.28);
 
-        --accent: #a25d39;
+        --accent: #9c6247;
         --accent-glow: 0 0 calc(14px * var(--selection-glow-scale, 1)) calc(1.5px * var(--selection-glow-scale, 1)) rgba(204, 129, 70, 0.65);
         --accent-text-glow: 0 0 22px rgba(204, 129, 70, 0.38);
         --all-people-focus-pill: rgba(156, 98, 71, 0.2);
@@ -1973,7 +1973,7 @@ body.is-sidebar-collapsed #gallery-blur-layer {
 #photo-gallery.has-custom-background ~ #footer {
     --ink-rgb: 31, 27, 24;
     --thumb-glow: 0 calc(4px * var(--thumb-shadow-offset-scale, 1)) calc(14px * var(--thumb-shadow-blur-scale, 1)) rgba(0, 0, 0, 0.28);
-    --accent: #a25d39;
+    --accent: #9c6247;
     --accent-glow: 0 0 calc(14px * var(--selection-glow-scale, 1)) calc(1.5px * var(--selection-glow-scale, 1)) rgba(204, 129, 70, 0.65);
     --accent-text-glow: 0 0 22px rgba(204, 129, 70, 0.38);
     color: rgb(var(--ink-rgb));
