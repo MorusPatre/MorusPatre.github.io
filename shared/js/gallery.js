@@ -4915,7 +4915,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const isHorizontallyNear = e.clientX >= thumbRect.left - proximity;
                 const isVerticallyNear = (e.clientY >= thumbRect.top - proximity) && (e.clientY <= thumbRect.bottom + proximity);
 
-                if (isHorizontallyNear && isVerticallyNear && e.clientX < window.innerWidth - 2) {
+                // A marquee leaves the scroller narrow, even one dragged
+                // right past it.
+                const isMarqueeDragging = document.body.classList.contains('is-marquee-dragging');
+
+                if (!isMarqueeDragging && isHorizontallyNear && isVerticallyNear && e.clientX < window.innerWidth - 2) {
                     thumb.classList.add('is-near');
                 } else {
                     thumb.classList.remove('is-near');
