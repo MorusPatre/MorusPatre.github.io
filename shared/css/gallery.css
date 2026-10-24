@@ -82,8 +82,7 @@
 
         --thumb-glow: 0 calc(4px * var(--thumb-shadow-offset-scale, 1)) calc(14px * var(--thumb-shadow-blur-scale, 1)) rgba(0, 0, 0, 0.28);
 
-        /* The copper ring marks the selection; the glow around it stays soft. */
-        --accent: #a8582a;
+        --accent: #9c6247;
         --accent-glow: 0 0 calc(16px * var(--selection-glow-scale, 1)) rgba(176, 108, 70, 0.4);
         --accent-text-glow: 0 0 22px rgba(176, 108, 70, 0.25);
         --all-people-focus-pill: rgba(156, 98, 71, 0.2);
@@ -1974,7 +1973,7 @@ body.is-sidebar-collapsed #gallery-blur-layer {
 #photo-gallery.has-custom-background ~ #footer {
     --ink-rgb: 31, 27, 24;
     --thumb-glow: 0 calc(4px * var(--thumb-shadow-offset-scale, 1)) calc(14px * var(--thumb-shadow-blur-scale, 1)) rgba(0, 0, 0, 0.28);
-    --accent: #a8582a;
+    --accent: #9c6247;
     --accent-glow: 0 0 calc(16px * var(--selection-glow-scale, 1)) rgba(176, 108, 70, 0.4);
     --accent-text-glow: 0 0 22px rgba(176, 108, 70, 0.25);
     color: rgb(var(--ink-rgb));
