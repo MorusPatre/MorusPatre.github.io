@@ -82,12 +82,10 @@
 
         --thumb-glow: 0 calc(4px * var(--thumb-shadow-offset-scale, 1)) calc(14px * var(--thumb-shadow-blur-scale, 1)) rgba(0, 0, 0, 0.28);
 
-        /* A glow can't lighten a light page, and a dark one reads as the
-           thumbnail's own shadow, so the selection is a saturated amber rim
-           hugging the thumbnail instead, with a deeper copper hairline and name. */
+        /* The copper ring marks the selection; the glow around it stays soft. */
         --accent: #a8582a;
-        --accent-glow: 0 0 calc(12px * var(--selection-glow-scale, 1)) calc(3px * var(--selection-glow-scale, 1)) rgba(232, 150, 70, 0.9);
-        --accent-text-glow: 0 0 22px rgba(232, 150, 70, 0.5);
+        --accent-glow: 0 0 calc(16px * var(--selection-glow-scale, 1)) rgba(176, 108, 70, 0.4);
+        --accent-text-glow: 0 0 22px rgba(176, 108, 70, 0.25);
         --all-people-focus-pill: rgba(156, 98, 71, 0.2);
         --text-selection: rgba(222, 168, 96, 0.35);
 
@@ -1977,8 +1975,8 @@ body.is-sidebar-collapsed #gallery-blur-layer {
     --ink-rgb: 31, 27, 24;
     --thumb-glow: 0 calc(4px * var(--thumb-shadow-offset-scale, 1)) calc(14px * var(--thumb-shadow-blur-scale, 1)) rgba(0, 0, 0, 0.28);
     --accent: #a8582a;
-    --accent-glow: 0 0 calc(12px * var(--selection-glow-scale, 1)) calc(3px * var(--selection-glow-scale, 1)) rgba(232, 150, 70, 0.9);
-    --accent-text-glow: 0 0 22px rgba(232, 150, 70, 0.5);
+    --accent-glow: 0 0 calc(16px * var(--selection-glow-scale, 1)) rgba(176, 108, 70, 0.4);
+    --accent-text-glow: 0 0 22px rgba(176, 108, 70, 0.25);
     color: rgb(var(--ink-rgb));
 }
 
