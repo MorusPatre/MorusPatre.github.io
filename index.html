@@ -7,6 +7,7 @@
     <meta name="color-scheme" content="dark light" />
     <link rel="icon" type="image/png" href="images/favicon-dancer.png">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,600">
+    <link rel="stylesheet" href="shared/css/history-nav.css?v=20261024-1">
     <style>
         /* Core Styles from main.css */
         html, body, div, span, h1, p, a, figure, figcaption, header, footer { margin: 0; padding: 0; border: 0; font-size: 100%; font: inherit; vertical-align: baseline; }
@@ -21,6 +22,8 @@
             --ink-rgb: 255, 255, 255;
             --accent: #dbb7a7;
             --cover-glow: 0 0 25px rgba(255, 255, 255, 0.2);
+            /* The galleries' menu panel, for Back and Forward's menus. */
+            --panel-rgb: 25, 25, 25;
         }
 
         @media (prefers-color-scheme: light) {
@@ -32,6 +35,7 @@
                 --ink-rgb: 31, 27, 24;
                 --accent: #9c6247;
                 --cover-glow: 0 0 25px rgba(60, 50, 40, 0.18);
+                --panel-rgb: 250, 249, 247;
             }
         }
 
@@ -172,6 +176,19 @@
     </style>
 </head>
 <body>
+    <nav id="history-nav" class="history-nav" aria-label="Back and Forward">
+        <button id="history-back" class="history-nav-button" type="button" aria-label="Back" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M14.1 5.52 7.42 12l6.68 6.48"></path>
+            </svg>
+        </button>
+        <button id="history-forward" class="history-nav-button" type="button" aria-label="Forward" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="m9.64 5.52 6.68 6.48-6.68 6.48"></path>
+            </svg>
+        </button>
+    </nav>
+
     <div id="wrapper">
         <div id="project-links">
 
@@ -216,15 +233,11 @@
     
     <div id="bg"></div>
 
+    <script src="shared/js/history-nav.js?v=20261024-1"></script>
     <script>
-        // The galleries' Back and Forward menus name this page by its title.
-        try {
-            navigation.updateCurrentEntry({ state: { title: document.title } });
-        } catch (error) {
-            // Without the Navigation API they name it by its address.
-        }
-
         document.addEventListener('DOMContentLoaded', () => {
+            setUpSiteHistoryNav();
+
             const projects = [
                 { id: 'got-count', path: 'game-of-thrones/gallery-data.json' },
                 { id: 'hotd-count', path: 'house-of-the-dragon/gallery-data.json' },

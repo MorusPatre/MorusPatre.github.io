@@ -1,0 +1,125 @@
+/*
+==================================================================
+Back and Forward
+==================================================================
+Binder's toolbar pair, on every page of the site (shared/js/history-nav.js).
+Each is a button like the galleries' sidebar toggle, its chevron drawn in
+the toggle's stroke, sized and placed against the toggle's glyph as SF
+Symbols' chevron.left and chevron.right are against sidebar.left.
+
+Sizes are in points of the galleries' 16pt type, so they come out the same
+on a page set in other type. By default the pair sits where the galleries'
+toggle does; a page can place it elsewhere (the galleries, past their
+sidebar) with a later rule.
+*/
+
+.history-nav {
+    position: fixed;
+    top: calc((40pt - 28px) / 2);
+    left: 20px;
+    z-index: 12;
+    display: flex;
+}
+
+.history-nav-button {
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    box-shadow: none;
+    color: var(--ink);
+    line-height: normal;
+    cursor: default;
+    -webkit-appearance: none;
+    appearance: none;
+    -moz-transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+    -webkit-transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+    -ms-transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+}
+
+.history-nav-button svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.history-nav-button:hover, .history-nav-button:focus-visible {
+    background: rgba(var(--ink-rgb), 0.1);
+}
+
+/* Lit while pressed, and while its menu of places is open. */
+.history-nav-button:active, .history-nav-button.is-pressed {
+    background: rgba(var(--ink-rgb), 0.175);
+}
+
+.history-nav-button:focus {
+    outline: none;
+}
+
+.history-nav-button:disabled {
+    opacity: 0.25;
+    pointer-events: none;
+}
+
+/* No room for them on a phone: its own Back and Forward gestures walk the
+   same places. */
+@media screen and (max-width: 736px) {
+
+    .history-nav {
+        display: none;
+    }
+
+}
+
+/* Held, a button lists the places that way, nearest first, under itself,
+   in the look of the galleries' context menus. */
+.history-menu {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    max-width: min(448pt, calc(100vw - 16px));
+    overflow-y: auto;
+    background-color: rgba(var(--panel-rgb), 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(var(--ink-rgb), 0.1);
+    border-radius: 8px;
+    padding: 5px 0;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    font-family: "Source Sans Pro", sans-serif;
+    font-weight: 300;
+    font-size: 10.4pt;
+    line-height: 1.65;
+    color: var(--ink);
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+.history-menu ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.history-menu ul li {
+    padding: 8px 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: default;
+}
+
+.history-menu ul li:hover {
+    background-color: rgba(var(--ink-rgb), 0.1);
+}

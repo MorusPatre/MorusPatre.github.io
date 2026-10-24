@@ -5465,15 +5465,11 @@ two buttons do, and a reload puts the visit back. The site's other pages
 in that history are places too: Back from a gallery's first visit goes
 to the page before it, the home page say, as Back in Finder goes from a
 folder to the one opened before it. Each visit keeps its scroll position;
-a new one starts at the top. Held for a moment, a button lists the
-places its way, nearest first, as Binder's segments do.
+a new one starts at the top. The buttons and their menus are the site's
+(shared/js/history-nav.js); this gallery hands them its visits.
 */
 
 const GALLERY_HISTORY_STORAGE_PREFIX = 'galleryHistory:';
-// AppKit's click-and-hold time for a segment's menu (HIMouseTracking 'clho'),
-// and its square around the press: a drag out of it opens the menu at once.
-const GALLERY_HISTORY_MENU_DELAY = 250;
-const GALLERY_HISTORY_MENU_DRAG_SLOP = 6;
 const GALLERY_HISTORY_SAVE_DELAY = 300;
 // A browser keeps about this many entries per tab; older visits are gone.
 const GALLERY_HISTORY_MAX_ENTRIES = 100;
@@ -5488,16 +5484,7 @@ const galleryHistoryState = {
     isRestoring: false,
     replaceTimer: null,
     saveTimer: null,
-    episodeTitles: null,
-    backButton: null,
-    forwardButton: null,
-    menu: null,
-    menuButton: null,
-    holdTimer: null,
-    pressedButton: null,
-    pressX: 0,
-    pressY: 0,
-    isMenuHeld: false
+    episodeTitles: null
 };
 
 function createGalleryHistoryId() {
@@ -5807,38 +5794,6 @@ function adoptGalleryHistoryEntryState(entryState) {
     state.index = index;
 }
 
-// The tab's run of this site's pages as the browser lists it, around the
-// one on screen: the gallery's visits, and before or after them the home
-// page or another gallery. Null where the browser doesn't say.
-function getSiteHistory() {
-    const navigation = window.navigation;
-    if (!navigation || !navigation.currentEntry || typeof navigation.entries !== 'function') return null;
-
-    const entries = navigation.entries();
-    const current = navigation.currentEntry.index;
-
-    return current >= 0 && entries[current] ? { entries, current } : null;
-}
-
-// Another page's name in the menus: the one it left with the browser (after
-// its gallery's name, when that is another gallery), or else its address.
-function getSitePageTitle(browserEntry) {
-    let saved = null;
-    try {
-        saved = browserEntry.getState();
-    } catch (error) {
-        saved = null;
-    }
-
-    if (saved && saved.title) {
-        const page = saved.page || saved.title;
-        return page === saved.title || page === document.title ? saved.title : `${page} \u00B7 ${saved.title}`;
-    }
-
-    const path = browserEntry.url ? new URL(browserEntry.url).pathname.replace(/\/(index\.html)?$/, '') : '';
-    return path ? decodeURIComponent(path.split('/').pop()).replace(/[-_]+/g, ' ') : location.hostname;
-}
-
 // Where the tab is among the places Back and Forward reach: the site's pages
 // where the browser lists them, else this gallery's visits alone.
 function getGalleryHistoryPosition() {
@@ -5877,9 +5832,7 @@ function syncGalleryHistory() {
 
     reconcileGalleryHistory();
 
-    const position = getGalleryHistoryPosition();
-    if (state.backButton) state.backButton.disabled = position.index <= 0;
-    if (state.forwardButton) state.forwardButton.disabled = position.index >= position.count - 1;
+    refreshSiteHistoryNav();
 
     scheduleGalleryHistorySave();
 }
@@ -5902,7 +5855,7 @@ function handleGalleryHistoryPopState(event) {
     // The tab is already on another entry: what was typed waits for no one.
     clearTimeout(state.replaceTimer);
     state.replaceTimer = null;
-    closeGalleryHistoryMenu();
+    closeSiteHistoryMenu();
 
     const outgoing = getCurrentGalleryHistoryEntry();
     if (outgoing) outgoing.scroll = readGalleryScroll();
@@ -5940,28 +5893,6 @@ function initGalleryHistory() {
 
 // --- The Menus ---
 
-function getGalleryHistoryMenu() {
-    const state = galleryHistoryState;
-
-    if (!state.menu) {
-        const menu = document.createElement('div');
-        menu.id = 'gallery-history-menu';
-        menu.className = 'context-menu';
-        menu.setAttribute('role', 'menu');
-        menu.appendChild(document.createElement('ul'));
-
-        menu.addEventListener('click', event => {
-            const item = event.target.closest('li[data-history-delta]');
-            if (item) chooseGalleryHistoryMenuItem(item);
-        });
-
-        document.body.appendChild(menu);
-        state.menu = menu;
-    }
-
-    return state.menu;
-}
-
 // The places one way, nearest first: this gallery's visits named from its
 // list, the site's other pages by the names they left.
 function getGalleryHistoryMenuItems(direction) {
@@ -5989,153 +5920,14 @@ function getGalleryHistoryMenuItems(direction) {
     return items;
 }
 
-function openGalleryHistoryMenu(button, direction) {
-    const state = galleryHistoryState;
-    const menu = getGalleryHistoryMenu();
-    const list = menu.querySelector('ul');
-
-    list.replaceChildren();
-    getGalleryHistoryMenuItems(direction).forEach(({ delta, title }) => {
-        const item = document.createElement('li');
-        item.setAttribute('role', 'menuitem');
-        item.dataset.historyDelta = String(delta);
-        item.textContent = title;
-        list.appendChild(item);
-    });
-
-    if (list.children.length === 0) return;
-
-    const rect = button.getBoundingClientRect();
-    menu.style.display = 'block';
-    menu.style.left = `${Math.round(rect.left)}px`;
-    menu.style.top = `${Math.round(rect.bottom + 4)}px`;
-    menu.style.maxHeight = `${Math.max(120, window.innerHeight - rect.bottom - 12)}px`;
-
-    state.menuButton = button;
-    button.classList.add('is-pressed');
-}
-
-function closeGalleryHistoryMenu() {
-    const state = galleryHistoryState;
-    if (state.menu) state.menu.style.display = 'none';
-    if (state.menuButton) state.menuButton.classList.remove('is-pressed');
-    state.menuButton = null;
-    state.isMenuHeld = false;
-}
-
-function isGalleryHistoryMenuOpen() {
-    return Boolean(galleryHistoryState.menuButton);
-}
-
-function chooseGalleryHistoryMenuItem(item) {
-    const delta = Number(item.dataset.historyDelta);
-    closeGalleryHistoryMenu();
-    goGalleryHistory(delta);
-}
-
-// --- The Buttons ---
-// A click goes one visit; held for AppKit's delay, or dragged off the spot,
-// the button's menu opens under it instead, and letting go over a visit goes
-// there. Like a toolbar button, neither takes focus from what has it.
-
-function setUpGalleryHistoryButton(button, direction) {
-    const state = galleryHistoryState;
-
-    button.addEventListener('mousedown', event => {
-        if (event.button !== 0) return;
-        event.preventDefault();
-
-        if (state.menuButton === button) {
-            closeGalleryHistoryMenu();
-            return;
-        }
-
-        closeGalleryHistoryMenu();
-        clearTimeout(state.holdTimer);
-        state.pressedButton = button;
-        state.pressX = event.clientX;
-        state.pressY = event.clientY;
-        button.classList.add('is-pressed');
-        state.holdTimer = setTimeout(() => openHeldGalleryHistoryMenu(button, direction), GALLERY_HISTORY_MENU_DELAY);
-    });
-
-    // Return and Space, and assistive clicks, which come without a press.
-    button.addEventListener('click', event => {
-        if (event.detail === 0) goGalleryHistory(direction);
-    });
-}
-
-function openHeldGalleryHistoryMenu(button, direction) {
-    const state = galleryHistoryState;
-    clearTimeout(state.holdTimer);
-    state.holdTimer = null;
-    state.isMenuHeld = true;
-    openGalleryHistoryMenu(button, direction);
-    if (!isGalleryHistoryMenuOpen()) button.classList.remove('is-pressed');
-}
-
-function handleGalleryHistoryMouseMove(event) {
-    const state = galleryHistoryState;
-    if (!state.holdTimer || !state.pressedButton) return;
-
-    const half = GALLERY_HISTORY_MENU_DRAG_SLOP / 2;
-    if (Math.abs(event.clientX - state.pressX) < half && Math.abs(event.clientY - state.pressY) < half) return;
-
-    const button = state.pressedButton;
-    openHeldGalleryHistoryMenu(button, button === state.backButton ? -1 : 1);
-}
-
-function handleGalleryHistoryMouseUp(event) {
-    const state = galleryHistoryState;
-    const button = state.pressedButton;
-    if (!button) return;
-
-    state.pressedButton = null;
-
-    if (state.holdTimer) {
-        clearTimeout(state.holdTimer);
-        state.holdTimer = null;
-        button.classList.remove('is-pressed');
-        if (button.contains(event.target)) goGalleryHistory(button === state.backButton ? -1 : 1);
-        return;
-    }
-
-    if (state.isMenuHeld) {
-        state.isMenuHeld = false;
-        const item = event.target.closest && event.target.closest('#gallery-history-menu li[data-history-delta]');
-        // Let go anywhere else and the menu stays open for a click.
-        if (item) chooseGalleryHistoryMenuItem(item);
-    }
-}
-
 document.addEventListener('DOMContentLoaded', () => {
     const state = galleryHistoryState;
-    state.backButton = document.getElementById('history-back');
-    state.forwardButton = document.getElementById('history-forward');
-    if (!state.backButton || !state.forwardButton) return;
 
-    setUpGalleryHistoryButton(state.backButton, -1);
-    setUpGalleryHistoryButton(state.forwardButton, 1);
-
-    document.addEventListener('mousemove', handleGalleryHistoryMouseMove);
-    document.addEventListener('mouseup', handleGalleryHistoryMouseUp);
-
-    document.addEventListener('mousedown', event => {
-        if (!isGalleryHistoryMenuOpen()) return;
-        if (state.menu.contains(event.target) || state.menuButton.contains(event.target)) return;
-        closeGalleryHistoryMenu();
-    }, true);
-
-    document.addEventListener('keydown', event => {
-        if (event.key === 'Escape' && isGalleryHistoryMenuOpen()) {
-            event.preventDefault();
-            event.stopPropagation();
-            closeGalleryHistoryMenu();
-        }
-    }, true);
-
-    window.addEventListener('resize', closeGalleryHistoryMenu);
-    window.addEventListener('blur', closeGalleryHistoryMenu);
+    setUpSiteHistoryNav({
+        getPosition: getGalleryHistoryPosition,
+        getMenuItems: getGalleryHistoryMenuItems,
+        go: goGalleryHistory
+    });
 
     // Registered after the gallery's own listeners, so a visit is taken up
     // once the gallery, its groups and its sidebar have been set up.
