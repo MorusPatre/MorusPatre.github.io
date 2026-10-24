@@ -217,6 +217,13 @@
     <div id="bg"></div>
 
     <script>
+        // The galleries' Back and Forward menus name this page by its title.
+        try {
+            navigation.updateCurrentEntry({ state: { title: document.title } });
+        } catch (error) {
+            // Without the Navigation API they name it by its address.
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const projects = [
                 { id: 'got-count', path: 'game-of-thrones/gallery-data.json' },

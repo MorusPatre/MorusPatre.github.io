@@ -5461,9 +5461,12 @@ after it refine that visit in place, as Finder's typed search does.
 
 The visits are the tab's own history entries, so the browser's Back and
 Forward, ⌘[ and ⌘], swipes and a mouse's side buttons walk them as the
-two buttons do, and a reload puts the visit back. Each visit keeps its
-scroll position; a new one starts at the top. Held for a moment, a
-button lists the visits its way, nearest first, as Binder's segments do.
+two buttons do, and a reload puts the visit back. The site's other pages
+in that history are places too: Back from a gallery's first visit goes
+to the page before it, the home page say, as Back in Finder goes from a
+folder to the one opened before it. Each visit keeps its scroll position;
+a new one starts at the top. Held for a moment, a button lists the
+places its way, nearest first, as Binder's segments do.
 */
 
 const GALLERY_HISTORY_STORAGE_PREFIX = 'galleryHistory:';
@@ -5648,6 +5651,21 @@ function writeGalleryHistoryEntryState(write, entry) {
     } catch (error) {
         // A browser that rations history calls: the list still has the visit.
     }
+
+    writeGalleryHistoryEntryName(entry);
+}
+
+// The visit's name, left with the browser for the menus of the site's
+// other pages, with the gallery it belongs to.
+function writeGalleryHistoryEntryName(entry) {
+    const navigation = window.navigation;
+    if (!entry || !navigation || typeof navigation.updateCurrentEntry !== 'function') return;
+
+    try {
+        navigation.updateCurrentEntry({ state: { title: getGalleryLocationTitle(entry.location), page: document.title } });
+    } catch (error) {
+        // The page is going: the visit keeps the name it had.
+    }
 }
 
 // A search refined letter by letter is written into its entry once the
@@ -5789,17 +5807,59 @@ function adoptGalleryHistoryEntryState(entryState) {
     state.index = index;
 }
 
+// The tab's run of this site's pages as the browser lists it, around the
+// one on screen: the gallery's visits, and before or after them the home
+// page or another gallery. Null where the browser doesn't say.
+function getSiteHistory() {
+    const navigation = window.navigation;
+    if (!navigation || !navigation.currentEntry || typeof navigation.entries !== 'function') return null;
+
+    const entries = navigation.entries();
+    const current = navigation.currentEntry.index;
+
+    return current >= 0 && entries[current] ? { entries, current } : null;
+}
+
+// Another page's name in the menus: the one it left with the browser (after
+// its gallery's name, when that is another gallery), or else its address.
+function getSitePageTitle(browserEntry) {
+    let saved = null;
+    try {
+        saved = browserEntry.getState();
+    } catch (error) {
+        saved = null;
+    }
+
+    if (saved && saved.title) {
+        const page = saved.page || saved.title;
+        return page === saved.title || page === document.title ? saved.title : `${page} \u00B7 ${saved.title}`;
+    }
+
+    const path = browserEntry.url ? new URL(browserEntry.url).pathname.replace(/\/(index\.html)?$/, '') : '';
+    return path ? decodeURIComponent(path.split('/').pop()).replace(/[-_]+/g, ' ') : location.hostname;
+}
+
+// Where the tab is among the places Back and Forward reach: the site's pages
+// where the browser lists them, else this gallery's visits alone.
+function getGalleryHistoryPosition() {
+    const state = galleryHistoryState;
+    const site = getSiteHistory();
+
+    return site
+        ? { index: site.current, count: site.entries.length }
+        : { index: state.index, count: state.entries.length };
+}
+
 // The browser may have let visits go (a page opened from one of them drops
 // those after it; a long run drops the oldest). Where it says which entries
 // are this page's, the list keeps only those.
 function reconcileGalleryHistory() {
     const state = galleryHistoryState;
-    const navigation = window.navigation;
-    if (!navigation || !navigation.currentEntry || typeof navigation.entries !== 'function') return;
+    const site = getSiteHistory();
+    if (!site) return;
 
-    const browserEntries = navigation.entries();
-    const current = navigation.currentEntry.index;
-    if (current < 0 || !browserEntries[current]) return;
+    const browserEntries = site.entries;
+    const current = site.current;
 
     let back = 0;
     while (current - back - 1 >= 0 && browserEntries[current - back - 1].sameDocument) back++;
@@ -5817,16 +5877,18 @@ function syncGalleryHistory() {
 
     reconcileGalleryHistory();
 
-    if (state.backButton) state.backButton.disabled = state.index <= 0;
-    if (state.forwardButton) state.forwardButton.disabled = state.index >= state.entries.length - 1;
+    const position = getGalleryHistoryPosition();
+    if (state.backButton) state.backButton.disabled = position.index <= 0;
+    if (state.forwardButton) state.forwardButton.disabled = position.index >= position.count - 1;
 
     scheduleGalleryHistorySave();
 }
 
 function goGalleryHistory(delta) {
     const state = galleryHistoryState;
-    const target = state.index + delta;
-    if (!state.isReady || delta === 0 || target < 0 || target >= state.entries.length) return;
+    const position = getGalleryHistoryPosition();
+    const target = position.index + delta;
+    if (!state.isReady || delta === 0 || target < 0 || target >= position.count) return;
 
     flushGalleryHistoryReplace();
     history.go(delta);
@@ -5847,6 +5909,7 @@ function handleGalleryHistoryPopState(event) {
 
     adoptGalleryHistoryEntryState(entryState);
     showGalleryHistoryEntry(getCurrentGalleryHistoryEntry());
+    writeGalleryHistoryEntryName(getCurrentGalleryHistoryEntry());
     syncGalleryHistory();
 }
 
@@ -5858,6 +5921,7 @@ function initGalleryHistory() {
         // A reload, or a return to this page: the visit as it was left.
         adoptGalleryHistoryEntryState(entryState);
         showGalleryHistoryEntry(getCurrentGalleryHistoryEntry());
+        writeGalleryHistoryEntryName(getCurrentGalleryHistoryEntry());
     } else {
         state.session = createGalleryHistoryId();
         state.entries = [{
@@ -5898,20 +5962,46 @@ function getGalleryHistoryMenu() {
     return state.menu;
 }
 
+// The places one way, nearest first: this gallery's visits named from its
+// list, the site's other pages by the names they left.
+function getGalleryHistoryMenuItems(direction) {
+    const state = galleryHistoryState;
+    const site = getSiteHistory();
+    const items = [];
+
+    if (!site) {
+        for (let index = state.index + direction; index >= 0 && index < state.entries.length; index += direction) {
+            items.push({ delta: index - state.index, title: getGalleryLocationTitle(state.entries[index].location) });
+        }
+        return items;
+    }
+
+    const ownStart = site.current - state.index;
+    for (let index = site.current + direction; index >= 0 && index < site.entries.length; index += direction) {
+        const own = index - ownStart;
+        const isOwn = site.entries[index].sameDocument && own >= 0 && own < state.entries.length;
+        items.push({
+            delta: index - site.current,
+            title: isOwn ? getGalleryLocationTitle(state.entries[own].location) : getSitePageTitle(site.entries[index])
+        });
+    }
+
+    return items;
+}
+
 function openGalleryHistoryMenu(button, direction) {
     const state = galleryHistoryState;
     const menu = getGalleryHistoryMenu();
     const list = menu.querySelector('ul');
-    const end = direction < 0 ? -1 : state.entries.length;
 
     list.replaceChildren();
-    for (let index = state.index + direction; index !== end; index += direction) {
+    getGalleryHistoryMenuItems(direction).forEach(({ delta, title }) => {
         const item = document.createElement('li');
         item.setAttribute('role', 'menuitem');
-        item.dataset.historyDelta = String(index - state.index);
-        item.textContent = getGalleryLocationTitle(state.entries[index].location);
+        item.dataset.historyDelta = String(delta);
+        item.textContent = title;
         list.appendChild(item);
-    }
+    });
 
     if (list.children.length === 0) return;
 
