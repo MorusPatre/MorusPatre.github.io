@@ -1753,14 +1753,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // Label position Right puts the name beside the icon; ungrouped, the
     // gallery then runs sideways, as Finder's does. Background is Default or
     // a Color, picked as Binder picks it; Binder's Picture is left out.
-    // Grain, which Binder hasn't, draws a film grain on the page's background;
-    // a page starts with it when its #bg has it in the markup, as The
-    // Witcher's does.
+    // Grain, which Binder hasn't, draws a film grain on the background, the
+    // page's own or the colour; a page starts with it when its #bg has it in
+    // the markup, as The Witcher's does. Its Amount, Size, Density and Tone
+    // start at the grain The Witcher had and run 0 to 400%, 1 to 6 times,
+    // 0 to 100% and dark to light.
     const VIEW_OPTIONS_STORAGE_PREFIX = 'galleryViewOptions:';
     const VIEW_OPTIONS_PANEL_STORAGE_KEY = 'galleryViewOptionsPanel';
     const VIEW_OPTIONS_DEFAULTS_STORAGE_KEY = 'galleryViewOptionsDefaults';
     const pageBackground = document.getElementById('bg');
-    const DEFAULT_VIEW_OPTIONS = { sortBy: 'none', sortReversed: false, iconSize: 253, gridSpacing: 54, cornerRadius: 0.06, textSize: 12, labelPosition: 'bottom', showItemInfo: true, showIconPreview: true, background: 'default', backgroundColor: null, grain: Boolean(pageBackground && pageBackground.classList.contains('has-grain')) };
+    const pageBackgroundColor = document.getElementById('bg-color');
+    const DEFAULT_VIEW_OPTIONS = { sortBy: 'none', sortReversed: false, iconSize: 253, gridSpacing: 54, cornerRadius: 0.06, textSize: 12, labelPosition: 'bottom', showItemInfo: true, showIconPreview: true, background: 'default', backgroundColor: null, grain: Boolean(pageBackground && pageBackground.classList.contains('has-grain')), grainAmount: 1, grainSize: 1, grainDensity: 0.4, grainTone: 0 };
     const viewOptionsPanel = document.getElementById('view-options-panel');
     const viewOptionsTitleBar = viewOptionsPanel && viewOptionsPanel.querySelector('.view-options-title-bar');
     const viewOptionsCloseButton = viewOptionsPanel && viewOptionsPanel.querySelector('.view-options-close');
@@ -1777,6 +1780,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const backgroundRadios = viewOptionsPanel ? Array.from(viewOptionsPanel.querySelectorAll('input[name="view-options-background"]')) : [];
     const backgroundColorInput = document.getElementById('view-options-background-color');
     const grainCheckbox = document.getElementById('view-options-grain');
+    // Grain's sliders run in whole steps: each option is its slider's value
+    // over its scale, and reads as its format gives it.
+    const GRAIN_SETTINGS = [
+        { key: 'grainAmount', id: 'view-options-grain-amount', scale: 100, min: 0, max: 400, format: value => `${Math.round(value * 100)}%` },
+        { key: 'grainSize', id: 'view-options-grain-size', scale: 10, min: 10, max: 60, format: value => `${value}×` },
+        { key: 'grainDensity', id: 'view-options-grain-density', scale: 100, min: 0, max: 100, format: value => `${Math.round(value * 100)}%` },
+        { key: 'grainTone', id: 'view-options-grain-tone', scale: 100, min: 0, max: 100, format: value => (value === 0 ? 'Dark' : value === 1 ? 'Light' : 'Mixed') }
+    ].map(setting => ({ ...setting, slider: document.getElementById(setting.id), output: document.getElementById(`${setting.id}-value`) }));
     const useAsDefaultsButton = document.getElementById('view-options-use-as-defaults');
     let viewOptions = readViewOptions();
     let viewOptionsPanelPosition = null;
@@ -1816,6 +1827,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (stored && (stored.background === 'default' || stored.background === 'color')) options.background = stored.background;
         if (stored && /^#[0-9a-f]{6}$/i.test(stored.backgroundColor)) options.backgroundColor = stored.backgroundColor;
         if (stored && typeof stored.grain === 'boolean') options.grain = stored.grain;
+        GRAIN_SETTINGS.forEach(({ key, scale, min, max }) => {
+            if (stored && Number.isFinite(stored[key])) options[key] = Math.min(Math.max(Math.round(stored[key] * scale), min), max) / scale;
+        });
         return options;
     }
 
@@ -2016,11 +2030,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Color fills the area right of the sidebar, and the gallery takes the
-    // light appearance over it. Until a colour is picked, Color shows as
+    // light appearance over it. The colour is laid on the page's background,
+    // where the grain can lie on it. Until a colour is picked, Color shows as
     // Default, as in Binder; the colour is kept while Default is chosen.
     function applyBackground() {
         const color = viewOptions.background === 'color' ? viewOptions.backgroundColor : null;
-        wrapper.style.backgroundColor = color || '';
+        if (pageBackgroundColor) {
+            pageBackgroundColor.hidden = !color;
+            pageBackgroundColor.style.backgroundColor = color || '';
+        }
         gallery.classList.toggle('has-custom-background', Boolean(color));
         backgroundRadios.forEach(radio => {
             radio.checked = radio.value === (color ? 'color' : 'default');
@@ -2028,9 +2046,127 @@ document.addEventListener('DOMContentLoaded', () => {
         if (backgroundColorInput && viewOptions.backgroundColor) backgroundColorInput.value = viewOptions.backgroundColor;
     }
 
+    // The grain is drawn here rather than loaded, so that it can lie on a
+    // colour as well. It is a tile of 256 pixels shown at 128 points, two
+    // pixels to a point, as the overlay it replaces was. That overlay was
+    // white noise: two pixels in five a black speck, half of those at 25/255
+    // and the rest spread evenly under it. Here each pixel is a cell with its
+    // own place in the noise, and Size makes the cells that many pixels
+    // across, each speck a soft round grain: the same grain, larger, its
+    // specks still apart, where a blur would run them together. Amount
+    // scales the specks, Density is the share of cells that are one, and Tone
+    // draws a share of them light, from the other end of the noise. The noise
+    // is the same every time, so the grain comes back as it was.
+    const GRAIN_TILE_PIXELS = 256;
+    const GRAIN_SPECK_ALPHA = 25 / 255;
+    let grainCells = null;
+    let grainDrawn = null;
+    let grainFrame = 0;
+
+    // A cell's place in the noise, from where it is: MurmurHash3's finish.
+    function hashGrainCell(x, y, salt) {
+        let hash = Math.imul(x, 0x27d4eb2d) ^ Math.imul(y, 0x165667b1) ^ salt;
+        hash = Math.imul(hash ^ (hash >>> 15), 0x85ebca6b);
+        hash = Math.imul(hash ^ (hash >>> 13), 0xc2b2ae35);
+        return ((hash ^ (hash >>> 16)) >>> 0) / 4294967296;
+    }
+
+    // The cells at a size, as many across as fit the tile whole, so it still
+    // repeats unseen. Each grain is nudged off the lattice by up to a quarter
+    // of a cell, so that large ones don't line up, not at all at 1, and made
+    // 0.7 to 1.3 times its usual width, so that they aren't all alike.
+    function getGrainCells(size) {
+        if (grainCells && grainCells.size === size) return grainCells;
+
+        const count = Math.round(GRAIN_TILE_PIXELS / size);
+        const values = new Float32Array(count * count);
+        const nudges = new Float32Array(count * count * 2);
+        const widths = new Float32Array(count * count);
+        const nudge = 0.5 * (1 - 1 / size);
+        for (let y = 0; y < count; y++) {
+            for (let x = 0; x < count; x++) {
+                const cell = y * count + x;
+                values[cell] = hashGrainCell(x, y, 0x2545f491);
+                nudges[cell * 2] = (hashGrainCell(x, y, 0x68e31da4) - 0.5) * nudge;
+                nudges[cell * 2 + 1] = (hashGrainCell(x, y, 0x1b56c4e9) - 0.5) * nudge;
+                widths[cell] = 0.7 + 0.6 * hashGrainCell(x, y, 0x5bd1e995);
+            }
+        }
+
+        grainCells = { size, count, pitch: GRAIN_TILE_PIXELS / count, values, nudges, widths };
+        return grainCells;
+    }
+
+    // Dark specks come from the top of the noise and light ones from the
+    // bottom, each the stronger the further in, the inner half of them at
+    // full strength, as the overlay's were. A grain is solid to a quarter of
+    // its cell from its centre and gone at three quarters, times its width,
+    // so at 1 it is the pixel and no more; where grains meet, a pixel takes
+    // the stronger. The page's background takes the tile, and the colour on
+    // it.
+    function drawGrain() {
+        const { grainAmount: amount, grainSize: size, grainDensity: density, grainTone: tone } = viewOptions;
+        const drawn = `${amount} ${size} ${density} ${tone}`;
+        if (drawn === grainDrawn) return;
+
+        const { count, pitch, values, nudges, widths } = getGrainCells(size);
+        const alpha = Math.min(amount * GRAIN_SPECK_ALPHA, 1) * 255;
+        const light = density * tone;
+        const dark = density - light;
+        // Each cell's speck, its alpha, less than 0 for a light one.
+        const specks = new Float32Array(values.length);
+        for (let cell = 0; cell < values.length; cell++) {
+            if (values[cell] >= 1 - dark) {
+                specks[cell] = alpha * Math.min((values[cell] - (1 - dark)) / dark * 2, 1);
+            } else if (values[cell] < light) {
+                specks[cell] = -alpha * Math.min((light - values[cell]) / light * 2, 1);
+            }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = GRAIN_TILE_PIXELS;
+        canvas.height = GRAIN_TILE_PIXELS;
+        const context = canvas.getContext('2d');
+        const image = context.createImageData(GRAIN_TILE_PIXELS, GRAIN_TILE_PIXELS);
+        for (let py = 0; py < GRAIN_TILE_PIXELS; py++) {
+            const y = (py + 0.5) / pitch;
+            const row = Math.floor(y);
+            for (let px = 0; px < GRAIN_TILE_PIXELS; px++) {
+                const x = (px + 0.5) / pitch;
+                const column = Math.floor(x);
+                let speck = 0;
+                for (let dy = -1; dy <= 1; dy++) {
+                    for (let dx = -1; dx <= 1; dx++) {
+                        const cell = ((row + dy + count) % count) * count + (column + dx + count) % count;
+                        if (!specks[cell]) continue;
+                        const distance = Math.hypot(x - (column + dx + 0.5 + nudges[cell * 2]), y - (row + dy + 0.5 + nudges[cell * 2 + 1]));
+                        const reach = Math.min(Math.max((0.75 - distance / widths[cell]) * 2, 0), 1);
+                        const value = specks[cell] * reach * reach * (3 - 2 * reach);
+                        if (Math.abs(value) > Math.abs(speck)) speck = value;
+                    }
+                }
+                const pixel = (py * GRAIN_TILE_PIXELS + px) * 4;
+                if (speck < 0) image.data.fill(255, pixel, pixel + 3);
+                image.data[pixel + 3] = Math.round(Math.abs(speck));
+            }
+        }
+        context.putImageData(image, 0, 0);
+        pageBackground.style.setProperty('--grain-image', `url("${canvas.toDataURL()}")`);
+        grainDrawn = drawn;
+    }
+
+    // Its sliders work while it's on, and it is drawn only then.
     function applyGrain() {
         if (pageBackground) pageBackground.classList.toggle('has-grain', viewOptions.grain);
         if (grainCheckbox) grainCheckbox.checked = viewOptions.grain;
+        GRAIN_SETTINGS.forEach(({ key, scale, format, slider, output }) => {
+            if (slider) {
+                slider.value = String(Math.round(viewOptions[key] * scale));
+                slider.disabled = !viewOptions.grain;
+            }
+            if (output) output.textContent = format(viewOptions[key]);
+        });
+        if (viewOptions.grain && pageBackground) drawGrain();
     }
 
     // Whether an item draws its thumbnail rather than its kind icon.
@@ -2204,6 +2340,21 @@ document.addEventListener('DOMContentLoaded', () => {
             applyGrain();
         });
     }
+
+    // The grain follows its sliders as they move, drawn once a frame, and
+    // is kept where they are let go.
+    GRAIN_SETTINGS.forEach(({ key, scale, slider }) => {
+        if (!slider) return;
+        slider.addEventListener('input', () => {
+            viewOptions[key] = Number(slider.value) / scale;
+            if (grainFrame) return;
+            grainFrame = requestAnimationFrame(() => {
+                grainFrame = 0;
+                applyGrain();
+            });
+        });
+        slider.addEventListener('change', saveViewOptions);
+    });
 
     // Binder's Use as Defaults: every option, saved for the galleries that
     // have none of their own. This one keeps its own.

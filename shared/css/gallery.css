@@ -714,7 +714,6 @@ input, select, textarea {
 
         .image:before {
             pointer-events: none;
-            background-image: url("../images/overlay.png");
             background-color: rgba(19, 21, 25, 0.5);
             border-radius: 4px;
             content: '';
@@ -1211,12 +1210,47 @@ input, select, textarea {
             z-index: 2;
         }
 
-        /* View Options ▸ Grain: a film grain under the page's own wash. */
+        /* View Options ▸ Grain: a film grain under the page's own wash. The
+           script draws its tile, 128px square, into --grain-image. */
         #bg.has-grain:before {
-            background-image: var(--theme-bg-overlay), linear-gradient(var(--grain-veil), var(--grain-veil)), url("../images/overlay.png");
-            background-size: auto, auto, 256px 256px;
-            background-position: center;
+            background-image: var(--theme-bg-overlay), linear-gradient(var(--grain-veil), var(--grain-veil)), var(--grain-image, none);
+            background-size: auto, auto, 128px 128px;
+            background-position: 0 0;
             background-repeat: no-repeat, no-repeat, repeat;
+        }
+
+        /* View Options ▸ Background ▸ Color: the colour over the page's own
+           background, cut at the sidebar's edge, its width held between its
+           least and most as the sidebar's is, and moving with it. The grain
+           lies on it, its tiles in line with those under the sidebar. */
+        #bg-color {
+            --sidebar-edge: calc(var(--sidebar-gutter) + clamp(var(--sidebar-min-width), var(--sidebar-width), min(var(--sidebar-max-width), 100vw - 320px)));
+            position: absolute;
+            inset: 0;
+            z-index: 3;
+            background-size: 128px 128px;
+            -webkit-clip-path: inset(0 0 0 var(--sidebar-edge));
+            clip-path: inset(0 0 0 var(--sidebar-edge));
+            -moz-transition: clip-path 260ms cubic-bezier(0.22, 1, 0.36, 1);
+            -webkit-transition: -webkit-clip-path 260ms cubic-bezier(0.22, 1, 0.36, 1), clip-path 260ms cubic-bezier(0.22, 1, 0.36, 1);
+            -ms-transition: clip-path 260ms cubic-bezier(0.22, 1, 0.36, 1);
+            transition: clip-path 260ms cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        #bg.has-grain #bg-color {
+            background-image: var(--grain-image, none);
+        }
+
+        body.is-sidebar-collapsed #bg-color {
+            -webkit-clip-path: inset(0);
+            clip-path: inset(0);
+        }
+
+        body.is-resizing-sidebar #bg-color {
+            -moz-transition: none;
+            -webkit-transition: none;
+            -ms-transition: none;
+            transition: none;
         }
 
         #bg:after {
@@ -1978,9 +2012,10 @@ body.is-sidebar-collapsed #gallery-blur-layer {
 }
 
 /* View Options ▸ Background ▸ Color: the colour fills the area right of the
-   sidebar, under the items, in place of the page's own background. As in
-   Binder, the items are drawn in the light appearance over it, whatever the
-   system's, so the gallery and its footer take the light tokens. */
+   sidebar, under the items, in place of the page's own background; #bg-color
+   draws it. As in Binder, the items are drawn in the light appearance over
+   it, whatever the system's, so the gallery and its footer take the light
+   tokens. */
 #photo-gallery.has-custom-background,
 #photo-gallery.has-custom-background ~ #footer {
     --ink-rgb: 31, 27, 24;
@@ -2766,6 +2801,14 @@ View Options Panel
     margin-top: calc(10 * var(--pt));
 }
 
+.view-options-check + .view-options-grain-slider {
+    margin-top: calc(2 * var(--pt));
+}
+
+.view-options-grain-slider + .view-options-separator {
+    margin-top: calc(6 * var(--pt));
+}
+
 /* A small checkbox: its 14pt box 2pt in from the margin and its title 4pt
    past the box, on an 18pt line. A native one, as Binder's is. */
 .view-options-panel .view-options-check {
@@ -2805,13 +2848,15 @@ View Options Panel
 }
 
 /* Use as Defaults: a small push button on a 22pt line, centred, 106pt under
-   the last separator as Binder places it. A native one, as Binder's is. */
+   the last separator as Binder places it, less the 82pt Grain's settings
+   take above that separator, so the window is as tall as it was without
+   them. A native one, as Binder's is. */
 .view-options-defaults {
     display: flex;
     justify-content: center;
     align-items: center;
     height: calc(22 * var(--pt));
-    margin-top: calc(106 * var(--pt));
+    margin-top: calc(24 * var(--pt));
 }
 
 .view-options-panel .view-options-defaults button {
@@ -2903,6 +2948,36 @@ View Options Panel
     top: calc(12.3 * var(--pt));
     width: calc(26.6 * var(--pt));
     height: calc(26.6 * var(--pt));
+}
+
+/* Grain's settings, under it: a 20pt row each, from its title, as macOS sets
+   in a checkbox's dependent controls, and laid out as Preview's Adjust Color
+   lays out its sliders: the setting's title, its slider, and here its value
+   at the margin. While Grain is off they are too, their titles and values in
+   AppKit's disabled control text, a quarter of the label colour. */
+.view-options-grain-slider {
+    display: grid;
+    grid-template-columns: calc(46 * var(--pt)) minmax(0, 1fr) calc(34 * var(--pt));
+    align-items: center;
+    height: calc(20 * var(--pt));
+    padding: 0 calc(18 * var(--pt)) 0 calc(38 * var(--pt));
+}
+
+.view-options-grain-slider output {
+    text-align: right;
+}
+
+.view-options-grain-slider:has(input:disabled) {
+    color: rgba(var(--ink-rgb), 0.25);
+}
+
+.view-options-grain-slider input[type="range"] {
+    all: revert;
+    font: inherit;
+    width: 100%;
+    height: calc(18 * var(--pt));
+    margin: 0;
+    accent-color: var(--accent);
 }
 
 /* A native slider too. Its font is the panel's, which its metrics count in. */
