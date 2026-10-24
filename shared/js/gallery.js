@@ -477,6 +477,8 @@ function applyGalleryFilters(options = {}) {
     const sidebar = state.sidebar || galleryFilters.sidebar;
     const searchTerms = state.searchTerms || [];
     const galleryItems = gallery.querySelectorAll('figure');
+    // Where the gallery was before this pass, for Back and Forward to come back to.
+    const scrolledFrom = { x: gallery.scrollLeft, y: window.scrollY };
 
     galleryItems.forEach(item => {
         const img = item.querySelector('img');
@@ -502,7 +504,7 @@ function applyGalleryFilters(options = {}) {
         window.scrollTo(0, 0);
     }
 
-    window.dispatchEvent(new CustomEvent('galleryFiltered'));
+    window.dispatchEvent(new CustomEvent('galleryFiltered', { detail: { scrolledFrom } }));
 }
 
 window.applyGalleryFilters = applyGalleryFilters;
@@ -4572,6 +4574,26 @@ document.addEventListener('galleryLoaded', () => {
         searchInput.focus();
     }
 
+    // Back and Forward put a visit's search back as it was left: its pills,
+    // then what was typed after them.
+    window.setGallerySearch = (pillValues, text) => {
+        searchWrapper.querySelectorAll('.search-pill').forEach(pill => pill.remove());
+        pillValues.forEach(value => searchWrapper.insertBefore(createPill(value), searchInput));
+        searchInput.value = text;
+        suggestionsContainer.style.display = 'none';
+
+        const fullQueryText = pillValues.join(' ') + ' ' + text;
+        const hasQuery = fullQueryText.trim().length > 0;
+        const clearSearchBtn = document.getElementById('clear-search');
+        if (clearSearchBtn) {
+            clearSearchBtn.style.display = hasQuery ? 'block' : 'none';
+            searchWrapper.style.paddingRight = hasQuery ? '30px' : '';
+        }
+
+        galleryFilters.searchTerms = buildGallerySearchTerms(fullQueryText);
+        searchInput.placeholder = pillValues.length > 0 ? '' : getDefaultSearchPlaceholder(searchInput);
+    };
+
     function updateActiveSuggestion(items) {
         items.forEach((item, index) => {
             item.classList.toggle('active', index === activeSuggestionIndex);
@@ -5424,6 +5446,630 @@ window.addEventListener('resize', applyAllPeopleColumnWidth);
 /*
 ==================================================================
 // END: ALL PEOPLE NODE
+==================================================================
+*/
+
+/*
+==================================================================
+// START: BACK AND FORWARD
+==================================================================
+Binder's Back/Forward pair. Every change of what the sidebar shows (a
+season, an episode, a person, the All People node and each change of its
+picks or its Match) is a visit, as each folder is in a Finder tab. The
+first letter typed into an empty search is a visit too, and the letters
+after it refine that visit in place, as Finder's typed search does.
+
+The visits are the tab's own history entries, so the browser's Back and
+Forward, ⌘[ and ⌘], swipes and a mouse's side buttons walk them as the
+two buttons do, and a reload puts the visit back. Each visit keeps its
+scroll position; a new one starts at the top. Held for a moment, a
+button lists the visits its way, nearest first, as Binder's segments do.
+*/
+
+const GALLERY_HISTORY_STORAGE_PREFIX = 'galleryHistory:';
+// AppKit's click-and-hold time for a segment's menu (HIMouseTracking 'clho'),
+// and its square around the press: a drag out of it opens the menu at once.
+const GALLERY_HISTORY_MENU_DELAY = 250;
+const GALLERY_HISTORY_MENU_DRAG_SLOP = 6;
+const GALLERY_HISTORY_SAVE_DELAY = 300;
+// A browser keeps about this many entries per tab; older visits are gone.
+const GALLERY_HISTORY_MAX_ENTRIES = 100;
+
+const galleryHistoryState = {
+    // One run of visits: every entry pushed by this page, across reloads.
+    session: null,
+    // { id, location, typed, scroll: { x, y } }, oldest first.
+    entries: [],
+    index: -1,
+    isReady: false,
+    isRestoring: false,
+    replaceTimer: null,
+    saveTimer: null,
+    episodeTitles: null,
+    backButton: null,
+    forwardButton: null,
+    menu: null,
+    menuButton: null,
+    holdTimer: null,
+    pressedButton: null,
+    pressX: 0,
+    pressY: 0,
+    isMenuHeld: false
+};
+
+function createGalleryHistoryId() {
+    return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+}
+
+// Where the gallery is, as plain data: the sidebar's choices and the search.
+function captureGalleryLocation() {
+    const sidebar = galleryFilters.sidebar;
+    const searchWrapper = document.getElementById('search-wrapper');
+    const searchInput = document.getElementById('search-input');
+    const pills = searchWrapper
+        ? Array.from(searchWrapper.querySelectorAll('.search-pill'), pill => pill.dataset.value)
+        : [];
+
+    return {
+        season: sidebar.season || 'all',
+        episode: sidebar.episode || 'all',
+        person: sidebar.person || 'all',
+        allPeople: sidebar.allPeople
+            ? { names: sidebar.allPeople.names.slice(), matchAny: sidebar.allPeople.matchAny }
+            : null,
+        search: { pills, text: searchInput ? searchInput.value : '' }
+    };
+}
+
+function isGallerySearchEmpty(search) {
+    return search.pills.length === 0 && search.text.trim() === '';
+}
+
+function isSameGallerySearch(a, b) {
+    return a.text === b.text &&
+        a.pills.length === b.pills.length &&
+        a.pills.every((pill, index) => pill === b.pills[index]);
+}
+
+function isSameGallerySidebarLocation(a, b) {
+    if (a.season !== b.season || a.episode !== b.episode || a.person !== b.person) return false;
+    if (!a.allPeople || !b.allPeople) return a.allPeople === b.allPeople;
+
+    return a.allPeople.matchAny === b.allPeople.matchAny &&
+        a.allPeople.names.length === b.allPeople.names.length &&
+        a.allPeople.names.every((name, index) => name === b.allPeople.names[index]);
+}
+
+function getGalleryHistoryEpisodeTitles() {
+    if (!galleryHistoryState.episodeTitles) {
+        const source = document.getElementById('gallery-episode-titles');
+        try {
+            galleryHistoryState.episodeTitles = source ? JSON.parse(source.textContent) : {};
+        } catch (error) {
+            galleryHistoryState.episodeTitles = {};
+        }
+    }
+
+    return galleryHistoryState.episodeTitles;
+}
+
+// A visit's name in the menus, as Binder names a location by its window
+// title: the episode as the group headers write it, the person (or, in
+// All People, the pick or how many), the search, and else the gallery.
+function getGalleryLocationTitle(location) {
+    const parts = [];
+    const { season, episode, allPeople, search } = location;
+
+    if (season !== 'all' && episode !== 'all') {
+        const title = (getGalleryHistoryEpisodeTitles()[season] || {})[episode];
+        parts.push(`S${season} E${episode}${title ? ` ${title}` : ''}`);
+    } else if (season !== 'all') {
+        parts.push(`Season ${season}`);
+    } else if (episode !== 'all') {
+        parts.push(`Episode ${episode}`);
+    }
+
+    if (allPeople) {
+        const count = allPeople.names.length;
+        parts.push(count === 0 ? 'All People' : count === 1 ? allPeople.names[0] : `${count} People`);
+    } else if (location.person !== 'all') {
+        parts.push(location.person);
+    }
+
+    if (!isGallerySearchEmpty(search)) {
+        const query = [...search.pills, search.text.trim()].filter(part => part.length > 0).join(' ');
+        parts.push(`Searching “${query}”`);
+    }
+
+    return parts.length > 0 ? parts.join(' · ') : document.title;
+}
+
+function readGalleryScroll() {
+    const gallery = document.getElementById('photo-gallery');
+    return { x: gallery ? gallery.scrollLeft : 0, y: window.scrollY };
+}
+
+function restoreGalleryScroll(scroll) {
+    const gallery = document.getElementById('photo-gallery');
+    window.scrollTo(0, scroll.y);
+    if (gallery) gallery.scrollLeft = scroll.x;
+}
+
+// --- Storage ---
+// The visits' list lives in the tab's session storage, so a reload still
+// knows what Back and Forward lead to; each entry's own state carries its
+// visit too, in case the list is lost.
+
+function getGalleryHistoryStorageKey(session) {
+    return `${GALLERY_HISTORY_STORAGE_PREFIX}${session}`;
+}
+
+function readGalleryHistoryEntries(session) {
+    try {
+        const entries = JSON.parse(sessionStorage.getItem(getGalleryHistoryStorageKey(session)));
+        return Array.isArray(entries) ? entries : null;
+    } catch (error) {
+        return null;
+    }
+}
+
+function saveGalleryHistoryEntries() {
+    const state = galleryHistoryState;
+    clearTimeout(state.saveTimer);
+    state.saveTimer = null;
+
+    try {
+        sessionStorage.setItem(getGalleryHistoryStorageKey(state.session), JSON.stringify(state.entries));
+    } catch (error) {
+        // Without storage the list lasts as long as the page.
+    }
+}
+
+function scheduleGalleryHistorySave() {
+    const state = galleryHistoryState;
+    if (state.saveTimer) return;
+    state.saveTimer = setTimeout(saveGalleryHistoryEntries, GALLERY_HISTORY_SAVE_DELAY);
+}
+
+function getGalleryHistoryEntryState(entry) {
+    return {
+        galleryHistory: {
+            session: galleryHistoryState.session,
+            id: entry.id,
+            location: entry.location,
+            typed: entry.typed
+        }
+    };
+}
+
+function writeGalleryHistoryEntryState(write, entry) {
+    try {
+        history[write](getGalleryHistoryEntryState(entry), '');
+    } catch (error) {
+        // A browser that rations history calls: the list still has the visit.
+    }
+}
+
+// A search refined letter by letter is written into its entry once the
+// typing pauses, as browsers ration replaceState.
+function flushGalleryHistoryReplace() {
+    const state = galleryHistoryState;
+    if (!state.replaceTimer) return;
+
+    clearTimeout(state.replaceTimer);
+    state.replaceTimer = null;
+
+    const entry = state.entries[state.index];
+    if (entry) writeGalleryHistoryEntryState('replaceState', entry);
+}
+
+// --- Visits ---
+
+function getCurrentGalleryHistoryEntry() {
+    return galleryHistoryState.entries[galleryHistoryState.index] || null;
+}
+
+function pushGalleryHistoryEntry(location, typed) {
+    const state = galleryHistoryState;
+    flushGalleryHistoryReplace();
+
+    // As in Binder, a new visit drops the ones Forward led to.
+    const entries = state.entries.slice(0, state.index + 1);
+    const entry = { id: createGalleryHistoryId(), location, typed, scroll: readGalleryScroll() };
+    entries.push(entry);
+
+    state.entries = entries.slice(-GALLERY_HISTORY_MAX_ENTRIES);
+    state.index = state.entries.length - 1;
+    writeGalleryHistoryEntryState('pushState', entry);
+    syncGalleryHistory();
+}
+
+function replaceGalleryHistoryLocation(location) {
+    const state = galleryHistoryState;
+    const entry = getCurrentGalleryHistoryEntry();
+    if (!entry) return;
+
+    entry.location = location;
+    clearTimeout(state.replaceTimer);
+    state.replaceTimer = setTimeout(flushGalleryHistoryReplace, GALLERY_HISTORY_SAVE_DELAY);
+    scheduleGalleryHistorySave();
+}
+
+// Every pass of the filters reports here: a new place is a visit, a search
+// refined is the same visit.
+function recordGalleryLocation(event) {
+    const state = galleryHistoryState;
+    const entry = getCurrentGalleryHistoryEntry();
+    if (!state.isReady || state.isRestoring || !entry) return;
+
+    const location = captureGalleryLocation();
+    const isSameSidebar = isSameGallerySidebarLocation(entry.location, location);
+    if (isSameSidebar && isSameGallerySearch(entry.location.search, location.search)) return;
+
+    // The visit being left keeps where it was scrolled before this pass.
+    entry.scroll = (event && event.detail && event.detail.scrolledFrom) || readGalleryScroll();
+
+    if (!isSameSidebar) {
+        pushGalleryHistoryEntry(location, false);
+    } else if (!entry.typed && isGallerySearchEmpty(entry.location.search) && !isGallerySearchEmpty(location.search)) {
+        pushGalleryHistoryEntry(location, true);
+    } else {
+        replaceGalleryHistoryLocation(location);
+    }
+}
+
+// Puts a visit back: the sidebar's rows, the All People column and its
+// picks, the search, the filtered gallery, then its scroll position.
+function showGalleryHistoryEntry(entry) {
+    const state = galleryHistoryState;
+    const location = entry.location;
+    const sidebarElement = document.getElementById('finder-sidebar');
+    const filters = galleryFilters.sidebar;
+
+    filters.season = location.season;
+    filters.episode = location.episode;
+    filters.person = location.person;
+
+    if (location.allPeople) {
+        filters.allPeople = { names: location.allPeople.names.slice(), matchAny: location.allPeople.matchAny };
+        showAllPeopleColumn();
+
+        // The column's rows follow the visit, as Finder's tags column
+        // follows the window's target.
+        const names = getAllPeopleNames();
+        const picked = location.allPeople.names.map(name => names.indexOf(name)).filter(index => index >= 0);
+        const lead = picked.length > 0 ? Math.min(...picked) : -1;
+        setAllPeopleColumnSelection(new Set(picked), lead);
+        syncAllPeopleSidebarRows();
+    } else {
+        closeAllPeopleNode();
+    }
+
+    if (sidebarElement) {
+        updateSidebarFilterActiveState(sidebarElement, 'season');
+        renderSidebarEpisodeOptions(sidebarElement, buildSidebarEpisodeIndex());
+        updateSidebarFilterActiveState(sidebarElement, 'person');
+    }
+
+    if (window.setGallerySearch) {
+        window.setGallerySearch(location.search.pills, location.search.text);
+    }
+
+    state.isRestoring = true;
+    try {
+        applyGalleryFilters();
+    } finally {
+        state.isRestoring = false;
+    }
+
+    restoreGalleryScroll(entry.scroll || { x: 0, y: 0 });
+}
+
+// Takes up the entry the tab is on: this run's list, or the one it was
+// saved as before a reload, or else a list of that entry alone.
+function adoptGalleryHistoryEntryState(entryState) {
+    const state = galleryHistoryState;
+
+    if (entryState.session !== state.session) {
+        state.session = entryState.session;
+        state.entries = readGalleryHistoryEntries(entryState.session) || [];
+    }
+
+    let index = state.entries.findIndex(entry => entry.id === entryState.id);
+    if (index < 0) {
+        state.entries = [{
+            id: entryState.id,
+            location: entryState.location,
+            typed: Boolean(entryState.typed),
+            scroll: { x: 0, y: 0 }
+        }];
+        index = 0;
+    }
+
+    state.index = index;
+}
+
+// The browser may have let visits go (a page opened from one of them drops
+// those after it; a long run drops the oldest). Where it says which entries
+// are this page's, the list keeps only those.
+function reconcileGalleryHistory() {
+    const state = galleryHistoryState;
+    const navigation = window.navigation;
+    if (!navigation || !navigation.currentEntry || typeof navigation.entries !== 'function') return;
+
+    const browserEntries = navigation.entries();
+    const current = navigation.currentEntry.index;
+    if (current < 0 || !browserEntries[current]) return;
+
+    let back = 0;
+    while (current - back - 1 >= 0 && browserEntries[current - back - 1].sameDocument) back++;
+
+    let forward = 0;
+    while (current + forward + 1 < browserEntries.length && browserEntries[current + forward + 1].sameDocument) forward++;
+
+    const first = Math.max(0, state.index - back);
+    state.entries = state.entries.slice(first, state.index + 1 + forward);
+    state.index -= first;
+}
+
+function syncGalleryHistory() {
+    const state = galleryHistoryState;
+
+    reconcileGalleryHistory();
+
+    if (state.backButton) state.backButton.disabled = state.index <= 0;
+    if (state.forwardButton) state.forwardButton.disabled = state.index >= state.entries.length - 1;
+
+    scheduleGalleryHistorySave();
+}
+
+function goGalleryHistory(delta) {
+    const state = galleryHistoryState;
+    const target = state.index + delta;
+    if (!state.isReady || delta === 0 || target < 0 || target >= state.entries.length) return;
+
+    flushGalleryHistoryReplace();
+    history.go(delta);
+}
+
+function handleGalleryHistoryPopState(event) {
+    const state = galleryHistoryState;
+    const entryState = event.state && event.state.galleryHistory;
+    if (!state.isReady || !entryState) return;
+
+    // The tab is already on another entry: what was typed waits for no one.
+    clearTimeout(state.replaceTimer);
+    state.replaceTimer = null;
+    closeGalleryHistoryMenu();
+
+    const outgoing = getCurrentGalleryHistoryEntry();
+    if (outgoing) outgoing.scroll = readGalleryScroll();
+
+    adoptGalleryHistoryEntryState(entryState);
+    showGalleryHistoryEntry(getCurrentGalleryHistoryEntry());
+    syncGalleryHistory();
+}
+
+function initGalleryHistory() {
+    const state = galleryHistoryState;
+    const entryState = history.state && history.state.galleryHistory;
+
+    if (entryState) {
+        // A reload, or a return to this page: the visit as it was left.
+        adoptGalleryHistoryEntryState(entryState);
+        showGalleryHistoryEntry(getCurrentGalleryHistoryEntry());
+    } else {
+        state.session = createGalleryHistoryId();
+        state.entries = [{
+            id: createGalleryHistoryId(),
+            location: captureGalleryLocation(),
+            typed: false,
+            scroll: readGalleryScroll()
+        }];
+        state.index = 0;
+        writeGalleryHistoryEntryState('replaceState', state.entries[0]);
+    }
+
+    state.isReady = true;
+    syncGalleryHistory();
+}
+
+// --- The Menus ---
+
+function getGalleryHistoryMenu() {
+    const state = galleryHistoryState;
+
+    if (!state.menu) {
+        const menu = document.createElement('div');
+        menu.id = 'gallery-history-menu';
+        menu.className = 'context-menu';
+        menu.setAttribute('role', 'menu');
+        menu.appendChild(document.createElement('ul'));
+
+        menu.addEventListener('click', event => {
+            const item = event.target.closest('li[data-history-delta]');
+            if (item) chooseGalleryHistoryMenuItem(item);
+        });
+
+        document.body.appendChild(menu);
+        state.menu = menu;
+    }
+
+    return state.menu;
+}
+
+function openGalleryHistoryMenu(button, direction) {
+    const state = galleryHistoryState;
+    const menu = getGalleryHistoryMenu();
+    const list = menu.querySelector('ul');
+    const end = direction < 0 ? -1 : state.entries.length;
+
+    list.replaceChildren();
+    for (let index = state.index + direction; index !== end; index += direction) {
+        const item = document.createElement('li');
+        item.setAttribute('role', 'menuitem');
+        item.dataset.historyDelta = String(index - state.index);
+        item.textContent = getGalleryLocationTitle(state.entries[index].location);
+        list.appendChild(item);
+    }
+
+    if (list.children.length === 0) return;
+
+    const rect = button.getBoundingClientRect();
+    menu.style.display = 'block';
+    menu.style.left = `${Math.round(rect.left)}px`;
+    menu.style.top = `${Math.round(rect.bottom + 4)}px`;
+    menu.style.maxHeight = `${Math.max(120, window.innerHeight - rect.bottom - 12)}px`;
+
+    state.menuButton = button;
+    button.classList.add('is-pressed');
+}
+
+function closeGalleryHistoryMenu() {
+    const state = galleryHistoryState;
+    if (state.menu) state.menu.style.display = 'none';
+    if (state.menuButton) state.menuButton.classList.remove('is-pressed');
+    state.menuButton = null;
+    state.isMenuHeld = false;
+}
+
+function isGalleryHistoryMenuOpen() {
+    return Boolean(galleryHistoryState.menuButton);
+}
+
+function chooseGalleryHistoryMenuItem(item) {
+    const delta = Number(item.dataset.historyDelta);
+    closeGalleryHistoryMenu();
+    goGalleryHistory(delta);
+}
+
+// --- The Buttons ---
+// A click goes one visit; held for AppKit's delay, or dragged off the spot,
+// the button's menu opens under it instead, and letting go over a visit goes
+// there. Like a toolbar button, neither takes focus from what has it.
+
+function setUpGalleryHistoryButton(button, direction) {
+    const state = galleryHistoryState;
+
+    button.addEventListener('mousedown', event => {
+        if (event.button !== 0) return;
+        event.preventDefault();
+
+        if (state.menuButton === button) {
+            closeGalleryHistoryMenu();
+            return;
+        }
+
+        closeGalleryHistoryMenu();
+        clearTimeout(state.holdTimer);
+        state.pressedButton = button;
+        state.pressX = event.clientX;
+        state.pressY = event.clientY;
+        button.classList.add('is-pressed');
+        state.holdTimer = setTimeout(() => openHeldGalleryHistoryMenu(button, direction), GALLERY_HISTORY_MENU_DELAY);
+    });
+
+    // Return and Space, and assistive clicks, which come without a press.
+    button.addEventListener('click', event => {
+        if (event.detail === 0) goGalleryHistory(direction);
+    });
+}
+
+function openHeldGalleryHistoryMenu(button, direction) {
+    const state = galleryHistoryState;
+    clearTimeout(state.holdTimer);
+    state.holdTimer = null;
+    state.isMenuHeld = true;
+    openGalleryHistoryMenu(button, direction);
+    if (!isGalleryHistoryMenuOpen()) button.classList.remove('is-pressed');
+}
+
+function handleGalleryHistoryMouseMove(event) {
+    const state = galleryHistoryState;
+    if (!state.holdTimer || !state.pressedButton) return;
+
+    const half = GALLERY_HISTORY_MENU_DRAG_SLOP / 2;
+    if (Math.abs(event.clientX - state.pressX) < half && Math.abs(event.clientY - state.pressY) < half) return;
+
+    const button = state.pressedButton;
+    openHeldGalleryHistoryMenu(button, button === state.backButton ? -1 : 1);
+}
+
+function handleGalleryHistoryMouseUp(event) {
+    const state = galleryHistoryState;
+    const button = state.pressedButton;
+    if (!button) return;
+
+    state.pressedButton = null;
+
+    if (state.holdTimer) {
+        clearTimeout(state.holdTimer);
+        state.holdTimer = null;
+        button.classList.remove('is-pressed');
+        if (button.contains(event.target)) goGalleryHistory(button === state.backButton ? -1 : 1);
+        return;
+    }
+
+    if (state.isMenuHeld) {
+        state.isMenuHeld = false;
+        const item = event.target.closest && event.target.closest('#gallery-history-menu li[data-history-delta]');
+        // Let go anywhere else and the menu stays open for a click.
+        if (item) chooseGalleryHistoryMenuItem(item);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const state = galleryHistoryState;
+    state.backButton = document.getElementById('history-back');
+    state.forwardButton = document.getElementById('history-forward');
+    if (!state.backButton || !state.forwardButton) return;
+
+    setUpGalleryHistoryButton(state.backButton, -1);
+    setUpGalleryHistoryButton(state.forwardButton, 1);
+
+    document.addEventListener('mousemove', handleGalleryHistoryMouseMove);
+    document.addEventListener('mouseup', handleGalleryHistoryMouseUp);
+
+    document.addEventListener('mousedown', event => {
+        if (!isGalleryHistoryMenuOpen()) return;
+        if (state.menu.contains(event.target) || state.menuButton.contains(event.target)) return;
+        closeGalleryHistoryMenu();
+    }, true);
+
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && isGalleryHistoryMenuOpen()) {
+            event.preventDefault();
+            event.stopPropagation();
+            closeGalleryHistoryMenu();
+        }
+    }, true);
+
+    window.addEventListener('resize', closeGalleryHistoryMenu);
+    window.addEventListener('blur', closeGalleryHistoryMenu);
+
+    // Registered after the gallery's own listeners, so a visit is taken up
+    // once the gallery, its groups and its sidebar have been set up.
+    document.addEventListener('galleryLoaded', initGalleryHistory);
+    window.addEventListener('galleryFiltered', recordGalleryLocation);
+    window.addEventListener('popstate', handleGalleryHistoryPopState);
+
+    window.addEventListener('pageshow', event => {
+        if (event.persisted && state.isReady) syncGalleryHistory();
+    });
+
+    window.addEventListener('pagehide', () => {
+        if (!state.isReady) return;
+
+        const entry = getCurrentGalleryHistoryEntry();
+        if (entry) entry.scroll = readGalleryScroll();
+        flushGalleryHistoryReplace();
+        saveGalleryHistoryEntries();
+    });
+});
+
+/*
+==================================================================
+// END: BACK AND FORWARD
 ==================================================================
 */
 
