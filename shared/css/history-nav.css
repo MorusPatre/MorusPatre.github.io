@@ -2,64 +2,167 @@
 ==================================================================
 Back and Forward
 ==================================================================
-Binder's toolbar pair, on every page of the site (shared/js/history-nav.js).
-Each is a button like the galleries' sidebar toggle, its chevron drawn in
-the toggle's stroke, sized and placed against the toggle's glyph as SF
-Symbols' chevron.left and chevron.right are against sidebar.left.
+Binder's toolbar pair, on every page of the site (shared/js/history-nav.js):
+a separated NSSegmentedControl in Tahoe's glass capsule. The metrics are
+AppKit's, read off the live control in an off-screen NSToolbar on macOS 27.
+The platter is 73×36pt, radius 18. The segments track 0–36 and 36–73. A
+pressed segment lights a 30×28pt pill, radius 14, 4pt in from the capsule's
+end, and hides the 1×20pt divider. The chevrons are chevron.left and
+chevron.right at the cell's 13pt medium large, drawn from the symbols' own
+outlines where the cell puts their 13×18pt images. Toolbar segments have no
+hover look (their bezel configuration turns rollover off).
 
-Sizes are in points of the galleries' 16pt type, so they come out the same
-on a page set in other type. By default the pair sits where the galleries'
-toggle does; a page can place it elsewhere (the galleries, past their
-sidebar) with a later rule.
+The glass is the key window's (an inactive window frosts it and dims the
+chevrons; a page can't tell, so that look isn't here): QuartzCore's
+glassBackground filter with AppKit's parameters, fitted as a filter over the
+backdrop and a white fill (within one level of AppKit's face on grey and
+colour backdrops in light, three in dark up to mid grey). Its rim, lit top
+and bottom, its hairline edge, darker at the ends, and its faint shadow 8pt
+down are matched on the pages' own backgrounds, within two levels. Inside
+it AppKit draws with vibrancy, a fixed offset from the glass behind (black
+or white at −1/+0.95, disabled −0.3/+0.2, divider −0.205/+0.205, pressed
+−0.08/+0.08), here as the colours those give on that glass. Its lensing
+can't be done in CSS; the blur stands in for it.
+
+Sizes are CSS px, which are Binder's points. By default the pair sits where
+the galleries' sidebar toggle does; a page can place it elsewhere (the
+galleries, past their sidebar) with a later rule.
 */
 
+:root {
+    --history-nav-width: 73px;
+    --history-nav-height: 36px;
+}
+
 .history-nav {
+    --history-glass-fill: rgba(255, 255, 255, 0.14);
+    --history-glass-filter: blur(12px) saturate(1.5) brightness(0.89);
+    --history-glass-rim: rgba(255, 255, 255, 0.113);
+    --history-glass-rim-inner: rgba(255, 255, 255, 0.085);
+    --history-glass-glow-top: 0 5px 4px -4px;
+    --history-glass-glow-bottom: 0 -5px 4px -4px;
+    --history-glass-glow: rgba(255, 255, 255, 0.107);
+    --history-glass-edge: transparent;
+    --history-glass-edge-ends: rgba(0, 0, 0, 0.5);
+    --history-chevron: #fff;
+    --history-chevron-disabled: rgba(255, 255, 255, 0.244);
+    --history-divider: rgba(255, 255, 255, 0.25);
+    --history-pressed: rgba(255, 255, 255, 0.098);
     position: fixed;
-    top: calc((40pt - 28px) / 2);
+    top: calc((40pt - var(--history-nav-height)) / 2);
     left: 20px;
     z-index: 12;
     display: flex;
+    width: var(--history-nav-width);
+    height: var(--history-nav-height);
+    border-radius: calc(var(--history-nav-height) / 2);
+    background-color: var(--history-glass-fill);
+    -webkit-backdrop-filter: var(--history-glass-filter);
+    backdrop-filter: var(--history-glass-filter);
+    box-shadow:
+        inset 0 0.5px 0 var(--history-glass-rim),
+        inset 0 1px 0 var(--history-glass-rim-inner),
+        inset var(--history-glass-glow-top) var(--history-glass-glow),
+        inset 0 -0.5px 0 var(--history-glass-rim),
+        inset 0 -1px 0 var(--history-glass-rim-inner),
+        inset var(--history-glass-glow-bottom) var(--history-glass-glow),
+        0 0 0 0.5px var(--history-glass-edge),
+        -0.5px 0 0 0 var(--history-glass-edge-ends),
+        0.5px 0 0 0 var(--history-glass-edge-ends),
+        0 8px 4px rgba(0, 0, 0, 0.012);
+}
+
+@media (prefers-color-scheme: light) {
+
+    .history-nav {
+        --history-glass-fill: rgba(255, 255, 255, 0.515);
+        --history-glass-filter: blur(12px) saturate(1.95) brightness(0.96);
+        --history-glass-rim: rgba(255, 255, 255, 0.72);
+        --history-glass-rim-inner: rgba(255, 255, 255, 0.632);
+        --history-glass-glow-top: 0 7px 6px -6px;
+        --history-glass-glow-bottom: 0 -7px 6px -6px;
+        --history-glass-glow: rgba(255, 255, 255, 0.86);
+        --history-glass-edge: rgba(0, 0, 0, 0.09);
+        --history-glass-edge-ends: rgba(0, 0, 0, 0.2);
+        --history-chevron: #000;
+        --history-chevron-disabled: rgba(0, 0, 0, 0.31);
+        --history-divider: rgba(0, 0, 0, 0.213);
+        --history-pressed: rgba(0, 0, 0, 0.083);
+    }
+
+}
+
+/* The divider, between the segments. */
+.history-nav::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 36px;
+    width: 1px;
+    height: 20px;
+    border-radius: 0.5px;
+    background-color: var(--history-divider);
+    pointer-events: none;
+}
+
+.history-nav:has(.history-nav-button:active, .history-nav-button.is-pressed)::after {
+    visibility: hidden;
 }
 
 .history-nav-button {
-    width: 28px;
-    height: 28px;
-    display: grid;
-    place-items: center;
+    position: relative;
+    flex: 0 0 auto;
+    width: 36px;
+    height: 100%;
     padding: 0;
     border: 0;
-    border-radius: 7px;
+    border-radius: 0;
     background: transparent;
     box-shadow: none;
-    color: var(--ink);
+    color: var(--history-chevron);
     line-height: normal;
     cursor: default;
     -webkit-appearance: none;
     appearance: none;
-    -moz-transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
-    -webkit-transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
-    -ms-transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
-    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+}
+
+#history-forward {
+    width: 37px;
+}
+
+/* The pressed pill. */
+.history-nav-button::before {
+    content: '';
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 30px;
+    height: 28px;
+    border-radius: 14px;
+    pointer-events: none;
+}
+
+#history-forward::before {
+    left: 3px;
 }
 
 .history-nav-button svg {
-    width: 18px;
+    position: absolute;
+    top: 8.5px;
+    left: 13px;
+    width: 13px;
     height: 18px;
     display: block;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1.8;
-    stroke-linecap: round;
-    stroke-linejoin: round;
+    fill: currentColor;
 }
 
-.history-nav-button:hover, .history-nav-button:focus-visible {
-    background: rgba(var(--ink-rgb), 0.1);
+#history-forward svg {
+    left: 12px;
 }
 
 /* Lit while pressed, and while its menu of places is open. */
-.history-nav-button:active, .history-nav-button.is-pressed {
-    background: rgba(var(--ink-rgb), 0.175);
+.history-nav-button:active::before, .history-nav-button.is-pressed::before, .history-nav-button:focus-visible::before {
+    background-color: var(--history-pressed);
 }
 
 .history-nav-button:focus {
@@ -67,7 +170,7 @@ sidebar) with a later rule.
 }
 
 .history-nav-button:disabled {
-    opacity: 0.25;
+    color: var(--history-chevron-disabled);
     pointer-events: none;
 }
 
