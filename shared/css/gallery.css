@@ -85,7 +85,7 @@
         /* A tight ember layer hugs the ring so it seems to burn; the soft glow
            beyond it is unchanged. */
         --accent: #9c6247;
-        --accent-glow: 0 0 calc(3px * var(--selection-glow-scale, 1)) calc(1px * var(--selection-glow-scale, 1)) rgba(238, 138, 58, 0.85), 0 0 calc(14px * var(--selection-glow-scale, 1)) calc(1.5px * var(--selection-glow-scale, 1)) rgba(204, 129, 70, 0.65);
+        --accent-glow: 0 0 calc(3px * var(--selection-glow-scale, 1)) calc(1px * var(--selection-glow-scale, 1)) rgba(238, 138, 58, 0.6), 0 0 calc(14px * var(--selection-glow-scale, 1)) calc(1.5px * var(--selection-glow-scale, 1)) rgba(204, 129, 70, 0.65);
         --accent-text-glow: 0 0 22px rgba(204, 129, 70, 0.38);
         --all-people-focus-pill: rgba(156, 98, 71, 0.2);
         --text-selection: rgba(222, 168, 96, 0.35);
@@ -1976,7 +1976,7 @@ body.is-sidebar-collapsed #gallery-blur-layer {
     --ink-rgb: 31, 27, 24;
     --thumb-glow: 0 calc(4px * var(--thumb-shadow-offset-scale, 1)) calc(14px * var(--thumb-shadow-blur-scale, 1)) rgba(0, 0, 0, 0.28);
     --accent: #9c6247;
-    --accent-glow: 0 0 calc(3px * var(--selection-glow-scale, 1)) calc(1px * var(--selection-glow-scale, 1)) rgba(238, 138, 58, 0.85), 0 0 calc(14px * var(--selection-glow-scale, 1)) calc(1.5px * var(--selection-glow-scale, 1)) rgba(204, 129, 70, 0.65);
+    --accent-glow: 0 0 calc(3px * var(--selection-glow-scale, 1)) calc(1px * var(--selection-glow-scale, 1)) rgba(238, 138, 58, 0.6), 0 0 calc(14px * var(--selection-glow-scale, 1)) calc(1.5px * var(--selection-glow-scale, 1)) rgba(204, 129, 70, 0.65);
     --accent-text-glow: 0 0 22px rgba(204, 129, 70, 0.38);
     color: rgb(var(--ink-rgb));
 }
